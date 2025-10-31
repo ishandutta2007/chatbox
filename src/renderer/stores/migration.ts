@@ -71,7 +71,7 @@ async function doMigrateStorage(oldStorage: Storage) {
       try {
         const val = await oldStorage.getStoreValue(key)
         await storage.setItemNow(key, val)
-        log.info(`[] migrateStorage: ${index + 1} / ${keys.length} migrated`)
+        log.info(`migrateStorage: ${index + 1} / ${keys.length} migrated`)
       } catch {
         log.info(`migrateStorage: failed to migrate ${key}`)
       }
@@ -118,42 +118,60 @@ export const _migrateStorageForTest = migrateStorage
 
 async function migrateStorage() {
   const configVersion = await storage.getItem<number>(StorageKey.ConfigVersion, 0)
-  if (configVersion < CurrentVersion) {
-    // 如果configVersion不是当前最新的，存在可能需要迁移
 
-    // 如果当前的storage中没有读取到版本号，那么存在两种可能性
-    // 1. 这是第一次运行应用。
-    // 2. 刚刚切换到新的storage实现，之前的数据还没有迁移过来。
-    // 无论上面哪种情况，都需要找到old storage来执行迁移，寻找的方法都是找到config version最新的old storage来执行迁移
+  log.info(`migrateStorage: current storage config version: ${configVersion}`)
 
-    // 如果当前的storage读取到了版本号，说明使用过当前同样的storage (因为存在storage迁移出去又迁移回来的情况)，存在两种情况
-    // 1. 经历过迁移出去又迁移回来，这种情况需要找到config version 最新的old storage来执行迁移
-    // 2. 没有经历过后续迁移，保留当前的storage数据即可，执行后续的数据格式变更，这种情况当前的storage就是最新的
-    // 无论上面哪种情况，都只需要找到old storage中config version最新的来执行迁移即可
+  if (configVersion >= CurrentVersion) {
+    return
+  }
 
+  /**
+   * 对于桌面端：
+   *   需要判断configVersion，如果小于上次迁移过数据的版本号，需要从旧的storage中迁移数据
+   * 对于其他端（目前只有移动端）：
+   *   需要遍历所有旧的storage，找到configVersion最大的那个，如果比当前的新，则迁移数据
+   * 如果当前 configVersion 为 0，且没有找到可迁移数据，说明是第一次启动应用，需要初始化数据
+   */
+
+  let needMigration = false
+
+  const latestDesktopMigratedVersion = 12 // desktop 端最新的迁移版本是 11 到 12
+
+  // 桌面端的configVersion一直在config file storage中，不存在不同storage间不同的情况
+  if (platform.type === 'desktop' && configVersion > 0 && configVersion < latestDesktopMigratedVersion) {
     log.info(
-      `migrateStorage: config version ${configVersion} < current version ${CurrentVersion}, checking old storages`
+      `migrateStorage: desktop platform needs migration, config version ${configVersion} < latest migrated version ${latestDesktopMigratedVersion}`
     )
-    const [oldConfigVersion, oldStorage] = await findNewestStorage(getOldVersionStorages())
+    needMigration = true
+  }
 
+  const [oldConfigVersion, oldStorage] = await findNewestStorage(getOldVersionStorages())
+
+  if (!needMigration) {
     log.info(
-      `migrateStorage: platform ${platform.type} old config version: ${oldConfigVersion}, old storage: ${oldStorage?.getStorageType()}`
+      `migrateStorage check: platform ${platform.type} old config version: ${oldConfigVersion}, old storage: ${oldStorage?.getStorageType()}`
     )
 
-    // 当前 config version为0（当前storage没用过），或者 old storage 的版本更高（当前storage用过，但迁移出去过，需要迁移回来），且 old storage 和当前 storage 不同（相同的storage可以跳过数据迁移），才执行迁移
     if (
-      // 桌面端configVersion一直在config文件中，所以是相等的
-      (oldConfigVersion > configVersion || platform.type === 'desktop') &&
+      platform.type !== 'desktop' &&
+      oldConfigVersion > configVersion &&
       oldStorage &&
       oldStorage.getStorageType() !== storage.getStorageType()
     ) {
-      await doMigrateStorage(oldStorage)
-    } else if (configVersion === 0) {
-      // 这是第一次运行应用，直接将ConfigVersion设置为CurrentVersion，跳过后续的数据迁移
-      await storage.setItemNow(StorageKey.ConfigVersion, CurrentVersion)
-      // 初始化默认会话
-      await initData()
+      needMigration = true
     }
+  }
+
+  if (needMigration && oldStorage) {
+    await doMigrateStorage(oldStorage)
+  }
+
+  if (configVersion === 0 && needMigration === false) {
+    log.info(`migrateStorage: no old storage found, and config version is 0, initializing data`)
+    // 这是第一次运行应用，直接将ConfigVersion设置为CurrentVersion，跳过后续的数据迁移
+    await storage.setItemNow(StorageKey.ConfigVersion, CurrentVersion)
+    // 初始化默认会话
+    await initData()
   }
 }
 
