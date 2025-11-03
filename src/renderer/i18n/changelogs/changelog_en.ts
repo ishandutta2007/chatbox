@@ -1,5 +1,15 @@
 const changelog = `
-## v1.17.0
+## v1.17.1 - 2025.11.04
+1. Added quick jump to the top of the message list
+2. Mobile: message action buttons now support floating display
+3. Fixed a styling issue with the send button on mobile when using large font sizes
+4. Fixed the issue where the New Thread shortcut stopped working
+5. Optimized the close button styling on the settings page
+6. Improved automatic scrolling during output
+7. Fixed an issue where the input would lose focus when editing an empty AI message
+8. Added a "Recover conversation list" tool in Settings to recover conversations missing from the list
+
+## v1.17.0 - 2025.10.27
 
 1. Optimized storage performance, reducing lag and crashes during message generation
 2. Fixed the issue where duplicate token estimation calculations caused lag
