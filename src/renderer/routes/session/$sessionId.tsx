@@ -1,20 +1,20 @@
-import NiceModal from '@ebay/nice-modal-react'
-import { Button } from '@mantine/core'
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useCallback, useEffect, useMemo } from 'react'
-import { useTranslation } from 'react-i18next'
-import type { Message, ModelProvider } from 'src/shared/types'
-import { useStore } from 'zustand'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import Header from '@/components/Header'
-import InputBox from '@/components/InputBox'
-import MessageList from '@/components/MessageList'
+import InputBox from '@/components/InputBox/InputBox'
+import MessageList, { type MessageListRef } from '@/components/MessageList'
 import ThreadHistoryDrawer from '@/components/ThreadHistoryDrawer'
 import { updateSession as updateSessionStore, useSession } from '@/stores/chatStore'
 import { lastUsedModelStore } from '@/stores/lastUsedModelStore'
 import * as scrollActions from '@/stores/scrollActions'
 import { modifyMessage, removeCurrentThread, startNewThread, submitNewUserMessage } from '@/stores/sessionActions'
 import { getAllMessageList } from '@/stores/sessionHelpers'
+import NiceModal from '@ebay/nice-modal-react'
+import { Button } from '@mantine/core'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
+import type { Message, ModelProvider } from 'src/shared/types'
+import { useStore } from 'zustand'
 
 export const Route = createFileRoute('/session/$sessionId')({
   component: RouteComponent,
@@ -33,6 +33,8 @@ function RouteComponent() {
     () => currentMessageList.find((m: Message) => m.generating),
     [currentMessageList]
   )
+
+  const messageListRef = useRef<MessageListRef>(null)
 
   const goHome = useCallback(() => {
     navigate({ to: '/', replace: true })
@@ -105,6 +107,7 @@ function RouteComponent() {
       if (!currentSession) {
         return
       }
+      messageListRef.current?.scrollToBottom('instant')
       await submitNewUserMessage(currentSession.id, {
         newUserMsg: constructedMessage,
         needGenerating,
@@ -149,7 +152,7 @@ function RouteComponent() {
       <Header session={currentSession} />
 
       {/* MessageList 设置 key，确保每个 session 对应新的 MessageList 实例 */}
-      <MessageList key={`message-list${currentSessionId}`} currentSession={currentSession} />
+      <MessageList ref={messageListRef} key={`message-list${currentSessionId}`} currentSession={currentSession} />
 
       {/* <ScrollButtons /> */}
       <ErrorBoundary name="session-inputbox">

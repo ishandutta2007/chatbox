@@ -1,4 +1,5 @@
-import { Box, Flex, Modal, Title } from '@mantine/core'
+import { Box, Button, Flex, Modal, Text, Title } from '@mantine/core'
+import { IconX } from '@tabler/icons-react'
 import {
   createMemoryHistory,
   createRootRoute,
@@ -11,6 +12,7 @@ import clsx from 'clsx'
 import { type FC, useCallback, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import SettingsKnowledgeBaseRouteComponent from '@/components/knowledge-base/KnowledgeBase'
+import { ScalableIcon } from '@/components/ScalableIcon'
 import { getThemeDesign } from '@/hooks/useAppTheme'
 import useNeedRoomForWinControls from '@/hooks/useNeedRoomForWinControls'
 import { router } from '@/router'
@@ -70,12 +72,27 @@ export const SettingsModal: FC<SettingsModalProps> = (props) => {
         className="title-bar border-0 border-b border-[var(--mantine-color-chatbox-border-primary-outline)] border-solid"
       >
         <div className={clsx('flex-[1_1_0]', needRoomForMacWindowControls ? 'min-w-16' : '')} />
-        <Flex p="sm" align="center" w={'100%'} maw={1200}>
+        <Flex p="sm" align="center" w={'100%'} maw={1200} gap="xs">
           <Title order={3} flex={1}>
             {t('Settings')}
           </Title>
 
-          <Modal.CloseButton onClick={onClose} className="controls" />
+          <Text c="chatbox-tertiary" size="xs">
+            ESC
+          </Text>
+          <Button
+            className="controls"
+            color="chatbox-secondary"
+            variant="light"
+            h={36}
+            w={36}
+            p={0}
+            radius={18}
+            onClick={onClose}
+            autoFocus={false}
+          >
+            <ScalableIcon icon={IconX} size={20} />
+          </Button>
         </Flex>
         <div className={clsx('flex-[1_1_0]')} />
       </Flex>

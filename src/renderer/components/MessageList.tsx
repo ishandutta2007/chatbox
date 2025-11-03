@@ -1,7 +1,9 @@
 import NiceModal from '@ebay/nice-modal-react'
 import { ActionIcon, Button, Flex, Stack, Text, Transition } from '@mantine/core'
+import { useThrottledCallback } from '@mantine/hooks'
 import {
   IconAlignRight,
+  IconArrowBarToUp,
   IconArrowUp,
   IconChevronLeft,
   IconChevronRight,
@@ -12,7 +14,19 @@ import {
   IconTrash,
 } from '@tabler/icons-react'
 import { useAtomValue, useSetAtom } from 'jotai'
-import { type FC, memo, type UIEventHandler, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { throttle } from 'lodash'
+import {
+  type FC,
+  forwardRef,
+  memo,
+  type UIEventHandler,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import { useTranslation } from 'react-i18next'
 import { type StateSnapshot, Virtuoso, type VirtuosoHandle } from 'react-virtuoso'
 import type { Session, SessionThreadBrief } from 'src/shared/types'
@@ -34,10 +48,21 @@ import ActionMenu from './ActionMenu'
 import { ErrorBoundary } from './ErrorBoundary'
 import Message from './Message'
 import MessageNavigation, { ScrollToBottomButton } from './MessageNavigation'
+import { ScalableIcon } from './ScalableIcon'
 
 const sessionScrollPositionCache = new Map<string, StateSnapshot>()
 
-export default function MessageList(props: { className?: string; currentSession: Session }) {
+export interface MessageListRef {
+  scrollToTop: (behavior?: ScrollBehavior) => void
+  scrollToBottom: (behavior?: ScrollBehavior) => void
+}
+
+export interface MessageListProps {
+  className?: string
+  currentSession: Session
+}
+
+const MessageList = forwardRef<MessageListRef, MessageListProps>((props, ref) => {
   const { t } = useTranslation()
   const isSmallScreen = useIsSmallScreen()
   const widthFull = useUIStore((s) => s.widthFull)
@@ -145,10 +170,10 @@ export default function MessageList(props: { className?: string; currentSession:
       }
     }
   }, [])
-  const handleScroll = useCallback<UIEventHandler>((e) => {
-    const scrollTop = e.currentTarget.scrollTop
-    if (lastScrollTop.current) {
-      if (scrollTop < lastScrollTop.current) {
+
+  const handleScrollTopThrottled = useThrottledCallback((scrollTop?: number) => {
+    if (typeof scrollTop === 'number' && typeof lastScrollTop.current === 'number') {
+      if (scrollTop > 0 && scrollTop < lastScrollTop.current) {
         // 是向上滚动
         setShowScrollToPrev(true)
         if (timerRef.current) {
@@ -165,7 +190,17 @@ export default function MessageList(props: { className?: string; currentSession:
       }
     }
     lastScrollTop.current = scrollTop
-  }, [])
+  }, 256)
+
+  const handleScroll = useCallback<UIEventHandler>(
+    (e) => {
+      const scrollTop = e.currentTarget.scrollTop
+      if (e.currentTarget.scrollHeight - (scrollTop + e.currentTarget.clientHeight) >= 0) {
+        handleScrollTopThrottled(scrollTop)
+      }
+    },
+    [handleScrollTopThrottled]
+  )
   // message navigation handlers end
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: 仅执行一次
@@ -187,6 +222,11 @@ export default function MessageList(props: { className?: string; currentSession:
   }, [])
 
   const platformType = useAtomValue(platformTypeAtom)
+
+  useImperativeHandle(ref, () => ({
+    scrollToTop: (behavior = 'auto') => virtuoso.current?.scrollTo({ top: 0, behavior }),
+    scrollToBottom: (behavior = 'auto') => virtuoso.current?.scrollTo({ top: Infinity, behavior }),
+  }))
 
   return (
     <div className={cn('w-full h-full mx-auto', props.className)}>
@@ -265,21 +305,39 @@ export default function MessageList(props: { className?: string; currentSession:
           <>
             <Transition mounted={showScrollToPrev && !atTop} transition="fade-down">
               {(transitionStyle) => (
-                <Button
-                  className="absolute top-0 left-0 right-0 leading-tight"
-                  size="xs"
-                  h="auto"
-                  py={6}
-                  radius={0}
-                  bd={0}
-                  bg="chatbox-background-secondary"
-                  c="chatbox-tertiary"
+                <Flex
                   style={transitionStyle}
-                  onClick={handleScrollToPrev}
-                  leftSection={<IconArrowUp size={16} />}
+                  className="absolute top-0 left-0 right-0 leading-tight bg-[var(--mantine-color-chatbox-background-secondary-filled)]"
                 >
-                  {t('Tap to go to previous message')}
-                </Button>
+                  {[
+                    { text: t('Return to the top'), icon: IconArrowBarToUp, onClick: handleScrollToTop },
+                    {
+                      text: t('Back to previous message'),
+                      icon: IconArrowUp,
+                      onClick: handleScrollToPrev,
+                    },
+                  ].map((item, idx) => (
+                    <Button
+                      key={item.text}
+                      variant="transparent"
+                      className={cn(
+                        'w-1/2',
+                        idx === 0 ? 'border-r border-r-[var(--mantine-color-chatbox-border-primary-outline)]' : ''
+                      )}
+                      classNames={{
+                        section: '!mr-xxs',
+                      }}
+                      size="xs"
+                      h="auto"
+                      py={6}
+                      c="chatbox-tertiary"
+                      onClick={item.onClick}
+                      leftSection={<ScalableIcon icon={item.icon} size={16} />}
+                    >
+                      {item.text}
+                    </Button>
+                  ))}
+                </Flex>
               )}
             </Transition>
             <Transition mounted={!atBottom} transition="slide-up">
@@ -290,7 +348,9 @@ export default function MessageList(props: { className?: string; currentSession:
       </div>
     </div>
   )
-}
+})
+
+export default memo(MessageList)
 
 function ForkNav(props: { sessionId: string; msgId: string; forks: NonNullable<Session['messageForksHash']>[string] }) {
   const { sessionId, msgId, forks } = props

@@ -1,4 +1,4 @@
-import { useAtomValue } from 'jotai'
+import { createStore } from 'jotai'
 import { useEffect } from 'react'
 import { navigateToSettings } from '@/modals/Settings'
 import { router } from '@/router'
@@ -12,7 +12,6 @@ import { useIsSmallScreen } from './useScreenChange'
 
 export default function useShortcut() {
   const isSmallScreen = useIsSmallScreen()
-  const currentSessionId = useAtomValue(currentSessionIdAtom)
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -64,15 +63,11 @@ export default function useShortcut() {
       return
     }
     // 归档当前会话的上下文。
-    // if (e.key === 'r' && altOrOption) {
-    //     e.preventDefault()
-    //     sessionActions.startNewThread()
-    //     return
-    // }
     if (e.key === 'r' && ctrlKey) {
       e.preventDefault()
-      if (currentSessionId) {
-        void startNewThread(currentSessionId)
+      const sid = createStore().get(currentSessionIdAtom)
+      if (sid) {
+        void startNewThread(sid)
       }
       return
     }

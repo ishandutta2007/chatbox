@@ -1,14 +1,12 @@
 import NiceModal, { useModal } from '@ebay/nice-modal-react'
 import { Button, Image, List, Modal, Paper, Stack, Text, Title } from '@mantine/core'
 import { useTranslation } from 'react-i18next'
-import { useIsSmallScreen } from '@/hooks/useScreenChange'
-import { router } from '@/router'
 import icon from '../static/icon.png'
+import { navigateToSettings } from './Settings'
 
 const Welcome = NiceModal.create(() => {
   const { t } = useTranslation()
   const modal = useModal()
-  const isSmallScreen = useIsSmallScreen()
 
   const onClose = () => {
     modal.resolve()
@@ -52,9 +50,7 @@ const Welcome = NiceModal.create(() => {
               radius="md"
               classNames={{ root: '!outline-none', label: 'flex flex-col items-center justify-center' }}
               onClick={() => {
-                router.navigate({
-                  to: isSmallScreen ? '/settings/provider' : '/settings/provider/chatbox-ai',
-                })
+                navigateToSettings('/provider/chatbox-ai')
                 modal.resolve('setup')
                 modal.hide()
               }}

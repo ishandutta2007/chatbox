@@ -80,6 +80,7 @@ const _Message: FC<Props> = (props) => {
 
   const { t } = useTranslation()
   const theme = useTheme()
+  const isSamllScreen = useIsSmallScreen()
   const {
     userAvatarKey,
     showMessageTimestamp,
@@ -474,46 +475,56 @@ const _Message: FC<Props> = (props) => {
                 m="4px -4px -4px -4px"
                 className={clsx(
                   'group-hover/message:opacity-100 opacity-0 transition-opacity',
-                  actionMenuOpened || buttonGroup === 'always' ? 'opacity-100' : ''
+                  actionMenuOpened || buttonGroup === 'always' ? 'opacity-100' : '',
+                  isSamllScreen ? 'sticky bottom-4' : ''
                 )}
                 align="center"
               >
-                {!msg.generating && msg.role === 'assistant' && (
-                  <MessageActionIcon icon={IconReload} tooltip={t('Reply Again')} onClick={handleRefresh} />
-                )}
-
-                {msg.role !== 'assistant' && (
-                  <MessageActionIcon icon={IconArrowDown} tooltip={t('Reply Again Below')} onClick={onGenerateMore} />
-                )}
-
-                {
-                  // Chatbox-AI 模型不支持编辑消息
-                  !msg.model?.startsWith('Chatbox-AI') &&
-                    // 图片会话中，助手消息无需编辑
-                    !(msg.role === 'assistant' && props.sessionType === 'picture') && (
-                      <MessageActionIcon icon={IconPencil} tooltip={t('edit')} onClick={onEditClick} />
-                    )
-                }
-
-                {!(props.sessionType === 'picture' && msg.role === 'assistant') && (
-                  <MessageActionIcon icon={IconCopy} tooltip={t('copy')} onClick={onCopyMsg} />
-                )}
-
-                {!msg.generating && props.sessionType === 'picture' && msg.role === 'assistant' && (
-                  <MessageActionIcon
-                    icon={IconPhotoPlus}
-                    tooltip={t('Generate More Images Below')}
-                    onClick={onGenerateMore}
-                  />
-                )}
-
-                <ActionMenu
-                  items={actionMenuItems}
-                  opened={actionMenuOpened}
-                  onChange={(opened) => setActionMenuOpened(opened)}
+                <Flex
+                  gap={0}
+                  className={
+                    isSamllScreen
+                      ? 'p-xxs bg-[var(--mantine-color-chatbox-background-primary-filled)] rounded-md border-[0.5px] border-solid border-[var(--mantine-color-chatbox-border-primary-outline)] shadow-sm'
+                      : ''
+                  }
                 >
-                  <MessageActionIcon icon={IconDotsVertical} tooltip={t('More')} />
-                </ActionMenu>
+                  {!msg.generating && msg.role === 'assistant' && (
+                    <MessageActionIcon icon={IconReload} tooltip={t('Reply Again')} onClick={handleRefresh} />
+                  )}
+
+                  {msg.role !== 'assistant' && (
+                    <MessageActionIcon icon={IconArrowDown} tooltip={t('Reply Again Below')} onClick={onGenerateMore} />
+                  )}
+
+                  {
+                    // Chatbox-AI 模型不支持编辑消息
+                    !msg.model?.startsWith('Chatbox-AI') &&
+                      // 图片会话中，助手消息无需编辑
+                      !(msg.role === 'assistant' && props.sessionType === 'picture') && (
+                        <MessageActionIcon icon={IconPencil} tooltip={t('edit')} onClick={onEditClick} />
+                      )
+                  }
+
+                  {!(props.sessionType === 'picture' && msg.role === 'assistant') && (
+                    <MessageActionIcon icon={IconCopy} tooltip={t('copy')} onClick={onCopyMsg} />
+                  )}
+
+                  {!msg.generating && props.sessionType === 'picture' && msg.role === 'assistant' && (
+                    <MessageActionIcon
+                      icon={IconPhotoPlus}
+                      tooltip={t('Generate More Images Below')}
+                      onClick={onGenerateMore}
+                    />
+                  )}
+
+                  <ActionMenu
+                    items={actionMenuItems}
+                    opened={actionMenuOpened}
+                    onChange={(opened) => setActionMenuOpened(opened)}
+                  >
+                    <MessageActionIcon icon={IconDotsVertical} tooltip={t('More')} />
+                  </ActionMenu>
+                </Flex>
               </Flex>
             )}
           </Grid>

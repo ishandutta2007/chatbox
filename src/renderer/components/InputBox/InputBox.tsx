@@ -738,7 +738,7 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
             </Flex>
           )}
 
-          <Flex px="sm" pb="sm" align="flex-end" justify="space-between" gap="lg">
+          <Flex px="sm" pb="sm" align="flex-end" justify="space-between" gap="0" wrap="wrap">
             <Flex gap="md" flex="0 1 auto" className="!hidden sm:!flex">
               {sessionType !== 'picture' && (
                 <>
@@ -923,7 +923,7 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
               )}
             </Flex>
 
-            <Flex gap={isSmallScreen ? 'xxs' : 'sm'} align="flex-end" justify="flex-end">
+            <Flex gap={isSmallScreen ? 'xxs' : 'sm'} align="flex-end" justify="flex-end" flex="1 1 auto ">
               {/* Wrap TokenCountMenu and ModelSelector in a Flex with center alignment */}
               <Flex gap={isSmallScreen ? 'xxs' : 'sm'} align="center">
                 {/* Token count display */}

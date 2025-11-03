@@ -29,7 +29,10 @@ const MessageEdit = NiceModal.create((props: { sessionId: string; msg: Message }
   // const [data, setData] = useAtom(atoms.messageEditDialogShowAtom)
 
   const sessionId = props.sessionId
-  const [msg, _setMsg] = useState<Message>({ ...props.msg })
+  const [msg, _setMsg] = useState<Message>({
+    ...props.msg,
+    contentParts: props.msg.contentParts.length ? props.msg.contentParts : [{ type: 'text', text: '' }],
+  })
   const setMsg = useCallback((m: Partial<Message>) => {
     _setMsg((_m) => ({ ..._m, ...m }))
   }, [])
