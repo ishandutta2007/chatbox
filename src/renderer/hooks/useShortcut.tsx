@@ -1,4 +1,4 @@
-import { createStore } from 'jotai'
+import { getDefaultStore } from 'jotai'
 import { useEffect } from 'react'
 import { navigateToSettings } from '@/modals/Settings'
 import { router } from '@/router'
@@ -65,7 +65,7 @@ export default function useShortcut() {
     // 归档当前会话的上下文。
     if (e.key === 'r' && ctrlKey) {
       e.preventDefault()
-      const sid = createStore().get(currentSessionIdAtom)
+      const sid = getDefaultStore().get(currentSessionIdAtom)
       if (sid) {
         void startNewThread(sid)
       }
