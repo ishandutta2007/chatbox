@@ -162,7 +162,7 @@ export function pictureSessionSettings(): SessionSettings {
   return {
     provider: ModelProviderEnum.ChatboxAI,
     modelId: 'DALL-E-3',
-    imageGenerateNum: 3,
+    imageGenerateNum: 1,
     dalleStyle: 'vivid',
   }
 }
