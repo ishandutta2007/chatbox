@@ -323,7 +323,7 @@
   "Invalid provider configuration format": "تنسيق تكوين الموفر غير صالح",
   "Invalid request parameters detected. Please try again later. Persistent failures may indicate an outdated software version. Consider upgrading to access the latest performance improvements and features.": "تم اكتشاف معلمات طلب غير صالحة. يرجى المحاولة مرة أخرى لاحقًا. قد تشير الإخفاقات المستمرة إلى إصدار برنامج قديم. فكر في الترقية للوصول إلى أحدث تحسينات الأداء والميزات.",
   "It only takes a few seconds and helps a lot.": "يستغرق هذا بضع ثوانٍ فقط ويساعد كثيرًا.",
-  "Keep only the Top <0>{{N}}</0> Conversations in List and Permanently Delete the Rest": "احتفظ فقط بأعلى <0>{{N}}</0> محادثات في القائمة واحذف الباقي نهائيًا",
+  "Keep only the Top <input /> Conversations in List and Permanently Delete the Rest": "احتفظ فقط بأعلى <input /> محادثات في القائمة واحذف الباقي نهائيًا",
   "Key Combination": "مزيج المفاتيح",
   "Keyboard Shortcuts": "اختصارات لوحة المفاتيح",
   "Knowledge Base": "قاعدة المعرفة",

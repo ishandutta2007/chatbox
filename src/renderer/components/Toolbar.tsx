@@ -69,7 +69,7 @@ export default function Toolbar({ sessionId }: { sessionId: string }) {
           variant="outline"
           color="chatbox-tertiary"
           leftSection={<ScalableIcon icon={IconSearch} size={16} strokeWidth={1.8} />}
-          className="border-[var(--mantine-color-chatbox-border-primary-outline)]"
+          className="border-chatbox-border-primary"
           onClick={() => setOpenSearchDialog(true)}
         >
           {t('Search')}...

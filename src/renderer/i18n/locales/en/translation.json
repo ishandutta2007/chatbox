@@ -268,7 +268,7 @@
   "Invalid deep link config format": "Invalid deep link config format",
   "Invalid provider configuration format": "Invalid provider configuration format",
   "It only takes a few seconds and helps a lot.": "It only takes a few seconds and helps a lot.",
-  "Keep only the Top <0>{{N}}</0> Conversations in List and Permanently Delete the Rest": "Keep only the Top <0>{{N}}</0> Conversations in List and Permanently Delete the Rest",
+  "Keep only the Top <input /> Conversations in List and Permanently Delete the Rest": "Keep only the Top <input /> Conversations in List and Permanently Delete the Rest",
   "Knowledge Base": "Knowledge Base",
   "Knowledge Base Debug": "Knowledge Base Debug",
   "Knowledge Base functionality is not available on Windows ARM64 due to library compatibility issues. This feature is supported on Windows x64, macOS, and Linux.": "Knowledge Base functionality is not available on Windows ARM64 due to library compatibility issues. This feature is supported on Windows x64, macOS, and Linux.",

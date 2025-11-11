@@ -456,7 +456,7 @@ const KnowledgeBasePage: React.FC = () => {
           {kbList.length === 0 ? (
             <Paper withBorder p="xl" style={{ textAlign: 'center' }}>
               <Stack gap="md" align="center">
-                <ScalableIcon icon={IconInfoCircle} size={48} color="var(--mantine-color-dimmed)" />
+                <ScalableIcon icon={IconInfoCircle} size={48} color="var(--chatbox-tint-tertiary)" />
                 <Stack gap="xs" align="center">
                   <Text fw={500} size="lg">
                     {t('No Knowledge Base Yet')}

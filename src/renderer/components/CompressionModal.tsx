@@ -170,7 +170,7 @@ export function CompressionModal({ opened, onClose, session }: CompressionModalP
         {isCompleted && (
           <>
             <Flex align="center" gap="xs" mb="sm">
-              <ScalableIcon icon={IconCircleCheck} size={20} color="var(--mantine-color-green-6)" />
+              <ScalableIcon icon={IconCircleCheck} size={20} color="var(--chatbox-tint-success)" />
               <Text size="sm" c="green" fw={500}>
                 {t('Compression completed successfully!')}
               </Text>

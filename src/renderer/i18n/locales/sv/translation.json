@@ -323,7 +323,7 @@
   "Invalid provider configuration format": "Ogiltigt format på leverantörskonfiguration",
   "Invalid request parameters detected. Please try again later. Persistent failures may indicate an outdated software version. Consider upgrading to access the latest performance improvements and features.": "Ogiltiga förfrågningsparametrar upptäcktes. Vänligen försök igen senare. Upprepade fel kan tyda på en föråldrad programversion. Överväg att uppgradera för att få tillgång till de senaste prestandaförbättringarna och funktionerna.",
   "It only takes a few seconds and helps a lot.": "Det tar bara några sekunder och hjälper mycket.",
-  "Keep only the Top <0>{{N}}</0> Conversations in List and Permanently Delete the Rest": "Behåll endast de översta <0>{{N}}</0> konversationerna i listan och radera resten permanent",
+  "Keep only the Top <input /> Conversations in List and Permanently Delete the Rest": "Behåll endast de översta <input /> konversationerna i listan och radera resten permanent",
   "Key Combination": "Tangentkombination",
   "Keyboard Shortcuts": "Kortkommandon",
   "Knowledge Base": "Kunskapsbas",

@@ -156,6 +156,8 @@ export function RouteComponent() {
                 </Button>
               ) : (
                 <Button
+                  color="chatbox-success"
+                  variant="subtle"
                   onClick={async () => {
                     setIsDeactivating(true)
                     await premiumActions.deactivate()
@@ -338,7 +340,7 @@ export function RouteComponent() {
                       <Flex key={item} gap="xs" align="center">
                         <ScalableIcon
                           icon={IconCircleCheckFilled}
-                          className=" flex-shrink-0 flex-grow-0 text-[var(--mantine-color-chatbox-brand-text)]"
+                          className=" flex-shrink-0 flex-grow-0 text-chatbox-tint-brand"
                         />
                         <Text>{item}</Text>
                       </Flex>

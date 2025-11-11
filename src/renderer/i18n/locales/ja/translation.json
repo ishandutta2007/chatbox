@@ -323,7 +323,7 @@
   "Invalid provider configuration format": "無効な提供方構成形式",
   "Invalid request parameters detected. Please try again later. Persistent failures may indicate an outdated software version. Consider upgrading to access the latest performance improvements and features.": "無効なリクエストパラメータが検出されました。後で再試行してください。持続的な失敗は、古いソフトウェアバージョンを示す可能性があります。最新のパフォーマンスの向上と機能にアクセスするためにアップグレードを検討してください。",
   "It only takes a few seconds and helps a lot.": "これはたった数秒で、大きな助けになります。",
-  "Keep only the Top <0>{{N}}</0> Conversations in List and Permanently Delete the Rest": "リスト内の上位 <0>{{N}}</0> 件の会話のみを保持し、残りを完全に削除する",
+  "Keep only the Top <input /> Conversations in List and Permanently Delete the Rest": "リスト内の上位 <input /> 件の会話のみを保持し、残りを完全に削除する",
   "Key Combination": "キーの組み合わせ",
   "Keyboard Shortcuts": "キーボードショートカット",
   "Knowledge Base": "知識ベース",

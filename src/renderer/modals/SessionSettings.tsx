@@ -1,6 +1,18 @@
-import NiceModal, { muiDialogV5, useModal } from '@ebay/nice-modal-react'
-import { ActionIcon, FileButton, Flex, Stack, Switch, Text, Tooltip } from '@mantine/core'
-import { Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField, Typography } from '@mui/material'
+import NiceModal, { useModal } from '@ebay/nice-modal-react'
+import {
+  ActionIcon,
+  Box,
+  Button,
+  FileButton,
+  Flex,
+  Input,
+  Modal,
+  Stack,
+  Switch,
+  Text,
+  Textarea,
+  Tooltip,
+} from '@mantine/core'
 import { IconInfoCircle, IconTrash } from '@tabler/icons-react'
 import { pick } from 'lodash'
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -14,7 +26,6 @@ import {
   type Session,
   type SessionSettings,
 } from 'src/shared/types'
-import { Accordion, AccordionDetails, AccordionSummary } from '@/components/Accordion'
 import { AssistantAvatar } from '@/components/Avatar'
 import { handleImageInputAndSave } from '@/components/Image'
 import ImageCountSlider from '@/components/ImageCountSlider'
@@ -135,123 +146,132 @@ const SessionSettingsModal = NiceModal.create(
     }
 
     return (
-      <Dialog
-        {...muiDialogV5(modal)}
+      <Modal
+        opened={modal.visible}
         onClose={() => {
           modal.resolve()
           modal.hide()
         }}
-        fullWidth
+        // fullScreen={isSmallScreen}
+        centered
+        size="lg"
+        title={t('Conversation Settings')}
+        // fullWidth
       >
-        <DialogTitle>{t('Conversation Settings')}</DialogTitle>
-        <DialogContent>
-          <FileButton
-            accept="image/png,image/jpeg"
-            onChange={(file) => {
-              if (file) {
-                const key = StorageKeyGenerator.picture(`assistant-avatar:${session?.id}`)
-                handleImageInputAndSave(file, key, () => setEditingData({ ...editingData, assistantAvatarKey: key }))
-              }
-            }}
-          >
-            {(props) => (
-              <Flex justify="center">
-                <Flex className="relative">
-                  <AssistantAvatar
-                    size={isSmallScreen ? 64 : 80}
-                    avatarKey={editingData.assistantAvatarKey}
-                    picUrl={editingData.picUrl}
-                    sessionType={editingData.type}
-                    {...props}
-                  />
+        <Modal.Body>
+          <Stack>
+            <FileButton
+              accept="image/png,image/jpeg"
+              onChange={(file) => {
+                if (file) {
+                  const key = StorageKeyGenerator.picture(`assistant-avatar:${session?.id}`)
+                  handleImageInputAndSave(file, key, () => setEditingData({ ...editingData, assistantAvatarKey: key }))
+                }
+              }}
+            >
+              {(props) => (
+                <Flex justify="center">
+                  <Flex className="relative">
+                    <AssistantAvatar
+                      size={isSmallScreen ? 64 : 80}
+                      avatarKey={editingData.assistantAvatarKey}
+                      picUrl={editingData.picUrl}
+                      sessionType={editingData.type}
+                      {...props}
+                    />
 
-                  {editingData.assistantAvatarKey && (
-                    <ActionIcon
-                      color="chatbox-error"
-                      size={24}
-                      radius="xl"
-                      bottom={0}
-                      right={0}
-                      className="absolute"
-                      onClick={() => {
-                        setEditingData({ ...editingData, assistantAvatarKey: undefined })
-                      }}
-                    >
-                      <ScalableIcon icon={IconTrash} size={18} />
-                    </ActionIcon>
-                  )}
+                    {editingData.assistantAvatarKey && (
+                      <ActionIcon
+                        color="chatbox-error"
+                        size={24}
+                        radius="xl"
+                        bottom={0}
+                        right={0}
+                        className="absolute"
+                        onClick={() => {
+                          setEditingData({ ...editingData, assistantAvatarKey: undefined })
+                        }}
+                      >
+                        <ScalableIcon icon={IconTrash} size={18} />
+                      </ActionIcon>
+                    )}
+                  </Flex>
                 </Flex>
-              </Flex>
-            )}
-          </FileButton>
+              )}
+            </FileButton>
 
-          <TextField
-            autoFocus={!isSmallScreen}
-            margin="dense"
-            label={t('name')}
-            type="text"
-            fullWidth
-            variant="outlined"
-            value={editingData.name}
-            onChange={(e) => setEditingData({ ...editingData, name: e.target.value })}
-          />
-          <div className="mt-1">
-            <TextField
-              margin="dense"
+            <Input.Wrapper label={t('name')}>
+              <Input
+                placeholder={t('name')}
+                autoFocus={!isSmallScreen}
+                value={editingData.name}
+                onChange={(e) => setEditingData({ ...editingData, name: e.target.value })}
+                classNames={{
+                  input: '!text-chatbox-tint-primary',
+                }}
+              />
+            </Input.Wrapper>
+
+            <Textarea
               label={t('Instruction (System Prompt)')}
               placeholder={t('Copilot Prompt Demo') || ''}
-              fullWidth
-              variant="outlined"
-              multiline
+              autosize
               minRows={2}
-              maxRows={8}
+              maxRows={12}
               value={systemPrompt}
               onChange={(event) => setSystemPrompt(event.target.value)}
+              classNames={{
+                input: '!text-chatbox-tint-primary',
+              }}
             />
-          </div>
 
-          <Accordion defaultExpanded={true} className="mt-2">
-            <AccordionSummary aria-controls="panel1a-content">
-              <div className="flex flex-row w-full justify-between items-center">
-                <Typography>{t('Specific model settings')}</Typography>
-              </div>
-              {editingData.settings && (
-                <Button size="small" variant="text" onClick={onReset}>
+            <Stack className=" border border-solid border-chatbox-border-primary rounded-md">
+              <Flex
+                align="center"
+                justify="space-between"
+                px="md"
+                py="sm"
+                className="border-0 border-b border-solid border-chatbox-border-primary"
+              >
+                <Text fw={700}>{t('Specific model settings')}</Text>
+                <Button size="compact-sm" color="chatbox-secondary" variant="light" onClick={onReset}>
                   {t('Reset')}
                 </Button>
-              )}
-            </AccordionSummary>
-            <AccordionDetails>
-              {/* <Text>{JSON.stringify(editingData.settings)}</Text> */}
-              {isChatSession(session) && (
-                <ChatConfig
-                  settings={editingData.settings}
-                  onSettingsChange={(d) =>
-                    setEditingData((_data) => {
-                      if (_data) {
-                        return {
-                          ..._data,
-                          settings: {
-                            ..._data?.settings,
-                            ...d,
-                          },
+              </Flex>
+
+              <Box px="md" py="sm">
+                {isChatSession(session) && (
+                  <ChatConfig
+                    settings={editingData.settings}
+                    onSettingsChange={(d) =>
+                      setEditingData((_data) => {
+                        if (_data) {
+                          return {
+                            ..._data,
+                            settings: {
+                              ..._data?.settings,
+                              ...d,
+                            },
+                          }
+                        } else {
+                          return null
                         }
-                      } else {
-                        return null
-                      }
-                    })
-                  }
-                />
-              )}
-              {isPictureSession(session) && <PictureConfig dataEdit={editingData} setDataEdit={setEditingData} />}
-            </AccordionDetails>
-          </Accordion>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={onCancel}>{t('cancel')}</Button>
+                      })
+                    }
+                  />
+                )}
+                {isPictureSession(session) && <PictureConfig dataEdit={editingData} setDataEdit={setEditingData} />}
+              </Box>
+            </Stack>
+          </Stack>
+        </Modal.Body>
+        <Flex justify="flex-end" align="center" gap="md" px="md">
+          <Button onClick={onCancel} variant="subtle" color="chatbox-secondary">
+            {t('cancel')}
+          </Button>
           <Button onClick={onSave}>{t('save')}</Button>
-        </DialogActions>
-      </Dialog>
+        </Flex>
+      </Modal>
     )
   }
 )
@@ -367,7 +387,7 @@ function ThinkingBudgetConfig({
           zIndex={3000}
           events={{ hover: true, focus: true, touch: true }}
         >
-          <ScalableIcon icon={IconInfoCircle} size={20} className="text-[var(--mantine-color-chatbox-tertiary-text)]" />
+          <ScalableIcon icon={IconInfoCircle} size={20} className="text-chatbox-tint-tertiary" />
         </Tooltip>
       </Flex>
 
@@ -479,7 +499,7 @@ function OpenAIProviderConfig({
           zIndex={3000}
           events={{ hover: true, focus: true, touch: true }}
         >
-          <ScalableIcon icon={IconInfoCircle} size={20} className="text-[var(--mantine-color-chatbox-tertiary-text)]" />
+          <ScalableIcon icon={IconInfoCircle} size={20} className="text-chatbox-tint-tertiary" />
         </Tooltip>
       </Flex>
 
@@ -555,11 +575,7 @@ export function ChatConfig({
             zIndex={3000}
             events={{ hover: true, focus: true, touch: true }}
           >
-            <ScalableIcon
-              icon={IconInfoCircle}
-              size={20}
-              className="text-[var(--mantine-color-chatbox-tertiary-text)]"
-            />
+            <ScalableIcon icon={IconInfoCircle} size={20} className="text-chatbox-tint-tertiary" />
           </Tooltip>
         </Flex>
 
@@ -581,11 +597,7 @@ export function ChatConfig({
             zIndex={3000}
             events={{ hover: true, focus: true, touch: true }}
           >
-            <ScalableIcon
-              icon={IconInfoCircle}
-              size={20}
-              className="text-[var(--mantine-color-chatbox-tertiary-text)]"
-            />
+            <ScalableIcon icon={IconInfoCircle} size={20} className="text-chatbox-tint-tertiary" />
           </Tooltip>
         </Flex>
 
@@ -607,11 +619,7 @@ export function ChatConfig({
             zIndex={3000}
             events={{ hover: true, focus: true, touch: true }}
           >
-            <ScalableIcon
-              icon={IconInfoCircle}
-              size={20}
-              className="text-[var(--mantine-color-chatbox-tertiary-text)]"
-            />
+            <ScalableIcon icon={IconInfoCircle} size={20} className="text-chatbox-tint-tertiary" />
           </Tooltip>
         </Flex>
 

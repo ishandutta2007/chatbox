@@ -428,7 +428,7 @@ function ProviderSettings({ providerId }: { providerId: string }) {
               </Text>
               {providerSettings?.apiHost?.includes('aihubmix.com') && (
                 <Flex align="center" gap={4}>
-                  <ScalableIcon icon={IconDiscount2} size={14} color="var(--mantine-color-chatbox-tertiary-text)" />
+                  <ScalableIcon icon={IconDiscount2} size={14} color="var(--chatbox-tint-tertiary)" />
                   <Text span size="xs" c="chatbox-tertiary">
                     {t('AIHubMix integration in Chatbox offers 10% discount')}
                   </Text>

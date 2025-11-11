@@ -23,9 +23,9 @@ const readOnlyInputStyles = {
     fontWeight: 'normal',
   },
   input: {
-    backgroundColor: 'var(--mantine-color-chatbox-background-secondary-text)',
+    backgroundColor: 'var(--chatbox-background-secondary)',
     border: 'none',
-    color: 'var(--mantine-color-chatbox-primary-text)',
+    color: 'var(--chatbox-tint-primary)',
     cursor: 'default',
   },
 }
@@ -156,11 +156,11 @@ export function ImportProviderModal({ opened, onClose, importedConfig, existingP
             gap="xs"
             p="sm"
             style={{
-              backgroundColor: 'var(--mantine-color-chatbox-background-error-secondary-5)',
+              backgroundColor: 'var(--chatbox-background-error-secondary)',
               borderRadius: '8px',
             }}
           >
-            <ScalableIcon icon={IconAlertTriangle} color="var(--mantine-color-chatbox-error-5)" />
+            <ScalableIcon icon={IconAlertTriangle} color="var(--chatbox-tint-error)" />
             <Box flex={1}>
               <Text size="sm" fw={600} c="chatbox-error">
                 {t('Provider already exists')}

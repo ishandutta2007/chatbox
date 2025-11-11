@@ -65,8 +65,8 @@ export function getThemeDesign(realTheme: 'light' | 'dark', fontSize: number, la
         ? {}
         : {
             background: {
-              default: 'rgb(40, 40, 40)',
-              paper: 'rgb(40, 40, 40)',
+              default: 'var(--chatbox-background-primary)',
+              paper: 'var(--chatbox-background-primary)',
             },
           }),
     },

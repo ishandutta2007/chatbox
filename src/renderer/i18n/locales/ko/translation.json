@@ -323,7 +323,7 @@
   "Invalid provider configuration format": "잘못된 제공자 구성 형식",
   "Invalid request parameters detected. Please try again later. Persistent failures may indicate an outdated software version. Consider upgrading to access the latest performance improvements and features.": "잘못된 요청 매개변수가 감지되었습니다. 나중에 다시 시도하세요. 지속적인 실패는 오래된 소프트웨어 버전을 나타낼 수 있습니다. 최신 성능 향상 및 기능에 액세스하려면 업그레이드를 고려하세요.",
   "It only takes a few seconds and helps a lot.": "이 작업은 단 몇 초 만에 도움이 됩니다.",
-  "Keep only the Top <0>{{N}}</0> Conversations in List and Permanently Delete the Rest": "목록에서 상위 <0>{{N}}</0>개 대화만 유지하고 나머지는 영구적으로 삭제",
+  "Keep only the Top <input /> Conversations in List and Permanently Delete the Rest": "목록에서 상위 <input />개 대화만 유지하고 나머지는 영구적으로 삭제",
   "Key Combination": "단축키 조합",
   "Keyboard Shortcuts": "키보드 단축키",
   "Knowledge Base": "지식 기반",

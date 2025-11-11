@@ -307,7 +307,7 @@ const MessageList = forwardRef<MessageListRef, MessageListProps>((props, ref) =>
               {(transitionStyle) => (
                 <Flex
                   style={transitionStyle}
-                  className="absolute top-0 left-0 right-0 leading-tight bg-[var(--mantine-color-chatbox-background-secondary-filled)]"
+                  className="absolute top-0 left-0 right-0 leading-tight bg-chatbox-background-secondary"
                 >
                   {[
                     { text: t('Return to the top'), icon: IconArrowBarToUp, onClick: handleScrollToTop },
@@ -320,10 +320,7 @@ const MessageList = forwardRef<MessageListRef, MessageListProps>((props, ref) =>
                     <Button
                       key={item.text}
                       variant="transparent"
-                      className={cn(
-                        'w-1/2',
-                        idx === 0 ? 'border-r border-r-[var(--mantine-color-chatbox-border-primary-outline)]' : ''
-                      )}
+                      className={cn('w-1/2', idx === 0 ? 'border-r border-r-chatbox-border-primary' : '')}
                       classNames={{
                         section: '!mr-xxs',
                       }}
@@ -428,7 +425,7 @@ const ThreadLabel: FC<ThreadLabelProps> = memo(({ thread, sessionId }) => {
 
   const handleEditThreadName = useCallback(async () => {
     if (!thread.id) return
-    await NiceModal.show('thread-name-edit', { threadId: thread.id })
+    await NiceModal.show('thread-name-edit', { sessionId, threadId: thread.id })
   }, [thread.id])
 
   const handleContinueThread = useCallback(() => {

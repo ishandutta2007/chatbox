@@ -1,8 +1,8 @@
-import NiceModal, { muiDialogV5, useModal } from '@ebay/nice-modal-react'
-import { TextField, Button, Dialog, DialogContent, DialogActions, DialogTitle } from '@mui/material'
-import { useTranslation } from 'react-i18next'
-import { useState } from 'react'
+import NiceModal, { useModal } from '@ebay/nice-modal-react'
+import { Button, Flex, Modal, Textarea } from '@mantine/core'
 import _ from 'lodash'
+import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 const AttachLink = NiceModal.create(() => {
   const modal = useModal()
@@ -24,7 +24,7 @@ const AttachLink = NiceModal.create(() => {
   const onInput = (e: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
     setInput(e.target.value)
   }
-  const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+  const onKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     const ctrlOrCmd = event.ctrlKey || event.metaKey
     // ctrl + enter 提交
     if (event.keyCode === 13 && ctrlOrCmd) {
@@ -35,20 +35,19 @@ const AttachLink = NiceModal.create(() => {
   }
 
   return (
-    <Dialog
-      {...muiDialogV5(modal)}
+    <Modal
+      opened={modal.visible}
       onClose={() => {
         modal.resolve()
         modal.hide()
       }}
-      fullWidth
+      centered
+      title={t('Attach Link')}
     >
-      <DialogTitle>{t('Attach Link')}</DialogTitle>
-      <DialogContent>
-        <TextField
-          className="w-full"
+      <Modal.Body>
+        <Textarea
           autoFocus
-          multiline // multiline 需要和 maxRows 一起使用，否则长文本可能会导致退出编辑？
+          autosize
           minRows={5}
           maxRows={15}
           placeholder={`https://example.com\nhttps://example.com/page`}
@@ -56,12 +55,15 @@ const AttachLink = NiceModal.create(() => {
           onChange={onInput}
           onKeyDown={onKeyDown}
         />
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>{t('cancel')}</Button>
-        <Button onClick={onSubmit}>{t('submit')}</Button>
-      </DialogActions>
-    </Dialog>
+
+        <Flex gap="md" mt="md" justify="flex-end" align="center">
+          <Button onClick={onClose} color="chatbox-gray" variant="light">
+            {t('cancel')}
+          </Button>
+          <Button onClick={onSubmit}>{t('submit')}</Button>
+        </Flex>
+      </Modal.Body>
+    </Modal>
   )
 })
 

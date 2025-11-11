@@ -323,7 +323,7 @@
   "Invalid provider configuration format": "Formato di configurazione del provider non valido",
   "Invalid request parameters detected. Please try again later. Persistent failures may indicate an outdated software version. Consider upgrading to access the latest performance improvements and features.": "Rilevati parametri di richiesta non validi. Per favore, riprova più tardi. Errori persistenti potrebbero indicare una versione del software obsoleta. Considera di aggiornare per accedere agli ultimi miglioramenti delle prestazioni e alle nuove funzionalità.",
   "It only takes a few seconds and helps a lot.": "Ci vuole solo un minuto e aiuta molto.",
-  "Keep only the Top <0>{{N}}</0> Conversations in List and Permanently Delete the Rest": "Mantieni solo le prime <0>{{N}}</0> conversazioni nell'elenco ed elimina definitivamente le restanti",
+  "Keep only the Top <input /> Conversations in List and Permanently Delete the Rest": "Mantieni solo le prime <input /> conversazioni nell'elenco ed elimina definitivamente le restanti",
   "Key Combination": "Combinazione di tasti",
   "Keyboard Shortcuts": "Scorciatoie da tastiera",
   "Knowledge Base": "Base di conoscenza",

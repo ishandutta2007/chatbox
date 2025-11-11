@@ -323,7 +323,7 @@
   "Invalid provider configuration format": "无效的提供方配置格式",
   "Invalid request parameters detected. Please try again later. Persistent failures may indicate an outdated software version. Consider upgrading to access the latest performance improvements and features.": "检测到无效的请求参数。请稍后重试。如果多次失败可能表明当前软件版本过低，请升级以获得最新的功能与性能增强。",
   "It only takes a few seconds and helps a lot.": "只需几秒钟，并且非常有帮助。",
-  "Keep only the Top <0>{{N}}</0> Conversations in List and Permanently Delete the Rest": "只保留列表中最顶部的 <0>{{N}}</0> 个对话，并永久删除其余",
+  "Keep only the Top <input /> Conversations in List and Permanently Delete the Rest": "只保留列表中最顶部的 <input /> 个对话，并永久删除其余",
   "Key Combination": "按键",
   "Keyboard Shortcuts": "键盘快捷键",
   "Knowledge Base": "知识库",

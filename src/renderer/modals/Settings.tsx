@@ -62,15 +62,12 @@ export const SettingsModal: FC<SettingsModalProps> = (props) => {
       withCloseButton={false}
       classNames={{
         content: clsx('h-full'),
-        header: 'flex-none border-0 border-b border-[var(--mantine-color-chatbox-border-primary-outline)] border-solid',
+        header: 'flex-none border-0 border-b border-chatbox-border-primary border-solid',
         body: clsx('!p-0 flex-1  flex flex-col h-full'),
       }}
       transitionProps={{ transition: 'fade-up' }}
     >
-      <Flex
-        flex="0 0 auto"
-        className="title-bar border-0 border-b border-[var(--mantine-color-chatbox-border-primary-outline)] border-solid"
-      >
+      <Flex flex="0 0 auto" className="title-bar border-0 border-b border-chatbox-border-primary border-solid">
         <div className={clsx('flex-[1_1_0]', needRoomForMacWindowControls ? 'min-w-16' : '')} />
         <Flex p="sm" align="center" w={'100%'} maw={1200} gap="xs">
           <Title order={3} flex={1}>
