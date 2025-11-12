@@ -5,7 +5,6 @@ import {
   Flex,
   Loader,
   Modal,
-  Paper,
   PasswordInput,
   Select,
   Stack,
@@ -19,6 +18,7 @@ import {
   IconCircleCheck,
   IconDiscount2,
   IconExternalLink,
+  IconHelpCircle,
   IconPlus,
   IconRefresh,
   IconRestore,
@@ -42,7 +42,7 @@ import PopoverConfirm from '@/components/PopoverConfirm'
 import { ScalableIcon } from '@/components/ScalableIcon'
 import { getModelSettingUtil } from '@/packages/model-setting-utils'
 import platform from '@/platform'
-import { useProviderSettings, useSettingsStore } from '@/stores/settingsStore'
+import { useLanguage, useProviderSettings, useSettingsStore } from '@/stores/settingsStore'
 import { add as addToast } from '@/stores/toastActions'
 import { type ModelTestState, testModelCapabilities } from '@/utils/model-tester'
 
@@ -64,6 +64,8 @@ function ProviderSettings({ providerId }: { providerId: string }) {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const { setSettings, ...settings } = useSettingsStore((state) => state)
+
+  const language = useLanguage()
 
   const baseInfo = [...SystemProviders, ...(settings.customProviders || [])].find((p) => p.id === providerId)
 
@@ -242,6 +244,16 @@ function ProviderSettings({ providerId }: { providerId: string }) {
           </PopoverConfirm>
         )}
       </Flex>
+      {baseInfo.isCustom && language === 'zh-Hans' && (
+        <Flex>
+          <ScalableIcon icon={IconHelpCircle} />
+          <Text span size="xs" c="chatbox-tertiary">
+            <a href="https://docs.chatboxai.app/guides/providers" target="_blank" rel="noopener">
+              {t('Setup guide')}
+            </a>
+          </Text>
+        </Flex>
+      )}
 
       <Stack gap="xl">
         {/* custom provider base info */}
