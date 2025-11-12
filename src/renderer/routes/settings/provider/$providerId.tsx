@@ -55,6 +55,27 @@ type ModelTestResult = ModelTestState & {
   modelName: string
 }
 
+function normalizeAPIHost(
+  providerSettings: any,
+  providerType: ModelProviderType
+): {
+  apiHost: string
+  apiPath: string
+} {
+  switch (providerType) {
+    case ModelProviderType.Claude:
+      return normalizeClaudeHost(providerSettings?.apiHost || '')
+    case ModelProviderType.Gemini:
+      return normalizeGeminiHost(providerSettings?.apiHost || '')
+    case ModelProviderType.OpenAI:
+    default:
+      return normalizeOpenAIApiHostAndPath({
+        apiHost: providerSettings?.apiHost,
+        apiPath: providerSettings?.apiPath,
+      })
+  }
+}
+
 export function RouteComponent() {
   const { providerId } = Route.useParams()
   return <ProviderSettings key={providerId} providerId={providerId} />
@@ -416,25 +437,18 @@ function ProviderSettings({ providerId }: { providerId: string }) {
                     </Text>
                   </Flex>
                   <Flex gap="xs" align="center">
-                    <TextInput flex={1} value={providerSettings?.apiPath} onChange={handleApiPathChange} />
+                    <TextInput
+                      flex={1}
+                      value={providerSettings?.apiPath}
+                      onChange={handleApiPathChange}
+                      placeholder={normalizeAPIHost(providerSettings, baseInfo.type).apiPath}
+                    />
                   </Flex>
                 </Stack>
               </Flex>
               <Text span size="xs" flex="0 1 auto" c="chatbox-secondary">
-                {baseInfo.type === ModelProviderType.Claude
-                  ? normalizeClaudeHost(providerSettings?.apiHost || '').apiHost +
-                    normalizeClaudeHost(providerSettings?.apiHost || '').apiPath
-                  : baseInfo.type === ModelProviderType.Gemini
-                    ? normalizeGeminiHost(providerSettings?.apiHost || '').apiHost +
-                      normalizeGeminiHost(providerSettings?.apiHost || '').apiPath
-                    : normalizeOpenAIApiHostAndPath({
-                        apiHost: providerSettings?.apiHost,
-                        apiPath: providerSettings?.apiPath,
-                      }).apiHost +
-                      normalizeOpenAIApiHostAndPath({
-                        apiHost: providerSettings?.apiHost,
-                        apiPath: providerSettings?.apiPath,
-                      }).apiPath}
+                {normalizeAPIHost(providerSettings, baseInfo.type).apiHost +
+                  normalizeAPIHost(providerSettings, baseInfo.type).apiPath}
               </Text>
               {providerSettings?.apiHost?.includes('aihubmix.com') && (
                 <Flex align="center" gap={4}>
