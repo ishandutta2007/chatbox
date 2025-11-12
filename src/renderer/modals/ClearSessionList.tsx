@@ -1,7 +1,8 @@
 import NiceModal, { useModal } from '@ebay/nice-modal-react'
-import { Button, Flex, Input, Modal } from '@mantine/core'
+import { Button, Flex, Input } from '@mantine/core'
 import { type ChangeEvent, useEffect, useState } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
+import { Modal } from '@/components/Overlay'
 import { trackingEvent } from '@/packages/event'
 import { clearConversationList } from '@/stores/sessionActions'
 
@@ -41,23 +42,21 @@ const ClearSessionList = NiceModal.create(() => {
       centered
       title={t('Clear Conversation List')}
     >
-      <Modal.Body>
-        <Trans
-          i18nKey="Keep only the Top <input /> Conversations in List and Permanently Delete the Rest"
-          values={{ n: value }}
-          components={{
-            input: (
-              <Input
-                key={'0'}
-                value={value}
-                onChange={handleInput}
-                className=" inline-block w-14"
-                classNames={{ input: '!border-0 !border-b !rounded-none !bg-transparent' }}
-              />
-            ),
-          }}
-        />
-      </Modal.Body>
+      <Trans
+        i18nKey="Keep only the Top <input /> Conversations in List and Permanently Delete the Rest"
+        values={{ n: value }}
+        components={{
+          input: (
+            <Input
+              key={'0'}
+              value={value}
+              onChange={handleInput}
+              className=" inline-block w-14"
+              classNames={{ input: '!border-0 !border-b !rounded-none !bg-transparent' }}
+            />
+          ),
+        }}
+      />
 
       <Flex gap="md" mt="md" justify="flex-end" align="center">
         <Button onClick={handleClose} color="chatbox-gray" variant="light">

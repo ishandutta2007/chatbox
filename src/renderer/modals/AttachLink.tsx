@@ -1,8 +1,9 @@
 import NiceModal, { useModal } from '@ebay/nice-modal-react'
-import { Button, Flex, Modal, Textarea } from '@mantine/core'
+import { Button, Flex, Textarea } from '@mantine/core'
 import _ from 'lodash'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Modal } from '@/components/Overlay'
 
 const AttachLink = NiceModal.create(() => {
   const modal = useModal()
@@ -44,25 +45,23 @@ const AttachLink = NiceModal.create(() => {
       centered
       title={t('Attach Link')}
     >
-      <Modal.Body>
-        <Textarea
-          autoFocus
-          autosize
-          minRows={5}
-          maxRows={15}
-          placeholder={`https://example.com\nhttps://example.com/page`}
-          value={input}
-          onChange={onInput}
-          onKeyDown={onKeyDown}
-        />
+      <Textarea
+        autoFocus
+        autosize
+        minRows={5}
+        maxRows={15}
+        placeholder={`https://example.com\nhttps://example.com/page`}
+        value={input}
+        onChange={onInput}
+        onKeyDown={onKeyDown}
+      />
 
-        <Flex gap="md" mt="md" justify="flex-end" align="center">
-          <Button onClick={onClose} color="chatbox-gray" variant="light">
-            {t('cancel')}
-          </Button>
-          <Button onClick={onSubmit}>{t('submit')}</Button>
-        </Flex>
-      </Modal.Body>
+      <Flex gap="md" mt="md" justify="flex-end" align="center">
+        <Button onClick={onClose} color="chatbox-gray" variant="light">
+          {t('cancel')}
+        </Button>
+        <Button onClick={onSubmit}>{t('submit')}</Button>
+      </Flex>
     </Modal>
   )
 })

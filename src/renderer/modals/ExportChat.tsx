@@ -1,9 +1,10 @@
 import NiceModal, { useModal } from '@ebay/nice-modal-react'
-import { Button, Flex, Modal, Select, Stack } from '@mantine/core'
+import { Button, Flex, Select, Stack } from '@mantine/core'
 import { useAtomValue } from 'jotai'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { ExportChatFormat, ExportChatScope } from '@/../shared/types'
+import { Modal } from '@/components/Overlay'
 import { currentSessionIdAtom } from '@/stores/atoms'
 import { exportSessionChat } from '@/stores/sessionActions'
 

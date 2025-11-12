@@ -1,4 +1,4 @@
-import { Button, Flex, Modal, Stack, Text } from '@mantine/core'
+import { Button, Flex, Stack, Text } from '@mantine/core'
 import { IconCircleCheck } from '@tabler/icons-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -12,6 +12,7 @@ import * as promptFormat from '@/packages/prompts'
 import { useSessionSettings } from '@/stores/chatStore'
 import { compressAndCreateThread } from '@/stores/sessionActions'
 import { settingsStore } from '@/stores/settingsStore'
+import { Modal } from './Overlay'
 import { ScalableIcon } from './ScalableIcon'
 
 interface CompressionModalProps {

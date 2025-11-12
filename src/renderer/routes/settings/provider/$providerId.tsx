@@ -4,7 +4,6 @@ import {
   Button,
   Flex,
   Loader,
-  Modal,
   PasswordInput,
   Select,
   Stack,
@@ -38,6 +37,7 @@ import {
 } from 'src/shared/utils'
 import { createModelDependencies } from '@/adapters'
 import { ModelList } from '@/components/ModelList'
+import { Modal } from '@/components/Overlay'
 import PopoverConfirm from '@/components/PopoverConfirm'
 import { ScalableIcon } from '@/components/ScalableIcon'
 import { getModelSettingUtil } from '@/packages/model-setting-utils'

@@ -1,4 +1,4 @@
-import { Box, Button, Flex, Modal, Text, Title } from '@mantine/core'
+import { Box, Button, Flex, Text, Title } from '@mantine/core'
 import { IconX } from '@tabler/icons-react'
 import {
   createMemoryHistory,
@@ -12,6 +12,7 @@ import clsx from 'clsx'
 import { type FC, useCallback, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import SettingsKnowledgeBaseRouteComponent from '@/components/knowledge-base/KnowledgeBase'
+import { Modal } from '@/components/Overlay'
 import { ScalableIcon } from '@/components/ScalableIcon'
 import { getThemeDesign } from '@/hooks/useAppTheme'
 import useNeedRoomForWinControls from '@/hooks/useNeedRoomForWinControls'

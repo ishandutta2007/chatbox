@@ -1,5 +1,5 @@
 import NiceModal from '@ebay/nice-modal-react'
-import { ActionIcon, Badge, Drawer, Flex, Text } from '@mantine/core'
+import { ActionIcon, Badge, Flex, Text } from '@mantine/core'
 import { IconDots, IconEdit, IconSwitch, IconTrash } from '@tabler/icons-react'
 import { useAtom, useAtomValue } from 'jotai'
 import { useCallback, useMemo, useState } from 'react'
@@ -12,6 +12,7 @@ import { removeCurrentThread, removeThread, switchThread as switchThreadAction }
 import { getAllMessageList, getCurrentThreadHistoryHash } from '@/stores/sessionHelpers'
 import { useLanguage } from '@/stores/settingsStore'
 import ActionMenu from './ActionMenu'
+import { Drawer } from './Overlay'
 import { ScalableIcon } from './ScalableIcon'
 
 export default function ThreadHistoryDrawer({ session }: { session: Session }) {

@@ -1,4 +1,4 @@
-import { Alert, Button, Flex, Modal, Paper, PasswordInput, Progress, Stack, Text, Title } from '@mantine/core'
+import { Alert, Button, Flex, Paper, PasswordInput, Progress, Stack, Text, Title } from '@mantine/core'
 import {
   IconArrowRight,
   IconCircleCheckFilled,
@@ -14,6 +14,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 import { type ModelProvider, ModelProviderEnum } from 'src/shared/types'
 import { ModelList } from '@/components/ModelList'
+import { Modal } from '@/components/Overlay'
 import { ScalableIcon } from '@/components/ScalableIcon'
 import useChatboxAIModels from '@/hooks/useChatboxAIModels'
 import { trackingEvent } from '@/packages/event'

@@ -1,12 +1,11 @@
 import NiceModal, { useModal } from '@ebay/nice-modal-react'
-import { Button, Flex, Modal, ScrollArea, Text } from '@mantine/core'
-import ContentCopyIcon from '@mui/icons-material/ContentCopy'
+import { Button, Flex, Text } from '@mantine/core'
 import { IconCheck, IconCopy } from '@tabler/icons-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Modal } from '@/components/Overlay'
 import { ScalableIcon } from '@/components/ScalableIcon'
 import { copyToClipboard } from '@/packages/navigator'
-import * as toastActions from '@/stores/toastActions'
 
 interface OcrContentViewerProps {
   content: string
