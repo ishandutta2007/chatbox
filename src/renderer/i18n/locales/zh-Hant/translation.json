@@ -610,6 +610,8 @@
   "Thinking Effort only works for OpenAI o-series models": "思考程度僅適用於 OpenAI o-series 模型",
   "This action cannot be undone. All documents and their embeddings will be permanently deleted.": "此動作無法復原。所有文件及其嵌入將被永久刪除。",
   "This license key has reached the activation limit, <a>click here</a> to manage license and devices to deactivate old devices.": "此 license 授權密鑰已達到啟用限制，<a>點擊這裡</a>管理授權與設備以停用舊設備。",
+  "This model does not support tool use": "該模型不支援工具調用",
+  "This model does not support vision": "該模型不支援視覺能力",
   "This server enables LLMs to retrieve and process content from web pages, converting HTML to markdown for easier consumption.": "此伺服器讓大型語言模型能夠從網頁中擷取並處理內容，將 HTML 轉換為 Markdown 以便於閱讀。",
   "This will scan all stored conversations and rebuild the conversation list. This operation will clear the current list and may take a moment.": "這將掃描所有已儲存的對話並重建對話列表。此操作將清除目前的列表，並可能需要一些時間。",
   "This will summarize the current conversation and start a new thread with the compressed context. Continue?": "這將會總結目前的對話，並開啟一個新的對話串，包含壓縮後的上下文。繼續？",
