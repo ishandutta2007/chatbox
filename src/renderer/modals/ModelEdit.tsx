@@ -1,17 +1,5 @@
 import NiceModal, { useModal } from '@ebay/nice-modal-react'
-import {
-  Button,
-  Checkbox,
-  Flex,
-  Loader,
-  Modal,
-  NumberInput,
-  Select,
-  Stack,
-  Text,
-  TextInput,
-  Tooltip,
-} from '@mantine/core'
+import { Button, Checkbox, Flex, Loader, NumberInput, Select, Stack, Text, TextInput, Tooltip } from '@mantine/core'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { ProviderModelInfo } from 'src/shared/types'
