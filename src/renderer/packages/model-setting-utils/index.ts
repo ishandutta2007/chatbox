@@ -13,6 +13,7 @@ import ChatGLMSettingUtil from './chatglm-setting-util'
 import ClaudeSettingUtil from './claude-setting-util'
 import CustomClaudeSettingUtil from './custom-claude-util'
 import CustomGeminiSettingUtil from './custom-gemini-setting-util'
+import CustomOpenAIResponsesSettingUtil from './custom-openai-responses-util'
 import CustomModelSettingUtil from './custom-setting-util'
 import DeepSeekSettingUtil from './deepseek-setting-util'
 import GeminiSettingUtil from './gemini-setting-util'
@@ -58,6 +59,8 @@ export function getModelSettingUtil(
   // For custom providers, determine setting util based on type
   if (customProviderType) {
     switch (customProviderType) {
+      case ModelProviderType.OpenAIResponses:
+        return new CustomOpenAIResponsesSettingUtil()
       case ModelProviderType.OpenAI:
         return new CustomModelSettingUtil()
       case ModelProviderType.Claude:

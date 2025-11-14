@@ -38,6 +38,7 @@ const BuiltinProviderBaseInfoSchema = z.object({
   name: z.string(),
   type: z.nativeEnum(ModelProviderType).catch(ModelProviderType.OpenAI),
   isCustom: z.literal(false).optional().catch(undefined),
+  description: z.string().optional().catch(undefined),
   urls: z
     .object({
       website: z.string().nullish(),

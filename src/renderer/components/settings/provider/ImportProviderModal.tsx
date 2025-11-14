@@ -54,6 +54,10 @@ export function ImportProviderModal({ opened, onClose, importedConfig, existingP
   const apiPath = importedConfig?.apiPath || ''
   const apiKey = importedConfig?.apiKey || ''
   const urls = importedConfig && 'urls' in importedConfig ? importedConfig?.urls : existingProvider?.urls || {}
+  const providerType =
+    (importedConfig && 'type' in importedConfig ? importedConfig.type : undefined) ||
+    (existingProvider && 'type' in existingProvider ? existingProvider.type : undefined) ||
+    ModelProviderType.OpenAI
 
   // Filter out duplicate model IDs, fallback to existing provider models
   const allModels = importedConfig?.models || existingProvider?.models || []
@@ -87,7 +91,7 @@ export function ImportProviderModal({ opened, onClose, importedConfig, existingP
       const baseProviderInfo: CustomProviderBaseInfo = {
         id: providerId,
         name: providerName,
-        type: ModelProviderType.OpenAI,
+        type: providerType,
         iconUrl: importedConfig && 'iconUrl' in importedConfig ? importedConfig?.iconUrl : undefined,
         urls,
         isCustom: true,
@@ -127,6 +131,7 @@ export function ImportProviderModal({ opened, onClose, importedConfig, existingP
     t,
     onClose,
     importedConfig,
+    providerType,
   ])
 
   return (

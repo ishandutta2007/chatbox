@@ -15,6 +15,7 @@ import Claude from './claude'
 import CustomClaude from './custom-claude'
 import CustomGemini from './custom-gemini'
 import CustomOpenAI from './custom-openai'
+import CustomOpenAIResponses from './custom-openai-responses'
 import DeepSeek from './deepseek'
 import Gemini from './gemini'
 import Groq from './groq'
@@ -327,6 +328,21 @@ export function getModel(
                 topP: settings.topP,
                 maxOutputTokens: settings.maxTokens,
                 stream: settings.stream,
+              },
+              dependencies
+            )
+          case ModelProviderType.OpenAIResponses:
+            return new CustomOpenAIResponses(
+              {
+                apiKey: providerSetting.apiKey || '',
+                apiHost: formattedApiHost,
+                apiPath: providerSetting.apiPath || '',
+                model,
+                temperature: settings.temperature,
+                topP: settings.topP,
+                maxOutputTokens: settings.maxTokens,
+                stream: settings.stream,
+                useProxy: providerSetting.useProxy,
               },
               dependencies
             )

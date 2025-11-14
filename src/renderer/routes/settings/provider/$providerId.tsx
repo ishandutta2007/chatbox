@@ -34,6 +34,7 @@ import {
   normalizeClaudeHost,
   normalizeGeminiHost,
   normalizeOpenAIApiHostAndPath,
+  normalizeOpenAIResponsesHostAndPath,
 } from 'src/shared/utils'
 import { createModelDependencies } from '@/adapters'
 import { ModelList } from '@/components/ModelList'
@@ -67,6 +68,11 @@ function normalizeAPIHost(
       return normalizeClaudeHost(providerSettings?.apiHost || '')
     case ModelProviderType.Gemini:
       return normalizeGeminiHost(providerSettings?.apiHost || '')
+    case ModelProviderType.OpenAIResponses:
+      return normalizeOpenAIResponsesHostAndPath({
+        apiHost: providerSettings?.apiHost,
+        apiPath: providerSettings?.apiPath,
+      })
     case ModelProviderType.OpenAI:
     default:
       return normalizeOpenAIApiHostAndPath({
@@ -316,6 +322,10 @@ function ProviderSettings({ providerId }: { providerId: string }) {
                     label: t('OpenAI API Compatible'),
                   },
                   {
+                    value: ModelProviderType.OpenAIResponses,
+                    label: t('OpenAI Responses API Compatible'),
+                  },
+                  {
                     value: ModelProviderType.Claude,
                     label: t('Claude API Compatible'),
                   },
@@ -327,6 +337,15 @@ function ProviderSettings({ providerId }: { providerId: string }) {
               />
             </Stack>
           </>
+        )}
+
+        {/* Provider description */}
+        {baseInfo.description && (
+          <Stack gap="xxs">
+            <Text span size="xs" c="chatbox-tertiary">
+              {t(baseInfo.description)}
+            </Text>
+          </Stack>
         )}
 
         {/* API Key */}
@@ -363,6 +382,7 @@ function ProviderSettings({ providerId }: { providerId: string }) {
         {/* API Host */}
         {[
           ModelProviderEnum.OpenAI,
+          ModelProviderEnum.OpenAIResponses,
           ModelProviderEnum.Claude,
           ModelProviderEnum.Gemini,
           ModelProviderEnum.Ollama,
@@ -387,9 +407,13 @@ function ProviderSettings({ providerId }: { providerId: string }) {
               />
             </Flex>
             <Text span size="xs" flex="0 1 auto" c="chatbox-secondary">
-              {[ModelProviderEnum.OpenAI, ModelProviderEnum.Ollama, ModelProviderEnum.LMStudio, ''].includes(
-                baseInfo.id
-              )
+              {[
+                ModelProviderEnum.OpenAI,
+                ModelProviderEnum.OpenAIResponses,
+                ModelProviderEnum.Ollama,
+                ModelProviderEnum.LMStudio,
+                '',
+              ].includes(baseInfo.id)
                 ? normalizeOpenAIApiHostAndPath({
                     apiHost: providerSettings?.apiHost || baseInfo.defaultSettings?.apiHost,
                   }).apiHost +

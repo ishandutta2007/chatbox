@@ -62,6 +62,10 @@ export function AddProviderModal({ opened, onClose }: AddProviderModalProps) {
               label: t('OpenAI API Compatible'),
             },
             {
+              value: ModelProviderType.OpenAIResponses,
+              label: t('OpenAI Responses API Compatible'),
+            },
+            {
               value: ModelProviderType.Claude,
               label: t('Claude API Compatible'),
             },
