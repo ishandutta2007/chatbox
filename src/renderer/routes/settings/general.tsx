@@ -322,7 +322,7 @@ const ImportExportDataSection = () => {
     }
     const reader = new FileReader()
     reader.onload = (event) => {
-      ;(async () => {
+      void (async () => {
         setImportTips('')
         try {
           const result = event.target?.result
@@ -333,33 +333,42 @@ const ImportExportDataSection = () => {
           // 如果导入数据中包含了老的版本号，应该仅仅针对老的版本号进行迁移
           await migrateOnData(
             {
-              getData: async (key, defaultValue) => {
-                return importData[key] || defaultValue
-              },
-              setData: async (key, value) => {
+              getData: (key, defaultValue) => Promise.resolve(importData[key] ?? defaultValue),
+              setData: (key, value) => {
                 importData[key] = value
+                return Promise.resolve()
               },
-              setAll: async (data) => {
+              setAll: (data) => {
                 Object.assign(importData, data)
+                return Promise.resolve()
               },
             },
             false
           )
 
-          const previousData = await storage.getAll()
-          // FIXME: 这里缺少了数据校验
-          await storage.setAll({
-            ...previousData, // 有时候 importData 在导出时没有包含一些数据，这些数据应该保持原样
-            ...importData,
-            [StorageKey.ChatSessionsList]: uniqBy(
-              [
-                ...(previousData[StorageKey.ChatSessionsList] || []),
-                ...(importData[StorageKey.ChatSessionsList] || []),
-              ],
-              'id'
-            ),
-          })
-          // props.onCancel() // 导出成功后立即关闭设置窗口，防止用户点击保存、导致设置数据被覆盖
+          const entriesToImport = Object.entries(importData).filter(
+            ([key]) => key !== StorageKey.ChatSessionsList && key !== StorageKey.ConfigVersion && !key.startsWith('__')
+          )
+
+          const importedChatSessions = Array.isArray(importData[StorageKey.ChatSessionsList])
+            ? importData[StorageKey.ChatSessionsList]
+            : undefined
+
+          for (const [key, value] of entriesToImport) {
+            await storage.setItemNow(key, value)
+          }
+
+          if (importedChatSessions) {
+            const previousChatSessions = await storage.getItem(StorageKey.ChatSessionsList, [])
+
+            await storage.setItemNow(
+              StorageKey.ChatSessionsList,
+              uniqBy([...previousChatSessions, ...importedChatSessions], 'id')
+            )
+          }
+
+          // 由于即将重启应用，这里不需要清理loading状态
+          // props.onCancel() // 导入成功后立即关闭设置窗口，防止用户点击保存、导致设置数据被覆盖
           platform.relaunch() // 重启应用以生效
         } catch (err) {
           setImportTips(errTip)
