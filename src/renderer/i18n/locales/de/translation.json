@@ -244,6 +244,7 @@
   "Export Chat": "Chat exportieren",
   "Export Selected Data": "Ausgewählte Daten exportieren",
   "Exporting...": "Wird exportiert...",
+  "Exports are for viewing only. Use Settings → Backup if you need a backup you can restore.": "Exporte sind nur zur Ansicht. Verwenden Sie Einstellungen → Sicherung, wenn Sie eine wiederherstellbare Sicherung benötigen.",
   "extension": "Erweiterungen",
   "Failed": "Fehlgeschlagen",
   "Failed to activate license, please check your license key and network connection": "Aktivierung der Lizenz fehlgeschlagen, bitte überprüfen Sie Ihren Lizenzschlüssel und die Netzwerkverbindung",

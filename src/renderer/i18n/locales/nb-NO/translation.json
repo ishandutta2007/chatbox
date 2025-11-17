@@ -244,6 +244,7 @@
   "Export Chat": "Eksporter chat",
   "Export Selected Data": "Eksporter valgte data",
   "Exporting...": "Eksporterer...",
+  "Exports are for viewing only. Use Settings → Backup if you need a backup you can restore.": "Eksport er kun for visning. Bruk Innstillinger → Sikkerhetskopi hvis du trenger en sikkerhetskopi du kan gjenopprette.",
   "extension": "Utvidelser",
   "Failed": "Mislyktes",
   "Failed to activate license, please check your license key and network connection": "Aktivering av lisens mislyktes, vennligst sjekk lisensnøkkelen din og nettverksforbindelsen.",

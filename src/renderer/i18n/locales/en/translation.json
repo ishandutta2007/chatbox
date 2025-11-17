@@ -197,6 +197,7 @@
   "Export Chat": "Export Chat",
   "Export Selected Data": "Export Selected Data",
   "Exporting...": "Exporting...",
+  "Exports are for viewing only. Use Settings → Backup if you need a backup you can restore.": "Exports are for viewing only. Use Settings → Backup if you need a backup you can restore.",
   "Failed": "Failed",
   "Failed to activate license, please check your license key and network connection": "Failed to activate license, please check your license key and network connection",
   "Failed to create knowledge base, Error: {{error}}": "Failed to create knowledge base, Error: {{error}}",

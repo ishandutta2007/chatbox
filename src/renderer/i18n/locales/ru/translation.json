@@ -244,6 +244,7 @@
   "Export Chat": "Экспорт Переписки",
   "Export Selected Data": "Экспорт выбранных данных",
   "Exporting...": "Экспорт...",
+  "Exports are for viewing only. Use Settings → Backup if you need a backup you can restore.": "Экспорт предназначен только для просмотра. Используйте Настройки → Резервное копирование, если вам нужна резервная копия, которую можно восстановить.",
   "extension": "Расширения",
   "Failed": "Не удалось",
   "Failed to activate license, please check your license key and network connection": "Не удалось активировать лицензию, пожалуйста, проверьте свой ключ лицензии и сетевое соединение",

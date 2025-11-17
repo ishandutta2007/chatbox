@@ -244,6 +244,7 @@
   "Export Chat": "تصدير المحادثة",
   "Export Selected Data": "تصدير البيانات المحددة",
   "Exporting...": "جارٍ التصدير...",
+  "Exports are for viewing only. Use Settings → Backup if you need a backup you can restore.": "عمليات التصدير مخصصة للعرض فقط. استخدم الإعدادات ← النسخ الاحتياطي إذا كنت بحاجة إلى نسخة احتياطية يمكنك استعادتها.",
   "extension": "الإضافات",
   "Failed": "فشل",
   "Failed to activate license, please check your license key and network connection": "فشل في تفعيل الترخيص، يرجى التحقق من مفتاح الترخيص الخاص بك و الاتصال بالشبكة",

@@ -244,6 +244,7 @@
   "Export Chat": "Exportera chatt",
   "Export Selected Data": "Exportera vald data",
   "Exporting...": "Exporterar...",
+  "Exports are for viewing only. Use Settings → Backup if you need a backup you can restore.": "Exporter är endast för visning. Använd Inställningar → Säkerhetskopiering om du behöver en säkerhetskopia som du kan återställa.",
   "extension": "Tillägg",
   "Failed": "Misslyckades",
   "Failed to activate license, please check your license key and network connection": "Misslyckades med att aktivera licensen, vänligen kontrollera din licensnyckel och nätverksanslutning",

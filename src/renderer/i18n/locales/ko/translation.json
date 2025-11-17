@@ -244,6 +244,7 @@
   "Export Chat": "채팅 내보내기",
   "Export Selected Data": "선택한 데이터 내보내기",
   "Exporting...": "내보내는 중...",
+  "Exports are for viewing only. Use Settings → Backup if you need a backup you can restore.": "내보낸 파일은 보기 전용입니다. 복원 가능한 백업이 필요하면 설정 → 백업을 사용하세요.",
   "extension": "확장",
   "Failed": "실패했습니다",
   "Failed to activate license, please check your license key and network connection": "라이선스 활성화에 실패했습니다. 라이선스 키와 네트워크 연결을 확인하세요.",

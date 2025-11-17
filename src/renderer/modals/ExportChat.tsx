@@ -1,5 +1,5 @@
 import NiceModal, { useModal } from '@ebay/nice-modal-react'
-import { Button, Flex, Select, Stack } from '@mantine/core'
+import { Button, Flex, Select, Stack, Text } from '@mantine/core'
 import { useAtomValue } from 'jotai'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -39,6 +39,11 @@ const ExportChat = NiceModal.create(() => {
       title={t('Export Chat')}
     >
       <Stack gap="md" p="sm">
+        <div className="rounded-md border border-solid border-chatbox-border-warning bg-chatbox-background-warning-secondary px-sm py-xs">
+          <Text size="sm" c="chatbox-warning" className="leading-snug">
+            {t('Exports are for viewing only. Use Settings → Backup if you need a backup you can restore.')}
+          </Text>
+        </div>
         <Select
           label={t('Scope')}
           data={['all_threads', 'current_thread'].map((scope) => ({
