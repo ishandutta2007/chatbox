@@ -344,7 +344,6 @@ export async function refreshContextAndCreateNewThread(sessionId: string) {
     threads: session.threads ? [...session.threads, newThread] : [newThread],
     messages: systemPrompt ? [systemPrompt] : [createMessage('system', defaults.getDefaultPrompt())],
     threadName: '',
-    messageForksHash: undefined,
   })
 }
 
