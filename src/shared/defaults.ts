@@ -186,6 +186,12 @@ export const SystemProviders: ProviderBaseInfo[] = [
       // https://platform.openai.com/docs/models
       models: [
         {
+          modelId: 'gpt-5.1',
+          capabilities: ['vision', 'tool_use'],
+          contextWindow: 400_000,
+          maxOutput: 128_000,
+        },
+        {
           modelId: 'gpt-5-chat-latest',
           capabilities: ['vision', 'tool_use'],
           contextWindow: 400_000,
@@ -261,6 +267,12 @@ export const SystemProviders: ProviderBaseInfo[] = [
       // Responses API supported models - https://platform.openai.com/docs/api-reference/responses
       models: [
         {
+          modelId: 'gpt-5.1',
+          capabilities: ['vision', 'tool_use'],
+          contextWindow: 400_000,
+          maxOutput: 128_000,
+        },
+        {
           modelId: 'gpt-5',
           capabilities: ['vision', 'tool_use'],
           contextWindow: 400_000,
@@ -299,36 +311,22 @@ export const SystemProviders: ProviderBaseInfo[] = [
       // https://docs.anthropic.com/en/docs/about-claude/models/overview
       models: [
         {
-          modelId: 'claude-opus-4-0',
+          modelId: 'claude-opus-4-1',
           contextWindow: 200_000,
           maxOutput: 32_000,
           capabilities: ['vision', 'reasoning', 'tool_use'],
         },
         {
-          modelId: 'claude-sonnet-4-0',
+          modelId: 'claude-sonnet-4-5',
           contextWindow: 200_000,
           maxOutput: 64_000,
           capabilities: ['vision', 'reasoning', 'tool_use'],
         },
         {
-          modelId: 'claude-3-7-sonnet-latest',
+          modelId: 'claude-haiku-4-5',
           capabilities: ['vision', 'tool_use', 'reasoning'],
           contextWindow: 200_000,
-        },
-        {
-          modelId: 'claude-3-5-sonnet-latest',
-          capabilities: ['vision'],
-          contextWindow: 200_000,
-        },
-        {
-          modelId: 'claude-3-5-haiku-latest',
-          capabilities: ['vision'],
-          contextWindow: 200_000,
-        },
-        {
-          modelId: 'claude-3-opus-latest',
-          capabilities: ['vision'],
-          contextWindow: 200_000,
+          maxOutput: 64_000,
         },
       ],
     },
@@ -345,6 +343,12 @@ export const SystemProviders: ProviderBaseInfo[] = [
       // https://ai.google.dev/models/gemini
       models: [
         {
+          modelId: 'gemini-3-pro-preview',
+          capabilities: ['vision', 'reasoning', 'tool_use'],
+          contextWindow: 1_000_000,
+          maxOutput: 8_192,
+        },
+        {
           modelId: 'gemini-2.5-flash',
           capabilities: ['vision', 'reasoning', 'tool_use'],
           contextWindow: 1_000_000,
@@ -357,37 +361,13 @@ export const SystemProviders: ProviderBaseInfo[] = [
           maxOutput: 8_192,
         },
         {
-          modelId: 'gemini-2.5-flash-image-preview',
+          modelId: 'gemini-2.5-flash-image',
           capabilities: ['vision'],
           contextWindow: 32_768,
           maxOutput: 8_192,
         },
         {
-          modelId: 'gemini-2.0-flash-exp',
-          capabilities: ['vision'],
-          contextWindow: 1_000_000,
-          maxOutput: 8_192,
-        },
-        {
-          modelId: 'gemini-2.0-flash-thinking-exp',
-          capabilities: ['vision', 'reasoning'],
-          contextWindow: 32_000,
-          maxOutput: 8_000,
-        },
-        {
-          modelId: 'gemini-2.0-flash-thinking-exp-1219',
-          capabilities: ['vision', 'reasoning'],
-          contextWindow: 32_000,
-          maxOutput: 8_000,
-        },
-        {
-          modelId: 'gemini-1.5-pro-latest',
-          capabilities: ['vision'],
-          contextWindow: 2_000_000,
-          maxOutput: 8_192,
-        },
-        {
-          modelId: 'gemini-1.5-flash-latest',
+          modelId: 'gemini-2.0-flash',
           capabilities: ['vision'],
           contextWindow: 1_000_000,
           maxOutput: 8_192,
@@ -448,7 +428,7 @@ export const SystemProviders: ProviderBaseInfo[] = [
       apiHost: 'https://api.siliconflow.cn',
       models: [
         {
-          modelId: 'deepseek-ai/DeepSeek-V3.1',
+          modelId: 'deepseek-ai/DeepSeek-V3.2-Exp',
           capabilities: ['tool_use'],
           contextWindow: 160_000,
         },
@@ -545,39 +525,11 @@ export const SystemProviders: ProviderBaseInfo[] = [
       apiHost: 'https://openrouter.ai/api/v1',
       models: [
         {
-          modelId: 'deepseek/deepseek-chat-v3.1:free',
+          modelId: 'google/gemini-3-pro-preview',
           type: 'chat',
-          nickname: 'DeepSeek: DeepSeek V3.1 (free)',
-          capabilities: ['tool_use'],
-          contextWindow: 64000,
-        },
-        {
-          modelId: 'deepseek/deepseek-chat-v3-0324:free',
-          type: 'chat',
-          nickname: 'DeepSeek: DeepSeek V3 0324 (free)',
-          capabilities: ['tool_use'],
-          contextWindow: 163840,
-        },
-        {
-          modelId: 'deepseek/deepseek-r1-0528',
-          type: 'chat',
-          nickname: 'DeepSeek: R1 0528',
-          capabilities: ['tool_use'],
-          contextWindow: 163840,
-        },
-        {
-          modelId: 'deepseek/deepseek-r1:free',
-          type: 'chat',
-          nickname: 'DeepSeek: R1 (free)',
-          capabilities: ['tool_use'],
-          contextWindow: 163840,
-        },
-        {
-          modelId: 'tngtech/deepseek-r1t2-chimera:free',
-          type: 'chat',
-          nickname: 'TNG: DeepSeek R1T2 Chimera (free)',
-          capabilities: ['tool_use'],
-          contextWindow: 163840,
+          nickname: 'Google: Gemini 3 Pro',
+          capabilities: ['tool_use', 'vision'],
+          contextWindow: 1048576,
         },
         {
           modelId: 'google/gemini-2.5-pro',
@@ -613,6 +565,41 @@ export const SystemProviders: ProviderBaseInfo[] = [
           nickname: 'xAI: Grok 3 Mini',
           capabilities: ['tool_use'],
           contextWindow: 131072,
+        },
+        {
+          modelId: 'deepseek/deepseek-chat-v3.1:free',
+          type: 'chat',
+          nickname: 'DeepSeek: DeepSeek V3.1 (free)',
+          capabilities: ['tool_use'],
+          contextWindow: 64000,
+        },
+        {
+          modelId: 'deepseek/deepseek-chat-v3-0324:free',
+          type: 'chat',
+          nickname: 'DeepSeek: DeepSeek V3 0324 (free)',
+          capabilities: ['tool_use'],
+          contextWindow: 163840,
+        },
+        {
+          modelId: 'deepseek/deepseek-r1-0528',
+          type: 'chat',
+          nickname: 'DeepSeek: R1 0528',
+          capabilities: ['tool_use'],
+          contextWindow: 163840,
+        },
+        {
+          modelId: 'deepseek/deepseek-r1:free',
+          type: 'chat',
+          nickname: 'DeepSeek: R1 (free)',
+          capabilities: ['tool_use'],
+          contextWindow: 163840,
+        },
+        {
+          modelId: 'tngtech/deepseek-r1t2-chimera:free',
+          type: 'chat',
+          nickname: 'TNG: DeepSeek R1T2 Chimera (free)',
+          capabilities: ['tool_use'],
+          contextWindow: 163840,
         },
       ],
     },
