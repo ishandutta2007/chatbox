@@ -25,7 +25,8 @@ import {
   IconX,
 } from '@tabler/icons-react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { type ChangeEvent, useState } from 'react'
+import { uniq } from 'lodash'
+import { type ChangeEvent, useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { SystemProviders } from 'src/shared/defaults'
 import { ModelProviderEnum, ModelProviderType, type ProviderModelInfo } from 'src/shared/types'
@@ -200,35 +201,53 @@ function ProviderSettings({ providerId }: { providerId: string }) {
     await handleCheckModel(modelInfo)
   }
 
-  const handleCheckModel = async (model: ProviderModelInfo) => {
-    // Initialize result with model info
-    const result: ModelTestResult = {
-      modelId: model.modelId,
-      modelName: model.nickname || model.modelId,
-      testing: true,
-      basicTest: { status: 'pending' },
-      visionTest: { status: 'pending' },
-      toolTest: { status: 'pending' },
-    }
-    setModelTestResult(result)
+  const handleCheckModel = useCallback(
+    async (model: ProviderModelInfo) => {
+      // Initialize result with model info
+      const result: ModelTestResult = {
+        modelId: model.modelId,
+        modelName: model.nickname || model.modelId,
+        testing: true,
+        basicTest: { status: 'pending' },
+        visionTest: { status: 'pending' },
+        toolTest: { status: 'pending' },
+      }
+      setModelTestResult(result)
 
-    const configs = await platform.getConfig()
-    const dependencies = await createModelDependencies()
+      const configs = await platform.getConfig()
+      const dependencies = await createModelDependencies()
 
-    await testModelCapabilities({
-      providerId,
-      modelId: model.modelId,
-      settings,
-      configs,
-      dependencies,
-      onStateChange: (state) => {
-        setModelTestResult({
-          ...result,
-          ...state,
+      const finalState = await testModelCapabilities({
+        providerId,
+        modelId: model.modelId,
+        settings,
+        configs,
+        dependencies,
+        onStateChange: (state) => {
+          setModelTestResult({
+            ...result,
+            ...state,
+          })
+        },
+      })
+      const visionSupported = finalState.visionTest?.status === 'success'
+      const toolUseSupported = finalState.toolTest?.status === 'success'
+      if (visionSupported || toolUseSupported) {
+        const capabilitiesToAdd: ('vision' | 'tool_use')[] = []
+        if (visionSupported) capabilitiesToAdd.push('vision')
+        if (toolUseSupported) capabilitiesToAdd.push('tool_use')
+        console.log('Auto-enable capabilities based on test results')
+        setProviderSettings({
+          models: displayModels.map((m) =>
+            m.modelId === model.modelId
+              ? { ...m, capabilities: uniq([...(m.capabilities || []), ...capabilitiesToAdd]) }
+              : m
+          ),
         })
-      },
-    })
-  }
+      }
+    },
+    [displayModels, setProviderSettings, providerId]
+  )
 
   if (!baseInfo) {
     return <Text>{t('Provider not found')}</Text>

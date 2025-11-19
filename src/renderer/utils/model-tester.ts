@@ -33,7 +33,7 @@ const TEST_IMAGE_BASE64 =
  * Test a model's capabilities
  * @returns The final test state
  */
-export async function testModelCapabilities(options: TestModelOptions): Promise<void> {
+export async function testModelCapabilities(options: TestModelOptions): Promise<ModelTestState> {
   const { providerId, modelId, settings, configs, dependencies, onStateChange } = options
 
   let state: ModelTestState = {
@@ -63,11 +63,13 @@ export async function testModelCapabilities(options: TestModelOptions): Promise<
       state = await testToolUseRequest(modelInstance, state)
       onStateChange?.({ ...state })
     }
-
-    onStateChange?.({ ...state, testing: false })
+    state = { ...state, testing: false }
+    onStateChange?.({ ...state })
   } catch (e: unknown) {
-    onStateChange?.({ ...state, testing: false, basicTest: { status: 'error', error: String(e) } })
+    state = { ...state, testing: false, basicTest: { status: 'error', error: String(e) } }
+    onStateChange?.({ ...state })
   }
+  return state
 }
 
 async function testBasicRequest(modelInstance: ModelInterface, state: ModelTestState): Promise<ModelTestState> {
