@@ -503,7 +503,7 @@ export default abstract class AbstractAISDKModel implements ModelInterface {
     return this.finalizeResult(
       contentParts,
       {
-        usage: await result.usage,
+        usage: await result.totalUsage,
         finishReason: await result.finishReason,
       },
       options

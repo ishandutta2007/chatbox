@@ -187,7 +187,8 @@ const _Message: FC<Props> = (props) => {
       tips.push(`token count: ${msg.tokenCount}`)
     }
     if (showTokenUsed && msg.role === 'assistant' && !msg.generating) {
-      tips.push(`tokens used: ${msg.tokensUsed || 'unknown'}`)
+      tips.push(`tokens used: ${msg.usage?.totalTokens ? msg.usage.totalTokens : msg.tokensUsed || 'unknown'}`)
+      // `tokens used: ${msg.usage?.totalTokens ? `${msg.usage.totalTokens}${msg.usage.cachedInputTokens ? `(cached: ${msg.usage.cachedInputTokens})` : ''}` : msg.tokensUsed || 'unknown'}`
     }
     if (showFirstTokenLatency && msg.role === 'assistant' && !msg.generating) {
       const latency = msg.firstTokenLatency ? `${msg.firstTokenLatency}ms` : 'unknown'
