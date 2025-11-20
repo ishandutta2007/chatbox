@@ -346,3 +346,7 @@ html[data-need-room-for-windows-controls="true"] .pswp__top-bar {
 .scrollbar-custom::-webkit-scrollbar {
   width: 12px !important;
 }
+
+*::-webkit-scrollbar-corner {
+  background-color: transparent;
+}

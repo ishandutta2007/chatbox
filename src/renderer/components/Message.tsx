@@ -60,7 +60,6 @@ interface Props {
   collapseThreshold?: number // 文本长度阀值, 超过这个长度则会被折叠
   buttonGroup?: 'auto' | 'always' | 'none' // 按钮组显示策略, auto: 只在 hover 时显示; always: 总是显示; none: 不显示
   small?: boolean
-  preferCollapsedCodeBlock?: boolean
   assistantAvatarKey?: string
   sessionPicUrl?: string
 }
@@ -73,7 +72,6 @@ const _Message: FC<Props> = (props) => {
     collapseThreshold,
     buttonGroup = 'auto',
     small,
-    preferCollapsedCodeBlock,
     assistantAvatarKey,
     sessionPicUrl,
   } = props
@@ -372,13 +370,10 @@ const _Message: FC<Props> = (props) => {
                         <div key={`text-${msg.id}-${index}`}>
                           {enableMarkdownRendering && !isCollapsed ? (
                             <Markdown
+                              uniqueId={`${msg.id}-${index}`}
                               enableLaTeXRendering={enableLaTeXRendering}
                               enableMermaidRendering={enableMermaidRendering}
                               generating={msg.generating}
-                              preferCollapsedCodeBlock={
-                                autoCollapseCodeBlock &&
-                                (preferCollapsedCodeBlock || msg.role !== 'assistant' || previewArtifact)
-                              }
                             >
                               {item.text || ''}
                             </Markdown>
@@ -465,15 +460,6 @@ const _Message: FC<Props> = (props) => {
               )}
               <MessageErrTips msg={msg} />
               {needCollapse && !isCollapsed && CollapseButton}
-              {needArtifact && (
-                <MessageArtifact
-                  sessionId={sessionId}
-                  messageId={msg.id}
-                  messageContent={getMessageText(msg)}
-                  preview={previewArtifact}
-                  setPreview={setPreviewArtifact}
-                />
-              )}
 
               {msg.generating && msg.contentParts.length === 0 && <Loading />}
 
@@ -627,7 +613,7 @@ const PictureGallery = memo(({ pictures, onReport }: PictureGalleryProps) => {
       : []
   )
   return (
-    <Flex gap="sm">
+    <Flex gap="sm" wrap="wrap">
       <Gallery uiElements={uiElements}>
         {pictures.map((p) =>
           p.storageKey ? (
@@ -716,7 +702,7 @@ export const MessageActionIcon = forwardRef<
   )
 
   return tooltip ? (
-    <Tooltip1 label={tooltip} openDelay={1000}>
+    <Tooltip1 label={tooltip} openDelay={1000} withArrow>
       {actionIcon}
     </Tooltip1>
   ) : (

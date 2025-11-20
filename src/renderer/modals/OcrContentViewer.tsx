@@ -1,11 +1,10 @@
 import NiceModal, { useModal } from '@ebay/nice-modal-react'
 import { Button, Flex, Text } from '@mantine/core'
 import { IconCheck, IconCopy } from '@tabler/icons-react'
-import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Modal } from '@/components/Overlay'
 import { ScalableIcon } from '@/components/ScalableIcon'
-import { copyToClipboard } from '@/packages/navigator'
+import { useCopied } from '@/hooks/useCopied'
 
 interface OcrContentViewerProps {
   content: string
@@ -20,17 +19,7 @@ const OcrContentViewer = NiceModal.create(({ content }: OcrContentViewerProps) =
     modal.hide()
   }
 
-  const [copied, setCopied] = useState(false)
-  useEffect(() => {
-    if (copied) {
-      const timer = setTimeout(() => setCopied(false), 2000)
-      return () => clearTimeout(timer)
-    }
-  }, [copied])
-  const onCopy = () => {
-    copyToClipboard(content)
-    setCopied(true)
-  }
+  const { copied, copy: onCopy } = useCopied(content)
 
   return (
     <Modal opened={modal.visible} onClose={onClose} size="lg" centered title={t('OCR Text Content')}>
