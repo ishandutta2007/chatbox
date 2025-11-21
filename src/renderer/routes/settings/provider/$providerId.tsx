@@ -426,18 +426,24 @@ function ProviderSettings({ providerId }: { providerId: string }) {
               />
             </Flex>
             <Text span size="xs" flex="0 1 auto" c="chatbox-secondary">
-              {[
-                ModelProviderEnum.OpenAI,
-                ModelProviderEnum.OpenAIResponses,
-                ModelProviderEnum.Ollama,
-                ModelProviderEnum.LMStudio,
-                '',
-              ].includes(baseInfo.id)
+              {[ModelProviderEnum.OpenAI, ModelProviderEnum.Ollama, ModelProviderEnum.LMStudio, ''].includes(
+                baseInfo.id
+              )
                 ? normalizeOpenAIApiHostAndPath({
                     apiHost: providerSettings?.apiHost || baseInfo.defaultSettings?.apiHost,
                   }).apiHost +
                   normalizeOpenAIApiHostAndPath({
                     apiHost: providerSettings?.apiHost || baseInfo.defaultSettings?.apiHost,
+                  }).apiPath
+                : ''}
+              {baseInfo.id === ModelProviderEnum.OpenAIResponses
+                ? normalizeOpenAIResponsesHostAndPath({
+                    apiHost: providerSettings?.apiHost || baseInfo.defaultSettings?.apiHost,
+                    apiPath: providerSettings?.apiPath || baseInfo.defaultSettings?.apiPath,
+                  }).apiHost +
+                  normalizeOpenAIResponsesHostAndPath({
+                    apiHost: providerSettings?.apiHost || baseInfo.defaultSettings?.apiHost,
+                    apiPath: providerSettings?.apiPath || baseInfo.defaultSettings?.apiPath,
                   }).apiPath
                 : ''}
               {baseInfo.id === ModelProviderEnum.Claude

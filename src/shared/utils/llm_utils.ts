@@ -67,7 +67,18 @@ export function normalizeOpenAIApiHostAndPath(
 }
 
 export function normalizeOpenAIResponsesHostAndPath(options: { apiHost?: string; apiPath?: string }) {
-  return normalizeOpenAIApiHostAndPath(options, { apiPath: '/responses' })
+  const trimmedApiPath = options.apiPath?.trim()
+  const hasCustomApiPath = !!trimmedApiPath && trimmedApiPath !== '/responses'
+  const normalized = normalizeOpenAIApiHostAndPath(
+    hasCustomApiPath ? { ...options, apiPath: trimmedApiPath } : { ...options, apiPath: undefined },
+    { apiPath: '/responses' }
+  )
+
+  if (!hasCustomApiPath) {
+    normalized.apiPath = '/responses'
+  }
+
+  return normalized
 }
 
 export function normalizeClaudeHost(apiHost: string) {
