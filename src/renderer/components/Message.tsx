@@ -5,6 +5,7 @@ import Box from '@mui/material/Box'
 import {
   IconArrowDown,
   IconBug,
+  IconCode,
   IconCopy,
   IconDotsVertical,
   IconInfoCircle,
@@ -167,6 +168,10 @@ const _Message: FC<Props> = (props) => {
     setShouldThrowError(true)
   }, [])
 
+  const onViewMessageJson = useCallback(async () => {
+    await NiceModal.show('message-json-viewer', { msg })
+  }, [msg])
+
   if (shouldThrowError) {
     throw new Error('Manual error triggered from Message component for testing ErrorBoundary')
   }
@@ -274,6 +279,11 @@ const _Message: FC<Props> = (props) => {
               icon: IconBug,
               onClick: onTriggerError,
             },
+            {
+              text: t('View Message JSON'),
+              icon: IconCode,
+              onClick: onViewMessageJson,
+            },
           ]
         : []),
       {
@@ -283,7 +293,7 @@ const _Message: FC<Props> = (props) => {
         onClick: onDelMsg,
       },
     ],
-    [t, msg.role, onReport, quoteMsg, onDelMsg, onTriggerError]
+    [t, msg.role, onReport, quoteMsg, onDelMsg, onTriggerError, onViewMessageJson]
   )
   const [actionMenuOpened, setActionMenuOpened] = useState(false)
 

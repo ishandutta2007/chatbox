@@ -8,6 +8,7 @@ import ClearSessionList from './ClearSessionList'
 import ExportChat from './ExportChat'
 import MessageEdit from './MessageEdit'
 import AttachLink from './AttachLink'
+import JsonViewer from './JsonViewer'
 import ModelEdit from './ModelEdit'
 import OcrContentViewer from './OcrContentViewer'
 import ThreadNameEdit from './ThreadNameEdit'
@@ -21,6 +22,7 @@ NiceModal.register('artifact-preview', ArtifactPreview)
 NiceModal.register('clear-session-list', ClearSessionList)
 NiceModal.register('export-chat', ExportChat)
 NiceModal.register('message-edit', MessageEdit)
+NiceModal.register('json-viewer', JsonViewer)
 NiceModal.register('attach-link', AttachLink)
 NiceModal.register('report-content', ReportContent)
 NiceModal.register('model-edit', ModelEdit)
