@@ -364,6 +364,25 @@ export const LoggedInView = forwardRef<HTMLDivElement, LoggedInViewProps>(
                       label: `${license.key.substring(0, 10)}${'*'.repeat(10)}`,
                     }))}
                     placeholder={t('Select a license') as string}
+                    renderOption={({ option }) => {
+                      const license = licenses.find((l) => l.key === option.value)
+                      if (!license) return option.label
+
+                      const expiryDate = license.expires_at
+                        ? new Date(license.expires_at).toLocaleDateString()
+                        : t('No expiration')
+                      const isExpired = license.expires_at ? new Date(license.expires_at) < new Date() : false
+                      const expiryText = isExpired ? `${expiryDate} (${t('Expired')})` : expiryDate
+
+                      return (
+                        <Stack gap={2}>
+                          <Text size="sm">{option.label}</Text>
+                          <Text size="xs" c="dimmed">
+                            {license.product_name} - {t('Expires')}: {expiryText}
+                          </Text>
+                        </Stack>
+                      )
+                    }}
                   />
                   {activationError && (
                     <Text c="chatbox-error">

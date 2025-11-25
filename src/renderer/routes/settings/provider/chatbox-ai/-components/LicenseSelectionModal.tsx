@@ -51,8 +51,7 @@ export function LicenseSelectionModal({ opened, licenses, onConfirm, onCancel }:
             {licenses.map((license) => {
               const remaining = license.unified_token_limit - license.unified_token_usage
               const expiryDate = license.expires_at ? new Date(license.expires_at).toLocaleDateString() : null
-              // 将下划线替换为空格
-              const displayPaymentType = license.payment_type.replace(/_/g, ' ')
+              const isExpired = license.expires_at ? new Date(license.expires_at) < new Date() : false
 
               return (
                 <Radio
@@ -65,16 +64,20 @@ export function LicenseSelectionModal({ opened, licenses, onConfirm, onCancel }:
                         {license.key.substring(0, 8)}
                         {'*'.repeat(12)}
                       </Text>
-                      <Text size="xs" c="chatbox-tertiary">
-                        {t('Payment Type')}: {displayPaymentType}
-                      </Text>
-                      <Text size="xs" c="chatbox-tertiary">
-                        {t('Remaining/Total Quota')}: {formatTokens(remaining)}/
-                        {formatTokens(license.unified_token_limit)}
-                      </Text>
+                      {isExpired ? (
+                        <Text size="xs" c="chatbox-tertiary">
+                          {t('Total Quota')}: {formatTokens(license.unified_token_limit)}
+                        </Text>
+                      ) : (
+                        <Text size="xs" c="chatbox-tertiary">
+                          {t('Remaining/Total Quota')}: {formatTokens(remaining)}/
+                          {formatTokens(license.unified_token_limit)}
+                        </Text>
+                      )}
                       {expiryDate && (
                         <Text size="xs" c="chatbox-tertiary">
                           {t('Expires')}: {expiryDate}
+                          {isExpired && ` (${t('Expired')})`}
                         </Text>
                       )}
                     </Stack>
