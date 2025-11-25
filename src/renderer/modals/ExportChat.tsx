@@ -56,7 +56,7 @@ const ExportChat = NiceModal.create(() => {
 
         <Select
           label={t('Format')}
-          data={['HTML', 'TXT', 'Markdown']}
+          data={['Markdown', 'TXT', 'HTML']}
           value={format}
           onChange={(e) => e && setFormat(e as ExportChatFormat)}
         />

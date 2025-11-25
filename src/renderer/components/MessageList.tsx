@@ -289,7 +289,6 @@ const MessageList = forwardRef<MessageListRef, MessageListProps>((props, ref) =>
               )
             }}
             atTopStateChange={setAtTop}
-            atBottomThreshold={100}
             atBottomStateChange={setAtBottom}
             onScroll={handleScroll}
           />

@@ -7,6 +7,7 @@ import {
   Flex,
   Input,
   Modal,
+  Slider,
   Stack,
   Switch,
   Text,
@@ -28,7 +29,6 @@ import {
 } from 'src/shared/types'
 import { AssistantAvatar } from '@/components/Avatar'
 import { handleImageInputAndSave } from '@/components/Image'
-import ImageCountSlider from '@/components/ImageCountSlider'
 import ImageStyleSelect from '@/components/ImageStyleSelect'
 import LazyNumberInput from '@/components/LazyNumberInput'
 import MaxContextMessageCountSlider from '@/components/MaxContextMessageCountSlider'
@@ -156,6 +156,7 @@ const SessionSettingsModal = NiceModal.create(
         centered
         size="lg"
         title={t('Conversation Settings')}
+        onFocus={(e) => e.stopPropagation()}
         // fullWidth
       >
         <Modal.Body>
@@ -664,6 +665,7 @@ export function ChatConfig({
 }
 
 function PictureConfig(props: { dataEdit: Session; setDataEdit: (data: Session) => void }) {
+  const { t } = useTranslation()
   const { dataEdit, setDataEdit } = props
   const globalSettings = settingsStore.getState().getSettings()
   const sessionSettings = mergeSettings(globalSettings, dataEdit.settings || {}, dataEdit.type || 'chat')
@@ -677,17 +679,27 @@ function PictureConfig(props: { dataEdit: Session; setDataEdit: (data: Session) 
     })
   }
   return (
-    <Stack gap="md" className="mt-8">
+    <Stack gap="md" className="my-4">
       <ImageStyleSelect
         value={sessionSettings.dalleStyle || pictureSessionSettings().dalleStyle!}
         onChange={(v) => updateSettingsEdit({ dalleStyle: v })}
         className={sessionSettings.dalleStyle === undefined ? 'opacity-50' : ''}
       />
-      <ImageCountSlider
-        value={sessionSettings.imageGenerateNum || pictureSessionSettings().imageGenerateNum!}
-        onChange={(v) => updateSettingsEdit({ imageGenerateNum: v })}
-        className={sessionSettings.imageGenerateNum === undefined ? 'opacity-50' : ''}
-      />
+      <Stack>
+        <Text size="sm" fw="600">
+          {t('Number of Images per Reply')}
+        </Text>
+        <Slider
+          value={sessionSettings.imageGenerateNum || pictureSessionSettings().imageGenerateNum!}
+          onChange={(v) => updateSettingsEdit({ imageGenerateNum: v })}
+          min={1}
+          max={10}
+          step={1}
+          marks={Array.from({ length: 10 }).map((_, i) => ({
+            value: i + 1,
+          }))}
+        />
+      </Stack>
     </Stack>
   )
 }

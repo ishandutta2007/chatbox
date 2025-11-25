@@ -1,8 +1,9 @@
+import { MantineProvider } from '@mantine/core'
 import { escape as escapeHtml } from 'lodash'
 import ReactDOMServer from 'react-dom/server'
-import Markdown from '@/components/Markdown'
-import storage from '@/storage'
+import Markdown, { BlockCodeCollapsedStateProvider } from '@/components/Markdown'
 import * as base64 from '@/packages/base64'
+import storage from '@/storage'
 import type { Message, MessageToolCallPart, SessionThread } from '../../shared/types'
 import { getMessageText } from '../../shared/utils/message'
 
@@ -290,7 +291,13 @@ export async function formatChatAsHtml(sessionName: string, threads: SessionThre
           continue
         }
         if (p.type === 'text') {
-          content += ReactDOMServer.renderToStaticMarkup(<Markdown hiddenCodeCopyButton>{p.text}</Markdown>)
+          content += ReactDOMServer.renderToStaticMarkup(
+            <MantineProvider>
+              <BlockCodeCollapsedStateProvider defaultCollapsed={false}>
+                <Markdown hiddenCodeCopyButton>{p.text}</Markdown>
+              </BlockCodeCollapsedStateProvider>
+            </MantineProvider>
+          )
         } else if (p.type === 'image') {
           if (p.storageKey) {
             let url = ''
