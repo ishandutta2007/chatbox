@@ -28,7 +28,6 @@ import {
   IconBrandCSharp,
   IconBrandCss3,
   IconBrandDocker,
-  IconBrandFlutter,
   IconBrandGolang,
   IconBrandJavascript,
   IconBrandKotlin,
@@ -54,10 +53,13 @@ import {
   IconJson,
   IconPlayerPlayFilled,
   type IconProps,
+  IconWorldUpload,
 } from '@tabler/icons-react'
 import clsx from 'clsx'
 import { visit } from 'unist-util-visit'
 import { useCopied } from '@/hooks/useCopied'
+import { deployHtmlToEdgeOne } from '../packages/edgeone'
+import * as toastActions from '../stores/toastActions'
 import IconDart from './icons/Dart'
 import IconJava from './icons/Java'
 import { MessageMermaid, SVGPreview } from './Mermaid'
@@ -66,6 +68,7 @@ import { ScalableIcon } from './ScalableIcon'
 const CODE_BLOCK_COLLAPSE_LINE_THRESHOLD = 7
 
 function remarkAddCodeIndex() {
+  // biome-ignore lint/suspicious/noExplicitAny: remark AST nodes lack a friendly type here
   return (tree: any) => {
     let counter = 0
     visit(tree, 'code', (node) => {
@@ -112,6 +115,7 @@ function Markdown(props: {
       urlTransform={(url) => sanitizeUrl(url)}
       components={useMemo(
         () => ({
+          // biome-ignore lint/suspicious/noExplicitAny: react-markdown code component props are loosely typed
           code: (props: any) => {
             const codeIndex = typeof props['data-code-index'] === 'number' ? props['data-code-index'] : -1
             return (
@@ -338,6 +342,8 @@ const BlockCode = memo(({ children, uniqueId, hiddenCodeCopyButton, language, ge
   const colorScheme = useComputedColorScheme()
   const languageName = useMemo(() => language.toUpperCase(), [language])
   const isRenderableCode = useMemo(() => isRenderableCodeLanguage(language), [language])
+  const [deploying, setDeploying] = useState(false)
+  const canDeploy = useMemo(() => isRenderableCode && String(children).trim().length > 0, [children, isRenderableCode])
 
   const icon = useMemo(() => CodeIcons[languageName] || IconCode, [languageName])
 
@@ -359,6 +365,26 @@ const BlockCode = memo(({ children, uniqueId, hiddenCodeCopyButton, language, ge
       }).catch(() => null)
     },
     [children]
+  )
+
+  const onClickDeploy = useCallback(
+    async (event: React.MouseEvent) => {
+      event.stopPropagation()
+      event.preventDefault()
+      if (!canDeploy) {
+        return
+      }
+      setDeploying(true)
+      try {
+        const url = await deployHtmlToEdgeOne(String(children))
+        await NiceModal.show('edgeone-deploy-success', { url })
+      } catch (error) {
+        toastActions.add((error as Error)?.message || t('Publish failed'))
+      } finally {
+        setDeploying(false)
+      }
+    },
+    [canDeploy, children, t]
   )
 
   const needCollapse = useMemo(
@@ -410,6 +436,20 @@ const BlockCode = memo(({ children, uniqueId, hiddenCodeCopyButton, language, ge
             <Tooltip label={t('Preview')} withArrow openDelay={1000}>
               <ActionIcon variant="transparent" color="chatbox-tertiary" size={20} onClick={onClickArtifact}>
                 <IconPlayerPlayFilled />
+              </ActionIcon>
+            </Tooltip>
+          )}
+
+          {canDeploy && (
+            <Tooltip label={t('Publish Webpage')} withArrow openDelay={1000}>
+              <ActionIcon
+                variant="transparent"
+                color="chatbox-tertiary"
+                size={20}
+                onClick={onClickDeploy}
+                disabled={deploying}
+              >
+                {deploying ? <Loader size={12} /> : <IconWorldUpload />}
               </ActionIcon>
             </Tooltip>
           )}

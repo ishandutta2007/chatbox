@@ -5,6 +5,7 @@ import SessionSettings from './SessionSettings'
 import AppStoreRating from './AppStoreRating'
 import ArtifactPreview from './ArtifactPreview'
 import ClearSessionList from './ClearSessionList'
+import EdgeOneDeploySuccess from './EdgeOneDeploySuccess'
 import ExportChat from './ExportChat'
 import MessageEdit from './MessageEdit'
 import AttachLink from './AttachLink'
@@ -28,3 +29,4 @@ NiceModal.register('report-content', ReportContent)
 NiceModal.register('model-edit', ModelEdit)
 NiceModal.register('thread-name-edit', ThreadNameEdit)
 NiceModal.register('ocr-content-viewer', OcrContentViewer)
+NiceModal.register('edgeone-deploy-success', EdgeOneDeploySuccess)
