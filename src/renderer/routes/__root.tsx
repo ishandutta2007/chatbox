@@ -41,7 +41,7 @@ import { ThemeProvider } from '@mui/material/styles'
 import { createRootRoute, Outlet, useLocation } from '@tanstack/react-router'
 import { useSetAtom } from 'jotai'
 import { useEffect, useMemo, useRef } from 'react'
-import SettingsModal from '@/modals/Settings'
+import SettingsModal, { navigateToSettings } from '@/modals/Settings'
 import { getOS } from '@/packages/navigator'
 import * as remote from '@/packages/remote'
 import PictureDialog from '@/pages/PictureDialog'
@@ -130,7 +130,15 @@ function Root() {
     if (platform.onNavigate) {
       // 移动端和其他平台的导航监听器
       return platform.onNavigate((path) => {
-        router.navigate({ to: path })
+        // 如果是 settings 路径，使用 navigateToSettings 以保持与主页面设置按钮一致的行为
+        // 在桌面端会打开 Modal，在移动端会正常导航
+        if (path.startsWith('/settings')) {
+          // 提取 settings 之后的路径部分（包含查询参数）
+          const settingsPath = path.substring('/settings'.length)
+          navigateToSettings(settingsPath || '/')
+        } else {
+          router.navigate({ to: path })
+        }
       })
     }
   }, [])
