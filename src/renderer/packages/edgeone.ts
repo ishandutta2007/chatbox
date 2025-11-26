@@ -1,4 +1,6 @@
 import { ofetch } from 'ofetch'
+import platform from '@/platform'
+import { handleMobileRequest } from '@/utils/mobile-request'
 
 const EDGEONE_BASE_URL_ENDPOINT = 'https://mcp.edgeone.site/get_base_url'
 const BASE_URL_TTL = 60 * 1000
@@ -17,9 +19,31 @@ function generateInstallationId(length = 8): string {
   return fallback.map((byte) => byte.toString(16).padStart(2, '0')).join('')
 }
 
+async function httpGet(url: string): Promise<unknown> {
+  if (platform.type === 'mobile') {
+    const headers = new Headers({ 'Content-Type': 'application/json' })
+    const response = await handleMobileRequest(url, 'GET', headers)
+    return response.json()
+  }
+  return ofetch(url)
+}
+
+async function httpPost(
+  url: string,
+  body: Record<string, unknown>,
+  headers: Record<string, string> = {}
+): Promise<unknown> {
+  if (platform.type === 'mobile') {
+    const reqHeaders = new Headers({ 'Content-Type': 'application/json', ...headers })
+    const response = await handleMobileRequest(url, 'POST', reqHeaders, JSON.stringify(body))
+    return response.json()
+  }
+  return ofetch(url, { method: 'POST', headers, body })
+}
+
 async function fetchBaseUrl(): Promise<string> {
-  const response = await ofetch(EDGEONE_BASE_URL_ENDPOINT)
-  const { baseUrl } = typeof response === 'string' ? JSON.parse(response) : response
+  const response = await httpGet(EDGEONE_BASE_URL_ENDPOINT)
+  const { baseUrl } = typeof response === 'string' ? JSON.parse(response) : (response as { baseUrl?: string })
   if (!baseUrl) {
     throw new Error('EdgeOne base URL is unavailable.')
   }
@@ -43,15 +67,9 @@ export async function deployHtmlToEdgeOne(value: string): Promise<string> {
   }
 
   const baseUrl = await getEdgeOneBaseUrl()
-  const response = await ofetch(baseUrl, {
-    method: 'POST',
-    headers: {
-      'X-Installation-ID': generateInstallationId(),
-    },
-    body: { value },
-  })
+  const response = await httpPost(baseUrl, { value }, { 'X-Installation-ID': generateInstallationId() })
 
-  const data = typeof response === 'string' ? JSON.parse(response) : response
+  const data = typeof response === 'string' ? JSON.parse(response) : (response as { url?: string; error?: string })
 
   if (data.url) {
     return data.url
