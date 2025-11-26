@@ -659,42 +659,14 @@ export const SystemProviders: ProviderBaseInfo[] = [
       apiHost: 'https://api.x.ai',
       models: [
         {
-          modelId: 'grok-4-0709',
-          contextWindow: 256_000,
+          modelId: 'grok-4-1-fast-reasoning',
+          contextWindow: 2_000_000,
           capabilities: ['vision', 'tool_use', 'reasoning'],
         },
         {
-          modelId: 'grok-3',
-          contextWindow: 131_072,
-          capabilities: ['tool_use'],
-        },
-        {
-          modelId: 'grok-3-mini',
-          contextWindow: 131_072,
-          capabilities: ['tool_use', 'reasoning'],
-        },
-        {
-          modelId: 'grok-3-fast',
-          contextWindow: 131_072,
-          capabilities: ['tool_use'],
-        },
-        {
-          modelId: 'grok-2-vision-1212',
-          capabilities: ['vision'],
-          contextWindow: 8192,
-        },
-        {
-          modelId: 'grok-2-1212',
-          contextWindow: 128_000,
-        },
-        {
-          modelId: 'grok-vision-beta',
-          capabilities: ['vision'],
-          contextWindow: 8192,
-        },
-        {
-          modelId: 'grok-beta',
-          contextWindow: 128_000,
+          modelId: 'grok-4-1-fast-non-reasoning',
+          contextWindow: 2_000_000,
+          capabilities: ['vision', 'tool_use', 'reasoning'],
         },
       ],
     },
@@ -740,7 +712,7 @@ export const SystemProviders: ProviderBaseInfo[] = [
           capabilities: ['reasoning', 'tool_use'],
         },
         {
-          modelId: 'codestral-22b-latest',
+          modelId: 'codestral-latest',
           contextWindow: 32_000,
           capabilities: [],
         },
