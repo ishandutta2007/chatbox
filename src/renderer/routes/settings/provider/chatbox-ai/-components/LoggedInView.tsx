@@ -384,23 +384,6 @@ export const LoggedInView = forwardRef<HTMLDivElement, LoggedInViewProps>(
                       )
                     }}
                   />
-                  {activationError && (
-                    <Text c="chatbox-error">
-                      {activationError === 'not_found' ? (
-                        t('License not found, please check your license key')
-                      ) : activationError === 'expired' ? (
-                        t('License expired, please check your license key')
-                      ) : activationError === 'reached_activation_limit' ? (
-                        t('This license key has reached the activation limit')
-                      ) : (
-                        <>
-                          {t('Failed to activate license, please check your license key and network connection')}
-                          <br />
-                          Error: {activationError.slice(0, 100)}
-                        </>
-                      )}
-                    </Text>
-                  )}
                   {switchingLicense && (
                     <Text size="sm" c="dimmed">
                       {t('Switching license...')}
@@ -524,8 +507,38 @@ export const LoggedInView = forwardRef<HTMLDivElement, LoggedInViewProps>(
             </Stack>
           </Paper>
 
+          {/* Activation Error Alert - Outside Paper */}
+          {activationError && (
+            <Alert variant="light" color="red" p="sm">
+              <Flex gap="xs" align="center" c="chatbox-primary">
+                <ScalableIcon icon={IconExclamationCircle} className="flex-shrink-0" />
+                <Text>
+                  {activationError === 'not_found'
+                    ? t('License not found, please check your license key')
+                    : activationError === 'expired'
+                      ? t('Your license has expired.')
+                      : activationError === 'reached_activation_limit'
+                        ? t('This license key has reached the activation limit.')
+                        : t('Failed to activate license, please check your license key and network connection')}
+                </Text>
+
+                <a
+                  href={`https://chatboxai.app/redirect_app/manage_license/${language}/`}
+                  target="_blank"
+                  className="ml-auto flex flex-row items-center gap-xxs"
+                >
+                  <Text span fw={600} className="whitespace-nowrap">
+                    {t('Manage License')}
+                  </Text>
+                  <ScalableIcon icon={IconArrowRight} />
+                </a>
+              </Flex>
+            </Alert>
+          )}
+
           {/* Quota Warning Alert - Outside Paper */}
-          {!loadingLicenseDetail &&
+          {!activationError &&
+            !loadingLicenseDetail &&
             !licenseDetailError &&
             licenseDetail &&
             licenseDetail.remaining_quota_unified <= 0 &&

@@ -138,36 +138,35 @@ export const LicenseKeyView = forwardRef<HTMLDivElement, LicenseKeyViewProps>(({
             )}
           </Flex>
           {activated && <Text c="chatbox-success">{t('License Activated')}</Text>}
-          {activateError && (
-            <Text c="chatbox-error">
-              {activateError === 'not_found' ? (
-                t('License not found, please check your license key')
-              ) : activateError === 'expired' ? (
-                t('License expired, please check your license key')
-              ) : activateError === 'reached_activation_limit' ? (
-                <Trans
-                  i18nKey="This license key has reached the activation limit, <a>click here</a> to manage license and devices to deactivate old devices."
-                  components={{
-                    a: (
-                      <a
-                        href={`https://chatboxai.app/redirect_app/manage_license/${language}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="underline !text-inherit !font-semibold"
-                      />
-                    ),
-                  }}
-                />
-              ) : (
-                <>
-                  {t('Failed to activate license, please check your license key and network connection')}
-                  <br />
-                  Error: {activateError.slice(0, 100)}
-                </>
-              )}
-            </Text>
-          )}
         </Stack>
+
+        {activateError && (
+          <Alert variant="light" color="red" p="sm">
+            <Flex gap="xs" align="center" c="chatbox-primary">
+              <ScalableIcon icon={IconExclamationCircle} className="flex-shrink-0" />
+              <Text>
+                {activateError === 'not_found'
+                  ? t('License not found, please check your license key')
+                  : activateError === 'expired'
+                    ? t('License expired, please check your license key')
+                    : activateError === 'reached_activation_limit'
+                      ? t('This license key has reached the activation limit.')
+                      : t('Failed to activate license, please check your license key and network connection')}
+              </Text>
+
+              <a
+                href={`https://chatboxai.app/redirect_app/manage_license/${language}`}
+                target="_blank"
+                className="ml-auto flex flex-row items-center gap-xxs"
+              >
+                <Text span fw={600} className="whitespace-nowrap">
+                  {t('Manage License')}
+                </Text>
+                <ScalableIcon icon={IconArrowRight} />
+              </a>
+            </Flex>
+          </Alert>
+        )}
 
         {activated && licenseDetail ? (
           <>

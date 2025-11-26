@@ -376,6 +376,7 @@
   "Login timeout. Please try again.": "Tidsgräns för inloggning har överskridits. Försök igen.",
   "Low": "Låg",
   "Make sure you have the following command installed:": "Se till att du har följande kommando installerat:",
+  "Manage License": "Hantera licens",
   "Manage License and Devices": "Hantera licens och enheter",
   "Manually": "Manuellt",
   "Markdown Rendering": "Markdown-rendering",
@@ -662,6 +663,7 @@
   "This action cannot be undone. All documents and their embeddings will be permanently deleted.": "Denna åtgärd kan inte ångras. Alla dokument och deras inbäddningar kommer att raderas permanent.",
   "This license key has reached the activation limit": "Denna licensnyckel har nått aktiveringsgränsen",
   "This license key has reached the activation limit, <a>click here</a> to manage license and devices to deactivate old devices.": "Denna licensnyckel har nått aktiveringsgränsen, <a>klicka här</a> för att hantera licens och enheter för att inaktivera gamla enheter.",
+  "This license key has reached the activation limit.": "Denna licensnyckel har nått aktiveringsgränsen.",
   "This model does not support tool use": "Denna modell stöder inte verktygsanvändning",
   "This model does not support vision": "Denna modell stöder inte bildförståelse",
   "This server enables LLMs to retrieve and process content from web pages, converting HTML to markdown for easier consumption.": "Denna server möjliggör för LLM:er att hämta och bearbeta innehåll från webbsidor, och konverterar HTML till markdown för enklare konsumtion.",
@@ -742,6 +744,7 @@
   "Your ChatboxAI subscription already includes access to models from various providers. There's no need to switch providers - you can select different models directly within ChatboxAI. Switching from ChatboxAI to other providers will require their respective API keys. <button>Back to ChatboxAI</button>": "Din ChatboxAI-prenumeration inkluderar redan tillgång till modeller från olika leverantörer. Det finns ingen anledning att byta leverantör - du kan direkt välja olika modeller inom ChatboxAI. Att byta från ChatboxAI till andra leverantörer kräver deras respektive API-nycklar. <button>Tillbaka till ChatboxAI</button>",
   "Your current License (Chatbox AI Lite) does not support the {{model}} model. To use this model, please <OpenMorePlanButton>upgrade</OpenMorePlanButton> to Chatbox AI Pro or a higher-tier package. Alternatively, you can switch to a different model by <OpenSettingButton>accessing the settings</OpenSettingButton>.": "Din nuvarande licens (Chatbox AI Lite) stöder inte {{model}}-modellen. För att använda denna modell, vänligen <OpenMorePlanButton>uppgradera</OpenMorePlanButton> till Chatbox AI Pro eller ett paket i högre nivå. Alternativt kan du byta till en annan modell genom att <OpenSettingButton>gå till inställningarna</OpenSettingButton>.",
   "Your HTML content has been published. You can access it via the link below.": "Ditt HTML-innehåll har publicerats. Du kan komma åt det via länken nedan.",
+  "Your license has expired.": "Din licens har gått ut.",
   "Your license has expired. Please check your subscription or purchase a new one.": "Din licens har gått ut. Vänligen kontrollera din prenumeration eller köp en ny.",
   "Your rating on the App Store would help make Chatbox even better!": "Din betyg på App Store hjälper till att göra Chatbox ännu bättre!"
 }

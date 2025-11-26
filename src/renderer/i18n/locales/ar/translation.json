@@ -376,6 +376,7 @@
   "Login timeout. Please try again.": "انتهت مهلة تسجيل الدخول. الرجاء المحاولة مرة أخرى.",
   "Low": "منخفض",
   "Make sure you have the following command installed:": "تأكد من تثبيت الأمر التالي:",
+  "Manage License": "إدارة الترخيص",
   "Manage License and Devices": "إدارة الترخيص والأجهزة",
   "Manually": "يدويًا",
   "Markdown Rendering": "عرض Markdown",
@@ -662,6 +663,7 @@
   "This action cannot be undone. All documents and their embeddings will be permanently deleted.": "هذا الإجراء لا يمكن التراجع عنه. سيتم حذف جميع المستندات وتضميناتها نهائيًا.",
   "This license key has reached the activation limit": "لقد وصل مفتاح الترخيص هذا إلى حد التفعيل",
   "This license key has reached the activation limit, <a>click here</a> to manage license and devices to deactivate old devices.": "لقد وصل مفتاح الترخيص هذا إلى حد التفعيل، <a>انقر هنا</a> لإدارة الترخيص والأجهزة لتعطيل الأجهزة القديمة.",
+  "This license key has reached the activation limit.": "وصل مفتاح الترخيص هذا إلى حد التنشيط.",
   "This model does not support tool use": "هذا النموذج لا يدعم استخدام الأدوات",
   "This model does not support vision": "هذا النموذج لا يدعم الرؤية",
   "This server enables LLMs to retrieve and process content from web pages, converting HTML to markdown for easier consumption.": "يتيح هذا الخادم لـ LLMs استرداد ومعالجة المحتوى من صفحات الويب، مع تحويل HTML إلى ماركداون لتسهيل استهلاكه.",
@@ -741,6 +743,7 @@
   "Your ChatboxAI subscription already includes access to models from various providers. There's no need to switch providers - you can select different models directly within ChatboxAI. Switching from ChatboxAI to other providers will require their respective API keys. <button>Back to ChatboxAI</button>": "تشمل عقد ChatboxAI الذكاء الاصطناعي على نماذج من مختلف المزودين. لا يلزمك تغيير المزود - يمكنك اختيار نماذج مختلفة بشكل مباشر داخل ChatboxAI. التبديل من ChatboxAI إلى مزود آخر سيتطلب مفتاح API الخاص به. <button>Back to ChatboxAI</button>",
   "Your current License (Chatbox AI Lite) does not support the {{model}} model. To use this model, please <OpenMorePlanButton>upgrade</OpenMorePlanButton> to Chatbox AI Pro or a higher-tier package. Alternatively, you can switch to a different model by <OpenSettingButton>accessing the settings</OpenSettingButton>.": "الترخيص الحالي الخاص بك (Chatbox AI Lite) لا يدعم نموذج {{model}}. لاستخدام هذا النموذج، يرجى <OpenMorePlanButton>الترقية</OpenMorePlanButton> إلى Chatbox AI Pro أو حزمة أعلى. بدلاً من ذلك، يمكنك التبديل إلى نموذج مختلف عن طريق <OpenSettingButton>الوصول إلى الإعدادات</OpenSettingButton>.",
   "Your HTML content has been published. You can access it via the link below.": "تم نشر محتوى HTML الخاص بك. يمكنك الوصول إليه عبر الرابط أدناه.",
+  "Your license has expired.": "لقد انتهت صلاحية ترخيصك.",
   "Your license has expired. Please check your subscription or purchase a new one.": "انتهت صلاحية ترخيصك. يرجى التحقق من اشتراكك أو شراء ترخيص جديد.",
   "Your rating on the App Store would help make Chatbox even better!": "تقييمك في App Store سيساعد على جعل Chatbox أفضل!"
 }

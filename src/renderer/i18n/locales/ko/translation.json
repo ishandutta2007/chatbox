@@ -376,6 +376,7 @@
   "Login timeout. Please try again.": "로그인 시간 초과. 다시 시도해주세요.",
   "Low": "낮음",
   "Make sure you have the following command installed:": "다음 명령이 설치되어 있는지 확인하세요:",
+  "Manage License": "라이선스 관리",
   "Manage License and Devices": "라이선스 및 기기 관리",
   "Manually": "수동으로",
   "Markdown Rendering": "마크다운 렌더링",
@@ -663,6 +664,7 @@
   "This action cannot be undone. All documents and their embeddings will be permanently deleted.": "이 작업은 되돌릴 수 없습니다. 모든 문서와 해당 임베딩이 영구적으로 삭제됩니다.",
   "This license key has reached the activation limit": "이 라이선스 키는 활성화 제한에 도달했습니다.",
   "This license key has reached the activation limit, <a>click here</a> to manage license and devices to deactivate old devices.": "이 라이선스 키는 활성화 제한에 도달했습니다. 이전 기기를 비활성화하려면 <a>여기를 클릭</a>하여 라이선스 및 기기를 관리하세요.",
+  "This license key has reached the activation limit.": "이 라이선스 키는 활성화 제한에 도달했습니다.",
   "This model does not support tool use": "이 모델은 도구 사용을 지원하지 않습니다",
   "This model does not support vision": "이 모델은 시각을 지원하지 않습니다",
   "This server enables LLMs to retrieve and process content from web pages, converting HTML to markdown for easier consumption.": "이 서버는 LLM이 웹 페이지에서 콘텐츠를 검색하고 처리할 수 있도록 지원하며, HTML을 마크다운으로 변환하여 더 쉽게 활용할 수 있도록 합니다.",
@@ -742,6 +744,7 @@
   "Your ChatboxAI subscription already includes access to models from various providers. There's no need to switch providers - you can select different models directly within ChatboxAI. Switching from ChatboxAI to other providers will require their respective API keys. <button>Back to ChatboxAI</button>": "ChatboxAI 구독에는 이미 다양한 제공업체의 모델에 대한 접근 권한이 포함되어 있습니다. 제공업체를 전환할 필요가 없으며 ChatboxAI 내에서 직접 다른 모델을 선택할 수 있습니다. ChatboxAI에서 다른 제공업체로 전환하려면 해당 API 키가 필요합니다. <button>ChatboxAI로 돌아가기</button>",
   "Your current License (Chatbox AI Lite) does not support the {{model}} model. To use this model, please <OpenMorePlanButton>upgrade</OpenMorePlanButton> to Chatbox AI Pro or a higher-tier package. Alternatively, you can switch to a different model by <OpenSettingButton>accessing the settings</OpenSettingButton>.": "현재 라이선스(Chatbox AI Lite)는 {{model}} 모델을 지원하지 않습니다. 이 모델을 사용하려면 <OpenMorePlanButton>업그레이드</OpenMorePlanButton>하여 Chatbox AI Pro 또는 더 높은 티어 패키지로 전환하세요. 또는 <OpenSettingButton>설정에 접근</OpenSettingButton>하여 다른 모델로 전환할 수 있습니다.",
   "Your HTML content has been published. You can access it via the link below.": "HTML 콘텐츠가 게시되었습니다. 아래 링크를 통해 접속할 수 있습니다.",
+  "Your license has expired.": "라이선스가 만료되었습니다.",
   "Your license has expired. Please check your subscription or purchase a new one.": "라이선스가 만료되었습니다. 구독을 확인하거나 새로운 라이선스를 구매하세요.",
   "Your rating on the App Store would help make Chatbox even better!": "App Store에서 평점을 주시면 Chatbox을 더 나은 것으로 만들 수 있습니다!"
 }

@@ -376,6 +376,7 @@
   "Login timeout. Please try again.": "Время входа истекло. Повторите попытку.",
   "Low": "Низкий",
   "Make sure you have the following command installed:": "Убедитесь, что у вас установлена следующая команда:",
+  "Manage License": "Управление лицензией",
   "Manage License and Devices": "Управление лицензией и устройствами",
   "Manually": "Вручную",
   "Markdown Rendering": "Отображение Markdown",
@@ -663,6 +664,7 @@
   "This action cannot be undone. All documents and their embeddings will be permanently deleted.": "Это действие нельзя отменить. Все документы и их эмбеддинги будут безвозвратно удалены.",
   "This license key has reached the activation limit": "Этот ключ лицензии достиг лимита активации",
   "This license key has reached the activation limit, <a>click here</a> to manage license and devices to deactivate old devices.": "Этот ключ лицензии достиг лимита активации, <a>нажмите здесь</a>, чтобы управлять лицензией и устройствами для деактивации старых устройств.",
+  "This license key has reached the activation limit.": "Этот лицензионный ключ исчерпал лимит активаций.",
   "This model does not support tool use": "Эта модель не поддерживает использование инструментов",
   "This model does not support vision": "Эта модель не поддерживает визуальные возможности",
   "This server enables LLMs to retrieve and process content from web pages, converting HTML to markdown for easier consumption.": "Этот сервер позволяет LLM получать и обрабатывать контент с веб-страниц, преобразуя HTML в markdown для более легкого потребления.",
@@ -742,6 +744,7 @@
   "Your ChatboxAI subscription already includes access to models from various providers. There's no need to switch providers - you can select different models directly within ChatboxAI. Switching from ChatboxAI to other providers will require their respective API keys. <button>Back to ChatboxAI</button>": "Ваша подписка ChatboxAI уже включает доступ к моделям от различных поставщиков. Нет необходимости переключаться на другие поставщики - вы можете выбрать разные модели непосредственно в ChatboxAI. Переключение с ChatboxAI на другие поставщики потребует их соответствующих API-ключей. <button>Вернуться в ChatboxAI</button>",
   "Your current License (Chatbox AI Lite) does not support the {{model}} model. To use this model, please <OpenMorePlanButton>upgrade</OpenMorePlanButton> to Chatbox AI Pro or a higher-tier package. Alternatively, you can switch to a different model by <OpenSettingButton>accessing the settings</OpenSettingButton>.": "Ваша текущая лицензия (Chatbox AI Lite) не поддерживает модель {{model}}. Чтобы использовать эту модель, пожалуйста, <OpenMorePlanButton>обновитесь</OpenMorePlanButton> до Chatbox AI Pro или пакета более высокого уровня. В качестве альтернативы, вы можете переключиться на другую модель, <OpenSettingButton>перейдя в настройки</OpenSettingButton>.",
   "Your HTML content has been published. You can access it via the link below.": "Ваш HTML-контент опубликован. Вы можете получить к нему доступ по ссылке ниже.",
+  "Your license has expired.": "Ваша лицензия истекла.",
   "Your license has expired. Please check your subscription or purchase a new one.": "Ваша лицензия истекла. Пожалуйста, проверьте вашу подписку или приобретите новую.",
   "Your rating on the App Store would help make Chatbox even better!": "Ваш рейтинг в App Store поможет сделать Chatbox еще лучше!"
 }

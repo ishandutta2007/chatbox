@@ -376,6 +376,7 @@
   "Login timeout. Please try again.": "登录超时。请重试。",
   "Low": "低",
   "Make sure you have the following command installed:": "请确保您已安装以下命令：",
+  "Manage License": "管理 License",
   "Manage License and Devices": "管理License与设备",
   "Manually": "手动",
   "Markdown Rendering": "Markdown 渲染",
@@ -671,6 +672,7 @@
   "This action cannot be undone. All documents and their embeddings will be permanently deleted.": "此操作无法撤销。所有文档及其嵌入将被永久删除。",
   "This license key has reached the activation limit": "此 license key 已达到激活上限",
   "This license key has reached the activation limit, <a>click here</a> to manage license and devices to deactivate old devices.": "此 license 已达到激活上限，<a>点击这里</a>管理 license 与设备来取消激活旧设备。",
+  "This license key has reached the activation limit.": "此 license key 已达到激活上限",
   "This model does not support tool use": "该模型不支持工具调用",
   "This model does not support vision": "该模型不支持图片输入",
   "This server enables LLMs to retrieve and process content from web pages, converting HTML to markdown for easier consumption.": "这个服务器使LLMs能够从网页中检索和处理内容，将HTML转换为markdown以便更易于使用。",
@@ -753,6 +755,7 @@
   "Your ChatboxAI subscription already includes access to models from various providers. There's no need to switch providers - you can select different models directly within ChatboxAI. Switching from ChatboxAI to other providers will require their respective API keys. <button>Back to ChatboxAI</button>": "您的 ChatboxAI 订阅已包含来自各大供应商的模型访问权限。您可以直接在 ChatboxAI 中选择不同的模型，无需切换供应商。从 ChatboxAI 切换到其他供应商将需要他们各自的 API 密钥。<button>返回 ChatboxAI</button>",
   "Your current License (Chatbox AI Lite) does not support the {{model}} model. To use this model, please <OpenMorePlanButton>upgrade</OpenMorePlanButton> to Chatbox AI Pro or a higher-tier package. Alternatively, you can switch to a different model by <OpenSettingButton>accessing the settings</OpenSettingButton>.": "您当前的 License（Chatbox AI Lite）不支持 {{model}} 模型。要使用此模型，请<OpenMorePlanButton>升级</OpenMorePlanButton>到 Chatbox AI Pro 或更高级别的套餐。或者，您可以通过<OpenSettingButton>访问设置</OpenSettingButton>切换到其他模型。",
   "Your HTML content has been published. You can access it via the link below.": "您的 HTML 内容已成功发布。您可以通过以下链接访问。",
+  "Your license has expired.": "您的许可证已过期。",
   "Your license has expired. Please check your subscription or purchase a new one.": "您的 license 已过期。请检查您的订阅或重新购买。",
   "Your rating on the App Store would help make Chatbox even better!": "您的 App Store 评分将帮助 Chatbox 变得更好！"
 }

@@ -376,6 +376,7 @@
   "Login timeout. Please try again.": "ログインの有効期限が切れました。もう一度お試しください。",
   "Low": "低い",
   "Make sure you have the following command installed:": "以下のコマンドがインストールされていることを確認してください。",
+  "Manage License": "ライセンス管理",
   "Manage License and Devices": "ライセンスとデバイスの管理",
   "Manually": "手動で",
   "Markdown Rendering": "Markdownレンダリング",
@@ -663,6 +664,7 @@
   "This action cannot be undone. All documents and their embeddings will be permanently deleted.": "この操作は元に戻せません。すべてのドキュメントとその埋め込みは完全に削除されます。",
   "This license key has reached the activation limit": "このライセンスキーは有効化制限に達しました",
   "This license key has reached the activation limit, <a>click here</a> to manage license and devices to deactivate old devices.": "このライセンスキーは有効化制限に達しました、古いデバイスを無効化するためにライセンスとデバイスを管理するには<a>ここをクリックして</a>ください。",
+  "This license key has reached the activation limit.": "このライセンスキーはアクティベーションの上限に達しました。",
   "This model does not support tool use": "このモデルはツール利用に対応していません",
   "This model does not support vision": "このモデルは視覚に対応していません",
   "This server enables LLMs to retrieve and process content from web pages, converting HTML to markdown for easier consumption.": "このサーバーは、LLMがウェブページからコンテンツを取得・処理することを可能にし、HTMLをマークダウンに変換することで、より利用しやすくします。",
@@ -742,6 +744,7 @@
   "Your ChatboxAI subscription already includes access to models from various providers. There's no need to switch providers - you can select different models directly within ChatboxAI. Switching from ChatboxAI to other providers will require their respective API keys. <button>Back to ChatboxAI</button>": "あなたのChatboxAIサブスクリプションには、さまざまなプロバイダーのモデルへのアクセスがすでに含まれています。プロバイダーを切り替える必要はありません。ChatboxAI内で直接異なるモデルを選択できます。ChatboxAIから他のプロバイダーに切り替えると、それぞれのAPIキーが必要になります。<button>ChatboxAIに戻る</button>",
   "Your current License (Chatbox AI Lite) does not support the {{model}} model. To use this model, please <OpenMorePlanButton>upgrade</OpenMorePlanButton> to Chatbox AI Pro or a higher-tier package. Alternatively, you can switch to a different model by <OpenSettingButton>accessing the settings</OpenSettingButton>.": "あなたの現在のライセンス（Chatbox AI Lite）は{{model}}モデルをサポートしていません。このモデルを使用するには、<OpenMorePlanButton>アップグレード</OpenMorePlanButton>してChatbox AI Proまたはより高いティアのパッケージにアップグレードしてください。または、<OpenSettingButton>設定にアクセス</OpenSettingButton>して別のモデルに切り替えることもできます。",
   "Your HTML content has been published. You can access it via the link below.": "HTMLコンテンツが公開されました。以下のリンクからアクセスできます。",
+  "Your license has expired.": "ライセンスの有効期限が切れました。",
   "Your license has expired. Please check your subscription or purchase a new one.": "ライセンスが期限切れです。サブスクリプションを確認するか、新しいものを購入してください。",
   "Your rating on the App Store would help make Chatbox even better!": "App Storeでの評価は、Chatboxをさらに良くするのに役立ちます！"
 }
