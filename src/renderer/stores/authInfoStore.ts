@@ -66,7 +66,6 @@ export function useAuthInfoStore<U>(selector: Parameters<typeof useStore<typeof 
   return useStore<typeof authInfoStore, U>(authInfoStore, selector)
 }
 
-// 便捷的 hook
 export const useAuthTokens = () => {
   return useAuthInfoStore((state) => ({
     accessToken: state.accessToken,

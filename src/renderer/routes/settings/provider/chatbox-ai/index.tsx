@@ -90,28 +90,48 @@ export function RouteComponent() {
 
   useLayoutEffect(() => {
     const targetRef = viewMode === 'login' ? loginViewRef : licenseKeyViewRef
-    const targetElement = targetRef.current
 
-    if (!targetElement) {
-      const timer = setTimeout(() => {
-        if (targetRef.current) {
-          setContainerHeight(targetRef.current.scrollHeight)
-        }
-      }, 50)
-      return () => clearTimeout(timer)
+    let resizeObserver: ResizeObserver | null = null
+    let mutationObserver: MutationObserver | null = null
+    let timer: ReturnType<typeof setTimeout> | null = null
+
+    const updateHeight = () => {
+      if (targetRef.current) {
+        setContainerHeight(targetRef.current.scrollHeight)
+      }
     }
 
-    setContainerHeight(targetElement.scrollHeight)
+    const setupObservers = () => {
+      const targetElement = targetRef.current
+      if (!targetElement) return
 
-    const resizeObserver = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        setContainerHeight(entry.target.scrollHeight)
-      }
-    })
+      resizeObserver = new ResizeObserver(updateHeight)
+      resizeObserver.observe(targetElement)
 
-    resizeObserver.observe(targetElement)
+      mutationObserver = new MutationObserver(updateHeight)
+      mutationObserver.observe(targetElement, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+      })
+    }
 
-    return () => resizeObserver.disconnect()
+    if (!targetRef.current) {
+      // Element not ready yet, wait and then setup observers
+      timer = setTimeout(() => {
+        updateHeight()
+        setupObservers()
+      }, 50)
+    } else {
+      updateHeight()
+      setupObservers()
+    }
+
+    return () => {
+      if (timer) clearTimeout(timer)
+      resizeObserver?.disconnect()
+      mutationObserver?.disconnect()
+    }
   }, [viewMode, isLoggedIn, licenseKey])
 
   return (
