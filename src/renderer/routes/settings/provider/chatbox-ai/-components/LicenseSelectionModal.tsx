@@ -1,4 +1,4 @@
-import { Button, Flex, Modal, Radio, Stack, Text } from '@mantine/core'
+import { Button, Modal, Radio, Stack, Text } from '@mantine/core'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { UserLicense } from '@/packages/remote'

@@ -633,8 +633,6 @@ export async function checkLoginStatus(ticketId: string) {
     }
   )
   const json: Response = await res.json()
-  console.log('checkLoginStatus response', json)
-
   const responseStatus = json.data.status
   const accessToken = json.data.access_token || null
   const refreshToken = json.data.refresh_token || null
