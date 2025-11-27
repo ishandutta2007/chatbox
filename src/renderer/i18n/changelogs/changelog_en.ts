@@ -1,5 +1,5 @@
 const changelog = `
-## v1.18.0
+## v1.18.0 - 2025.11.27
 1. Added email login support, allowing users to use licenses bound to their email after logging in
 2. Added support for OpenAI Responses API
 3. Optimized code styling and generated webpage preview effects

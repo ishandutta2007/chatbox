@@ -1,5 +1,5 @@
 const changelog = `
-## v1.18.0
+## v1.18.0 - 2025.11.27
 1. 支持邮箱登录，登录后可使用邮箱下绑定的 License
 2. 支持OpenAI Responses API
 3. 优化代码样式和生成网页预览效果
