@@ -7,7 +7,6 @@ import {
   Flex,
   Input,
   Modal,
-  ScrollArea,
   Slider,
   Stack,
   Switch,
@@ -160,8 +159,8 @@ const SessionSettingsModal = NiceModal.create(
         onFocus={(e) => e.stopPropagation()}
         // fullWidth
       >
-        <ScrollArea.Autosize mah="60vh" scrollbars="y">
-          <Stack className="max-w-full overflow-hidden">
+        <div style={{ maxHeight: '60vh', overflowY: 'auto', overflowX: 'hidden' }}>
+          <Stack>
             <FileButton
               accept="image/png,image/jpeg"
               onChange={(file) => {
@@ -266,7 +265,7 @@ const SessionSettingsModal = NiceModal.create(
               </Box>
             </Stack>
           </Stack>
-        </ScrollArea.Autosize>
+        </div>
         <Flex justify="flex-end" align="center" gap="md" px="md" py="sm" pb="0">
           <Button onClick={onCancel} variant="subtle" color="chatbox-secondary">
             {t('cancel')}
@@ -376,7 +375,7 @@ function ThinkingBudgetConfig({
   const currentSegmentValue = getCurrentSegmentValue()
 
   return (
-    <Stack gap="md">
+    <Stack gap="md" style={{ minWidth: 0 }}>
       <Flex align="center" gap="xs">
         <Text size="sm" fw="600">
           {t('Thinking Budget')}
@@ -393,13 +392,15 @@ function ThinkingBudgetConfig({
         </Tooltip>
       </Flex>
 
-      <SegmentedControl
-        key="thinking-budget-control"
-        value={currentSegmentValue}
-        onChange={handleThinkingConfigChange}
-        data={thinkingBudgetOptions}
-        size="xs"
-      />
+      <div style={{ minWidth: 0, overflowX: 'auto' }}>
+        <SegmentedControl
+          key="thinking-budget-control"
+          value={currentSegmentValue}
+          onChange={handleThinkingConfigChange}
+          data={thinkingBudgetOptions}
+          fullWidth={false}
+        />
+      </div>
 
       {currentSegmentValue === 'custom' && (
         <SliderWithInput
