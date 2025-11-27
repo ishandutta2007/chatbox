@@ -169,8 +169,8 @@ const _Message: FC<Props> = (props) => {
   }, [])
 
   const onViewMessageJson = useCallback(async () => {
-    await NiceModal.show('message-json-viewer', { msg })
-  }, [msg])
+    await NiceModal.show('json-viewer', { title: t('Message Raw JSON'), data: msg })
+  }, [msg, t])
 
   if (shouldThrowError) {
     throw new Error('Manual error triggered from Message component for testing ErrorBoundary')
@@ -274,11 +274,11 @@ const _Message: FC<Props> = (props) => {
       // 开发环境添加测试错误按钮
       ...(process.env.NODE_ENV === 'development'
         ? [
-            {
-              text: 'Trigger Error (Test)',
-              icon: IconBug,
-              onClick: onTriggerError,
-            },
+            // {
+            //   text: 'Trigger Error (Test)',
+            //   icon: IconBug,
+            //   onClick: onTriggerError,
+            // },
             {
               text: t('View Message JSON'),
               icon: IconCode,

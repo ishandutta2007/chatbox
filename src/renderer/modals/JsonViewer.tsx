@@ -3,19 +3,19 @@ import { Button, Flex, Text } from '@mantine/core'
 import { IconCheck, IconCopy } from '@tabler/icons-react'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { Message } from '@/../shared/types'
 import { Modal } from '@/components/Overlay'
 import { ScalableIcon } from '@/components/ScalableIcon'
 import { useCopied } from '@/hooks/useCopied'
 
-interface MessageJsonViewerProps {
-  msg: Message
+interface JsonViewerProps {
+  title: string
+  data: unknown
 }
 
-const MessageJsonViewer = NiceModal.create(({ msg }: MessageJsonViewerProps) => {
+const JsonViewer = NiceModal.create(({ title, data }: JsonViewerProps) => {
   const modal = useModal()
   const { t } = useTranslation()
-  const prettyJson = useMemo(() => JSON.stringify(msg, null, 2), [msg])
+  const prettyJson = useMemo(() => JSON.stringify(data, null, 2), [data])
   const { copied, copy } = useCopied(prettyJson)
 
   const onClose = () => {
@@ -24,7 +24,7 @@ const MessageJsonViewer = NiceModal.create(({ msg }: MessageJsonViewerProps) => 
   }
 
   return (
-    <Modal opened={modal.visible} onClose={onClose} size="xl" centered title={t('Message Raw JSON')}>
+    <Modal opened={modal.visible} onClose={onClose} size="xl" centered title={title}>
       <div className="bg-chatbox-background-secondary border border-solid border-chatbox-border-secondary rounded-xs max-h-[60vh] overflow-y-auto p-sm">
         <Text
           component="pre"
@@ -55,4 +55,4 @@ const MessageJsonViewer = NiceModal.create(({ msg }: MessageJsonViewerProps) => 
   )
 })
 
-export default MessageJsonViewer
+export default JsonViewer

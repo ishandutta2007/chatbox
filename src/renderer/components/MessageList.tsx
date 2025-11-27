@@ -276,15 +276,16 @@ const MessageList = forwardRef<MessageListRef, MessageListProps>((props, ref) =>
                       sessionPicUrl={currentSession.picUrl}
                     />
                   </ErrorBoundary>
-                  {currentSession.messageForksHash?.[msg.id] && (
-                    <Flex justify="flex-end" mt={-16} pr="md" mr="md" className="z-10 self-end">
-                      <ForkNav
-                        sessionId={currentSession.id}
-                        msgId={msg.id}
-                        forks={currentSession.messageForksHash?.[msg.id]}
-                      />
-                    </Flex>
-                  )}
+                  {currentSession.messageForksHash?.[msg.id] &&
+                    currentSession.messageForksHash[msg.id].lists.length > 1 && (
+                      <Flex justify="flex-end" mt={-16} pr="md" mr="md" className="z-10 self-end">
+                        <ForkNav
+                          sessionId={currentSession.id}
+                          msgId={msg.id}
+                          forks={currentSession.messageForksHash[msg.id]}
+                        />
+                      </Flex>
+                    )}
                 </Stack>
               )
             }}

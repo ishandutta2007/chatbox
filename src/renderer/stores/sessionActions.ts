@@ -1302,7 +1302,7 @@ function buildSwitchForkPatch(
   }
 
   const forkEntry = messageForksHash[forkMessageId]
-  if (!forkEntry || forkEntry.lists.length === 0) {
+  if (!forkEntry || forkEntry.lists.length <= 1) {
     return null
   }
 
