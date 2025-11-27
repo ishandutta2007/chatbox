@@ -75,12 +75,12 @@ export function ProviderList({ providers, onAddProvider, onImportProvider, isImp
               >
                 {provider.isCustom ? (
                   provider.iconUrl ? (
-                    <Image w={36} h={36} src={provider.iconUrl} alt={provider.name} />
+                    <Image w={32} h={32} src={provider.iconUrl} alt={provider.name} />
                   ) : (
-                    <CustomProviderIcon providerId={provider.id} providerName={provider.name} size={36} />
+                    <CustomProviderIcon providerId={provider.id} providerName={provider.name} size={32} />
                   )
                 ) : (
-                  <Image w={36} h={36} src={icons.find((icon) => icon.name === provider.id)?.src} alt={provider.name} />
+                  <Image w={32} h={32} src={icons.find((icon) => icon.name === provider.id)?.src} alt={provider.name} />
                 )}
 
                 <Text

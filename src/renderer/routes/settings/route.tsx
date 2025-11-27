@@ -144,6 +144,7 @@ export function SettingsRoot() {
                 gap="xs"
                 p="md"
                 pr="xl"
+                py={isSmallScreen ? 'sm' : undefined}
                 align="center"
                 c={item.key === key ? 'chatbox-brand' : 'chatbox-secondary'}
                 bg={item.key === key ? 'var(--chatbox-background-brand-secondary)' : 'transparent'}
@@ -155,7 +156,12 @@ export function SettingsRoot() {
                 <Box component="span" flex="0 0 auto" w={20} h={20} mr="xs">
                   {item.icon}
                 </Box>
-                <Text flex={1} lineClamp={1} span={true} className="!text-inherit">
+                <Text
+                  flex={1}
+                  lineClamp={1}
+                  span={true}
+                  className={`!text-inherit ${isSmallScreen ? 'min-h-[32px] leading-[32px]' : ''}`}
+                >
                   {t(item.label)}
                 </Text>
                 {isSmallScreen && (
