@@ -160,8 +160,8 @@ const SessionSettingsModal = NiceModal.create(
         onFocus={(e) => e.stopPropagation()}
         // fullWidth
       >
-        <ScrollArea.Autosize mah="60vh">
-          <Stack>
+        <ScrollArea.Autosize mah="60vh" scrollbars="y">
+          <Stack className="max-w-full overflow-hidden">
             <FileButton
               accept="image/png,image/jpeg"
               onChange={(file) => {
@@ -398,6 +398,7 @@ function ThinkingBudgetConfig({
         value={currentSegmentValue}
         onChange={handleThinkingConfigChange}
         data={thinkingBudgetOptions}
+        size="xs"
       />
 
       {currentSegmentValue === 'custom' && (
