@@ -7,6 +7,7 @@ import {
   Flex,
   Input,
   Modal,
+  ScrollArea,
   Slider,
   Stack,
   Switch,
@@ -159,7 +160,7 @@ const SessionSettingsModal = NiceModal.create(
         onFocus={(e) => e.stopPropagation()}
         // fullWidth
       >
-        <Modal.Body>
+        <ScrollArea.Autosize mah="60vh">
           <Stack>
             <FileButton
               accept="image/png,image/jpeg"
@@ -265,8 +266,8 @@ const SessionSettingsModal = NiceModal.create(
               </Box>
             </Stack>
           </Stack>
-        </Modal.Body>
-        <Flex justify="flex-end" align="center" gap="md" px="md">
+        </ScrollArea.Autosize>
+        <Flex justify="flex-end" align="center" gap="md" px="md" py="sm" pb="0">
           <Button onClick={onCancel} variant="subtle" color="chatbox-secondary">
             {t('cancel')}
           </Button>
