@@ -529,6 +529,7 @@
   "Remote (http/sse)": "远程 (http/sse)",
   "rename": "重命名",
   "Reply Again": "重新回答",
+  "{{count}} conversations could not be recovered due to data read errors": "由于数据读取错误，{{count}} 个对话无法恢复",
   "Reply Again Below": "在下方重新回答",
   "report": "举报",
   "Report Content": "举报内容",

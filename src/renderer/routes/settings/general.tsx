@@ -222,16 +222,19 @@ export function RouteComponent() {
 const DataRecoverySection = () => {
   const { t } = useTranslation()
   const [isRecovering, setIsRecovering] = useState(false)
-  const [recoveryResult, setRecoveryResult] = useState<{ success: boolean; count?: number; error?: string } | null>(
-    null
-  )
+  const [recoveryResult, setRecoveryResult] = useState<{
+    success: boolean
+    recovered?: number
+    failed?: number
+    error?: string
+  } | null>(null)
 
   const handleRecover = async () => {
     setIsRecovering(true)
     setRecoveryResult(null)
     try {
-      const count = await recoverSessionList()
-      setRecoveryResult({ success: true, count })
+      const result = await recoverSessionList()
+      setRecoveryResult({ success: true, recovered: result.recovered, failed: result.failed })
     } catch (error) {
       console.error('Failed to recover session list:', error)
       setRecoveryResult({ success: false, error: String(error) })
@@ -239,6 +242,8 @@ const DataRecoverySection = () => {
       setIsRecovering(false)
     }
   }
+
+  const hasPartialFailure = recoveryResult?.success && recoveryResult.failed && recoveryResult.failed > 0
 
   return (
     <Stack gap="md">
@@ -255,16 +260,25 @@ const DataRecoverySection = () => {
         <Alert
           className="self-start"
           variant="light"
-          color={recoveryResult.success ? 'green' : 'red'}
+          color={recoveryResult.success ? (hasPartialFailure ? 'yellow' : 'green') : 'red'}
           title={
             recoveryResult.success
-              ? t('Recovered {{count}} conversations', { count: recoveryResult.count })
+              ? t('Recovered {{count}} conversations', { count: recoveryResult.recovered })
               : t('Recovery failed')
           }
           icon={<IconInfoCircle />}
         >
           {recoveryResult.success ? (
-            <Text size="sm">{t('The conversation list has been successfully recovered')}</Text>
+            <Stack gap="xs">
+              <Text size="sm">{t('The conversation list has been successfully recovered')}</Text>
+              {hasPartialFailure && (
+                <Text size="sm" c="orange">
+                  {t('{{count}} conversations could not be recovered due to data read errors', {
+                    count: recoveryResult.failed,
+                  })}
+                </Text>
+              )}
+            </Stack>
           ) : (
             <Text size="sm">{recoveryResult.error || t('Unknown error')}</Text>
           )}

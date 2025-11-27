@@ -444,6 +444,7 @@
   "RedNote": "RedNote",
   "Refresh": "Refresh",
   "Regulate the volume of historical messages sent to the AI, striking a harmonious balance between depth of comprehension and the efficiency of responses.": "Regulate the volume of historical messages sent to the AI, striking a harmonious balance between depth of comprehension and the efficiency of responses.",
+  "{{count}} conversations could not be recovered due to data read errors": "{{count}} conversations could not be recovered due to data read errors",
   "Remaining/Total Quota": "Remaining/Total Quota",
   "Remote (http/sse)": "Remote (http/sse)",
   "Reply Again": "Reply Again",
