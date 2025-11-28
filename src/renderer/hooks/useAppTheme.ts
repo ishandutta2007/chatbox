@@ -64,11 +64,22 @@ export function getThemeDesign(realTheme: 'light' | 'dark', fontSize: number, la
       ...(realTheme === 'light'
         ? {}
         : {
+            // MUI 内部无法处理 css 变量，需要使用具体颜色值
             background: {
-              default: 'var(--chatbox-background-primary)',
-              paper: 'var(--chatbox-background-primary)',
+              default: '#242424',
+              paper: '#242424',
             },
           }),
+    },
+    components: {
+      MuiSnackbarContent: {
+        styleOverrides: {
+          root: {
+            backgroundColor: realTheme === 'dark' ? '#333333' : undefined,
+            color: realTheme === 'dark' ? '#ffffff' : undefined,
+          },
+        },
+      },
     },
     typography: {
       // In Chinese and Japanese the characters are usually larger,
