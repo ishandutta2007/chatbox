@@ -155,6 +155,10 @@ const ExtensionSettingsSchema = z.object({
   webSearch: z.object({
     provider: z.enum(['build-in', 'bing', 'tavily']),
     tavilyApiKey: z.string().optional(),
+    tavilySearchDepth: z.string().optional(),
+    tavilyMaxResults: z.number().optional(),
+    tavilyTimeRange: z.string().optional(),
+    tavilyIncludeRawContent: z.string().optional(),
   }),
   knowledgeBase: z
     .object({
