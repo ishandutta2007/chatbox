@@ -3,7 +3,7 @@ import CircularProgressIcon from '@mui/material/CircularProgress'
 import { useQuery } from '@tanstack/react-query'
 import type React from 'react'
 import { forwardRef, memo } from 'react'
-import storage from '@/storage'
+import { useFetchBlob } from '@/hooks/useBlob'
 
 export const ImageInStorage = memo(
   forwardRef<
@@ -14,11 +14,12 @@ export const ImageInStorage = memo(
       onClick?: (e: React.MouseEvent<HTMLImageElement>) => void
     }
   >((props, ref) => {
+    const fetchBlob = useFetchBlob()
     const { data: base64 } = useQuery({
       queryKey: ['image-in-storage', props.storageKey],
       queryFn: async ({ queryKey: [, storageKey] }) => {
-        const blob = await storage.getBlob(storageKey)
-        return blob ? blob : false // false 意味着不存在
+        const blob = await fetchBlob(storageKey as string)
+        return blob ? blob : false
       },
       staleTime: Infinity,
     })
@@ -56,13 +57,20 @@ export function Img(props: {
   return <img src={props.src} className={`max-w-full max-h-full ${props.className || ''}`} onClick={props.onClick} />
 }
 
-export function handleImageInputAndSave(file: File, key: string, updateKey?: (key: string) => void) {
+export function handleImageInputAndSave(
+  file: File,
+  key: string,
+  updateKey?: (key: string) => void,
+  saveFn?: (key: string, value: string) => Promise<unknown>
+) {
   if (file.type.startsWith('image/')) {
     const reader = new FileReader()
     reader.onload = async (e) => {
       if (e.target && e.target.result) {
         const base64 = e.target.result as string
-        await storage.setBlob(key, base64)
+        if (saveFn) {
+          await saveFn(key, base64)
+        }
         if (updateKey) {
           updateKey(key)
         }

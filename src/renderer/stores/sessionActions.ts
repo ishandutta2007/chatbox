@@ -14,9 +14,8 @@ export {
 export { exportSessionChat } from './session/export'
 // Re-export fork operations from session/forks.ts
 export { createNewFork, deleteFork, expandFork, switchFork } from './session/forks'
-// Re-export generation operations from session/generation.ts
+// Re-export generation operations from session module
 export {
-  createLoadingPictures,
   generate,
   generateMore,
   generateMoreInNewFork,
@@ -40,6 +39,7 @@ export {
   scheduleGenerateNameAndThreadName,
   scheduleGenerateThreadName,
 } from './session/naming'
+export { createLoadingPictures } from './session/pictures'
 // Re-export thread operations from session/threads.ts
 export {
   compressAndCreateThread,

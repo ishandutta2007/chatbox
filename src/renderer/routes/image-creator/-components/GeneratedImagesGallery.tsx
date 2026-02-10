@@ -6,9 +6,9 @@ import type { UIElementData } from 'photoswipe'
 import { memo, useCallback, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Gallery, Item as GalleryItem } from 'react-photoswipe-gallery'
+import { useFetchBlob } from '@/hooks/useBlob'
 import { useIsSmallScreen } from '@/hooks/useScreenChange'
 import platform from '@/platform'
-import storage from '@/storage'
 import { blobToDataUrl, getBase64ImageSize } from './constants'
 
 export interface GeneratedImagesGalleryProps {
@@ -23,6 +23,7 @@ export const GeneratedImagesGallery = memo(function GeneratedImagesGallery({
   const storageKeysRef = useRef(storageKeys)
   storageKeysRef.current = storageKeys
   const isSmallScreen = useIsSmallScreen()
+  const fetchBlob = useFetchBlob()
 
   const uiElements: UIElementData[] = [
     {
@@ -40,7 +41,7 @@ export const GeneratedImagesGallery = memo(function GeneratedImagesGallery({
       onClick: async (_e: PointerEvent, _el: HTMLElement, pswp: PhotoSwipe) => {
         const storageKey = storageKeysRef.current[pswp.currIndex]
         if (storageKey) {
-          const base64 = await storage.getBlob(storageKey)
+          const base64 = await fetchBlob(storageKey)
           if (!base64) return
           const filename =
             platform.type === 'mobile'
@@ -106,11 +107,12 @@ function calculateDisplaySize(width: number, height: number): { displayWidth: nu
 function GeneratedImageGalleryItem({ storageKey, onUseAsReference, isSmallScreen }: GeneratedImageGalleryItemProps) {
   const { t } = useTranslation()
   const [hovered, setHovered] = useState(false)
+  const fetchBlob = useFetchBlob()
 
   const { data: imageData } = useQuery({
     queryKey: ['generated-image-gallery', storageKey],
     queryFn: async () => {
-      const blob = await storage.getBlob(storageKey)
+      const blob = await fetchBlob(storageKey)
       if (!blob) return null
       const base64 = blobToDataUrl(blob)
       const size = await getBase64ImageSize(base64)

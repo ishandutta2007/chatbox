@@ -34,9 +34,10 @@ import { getSessionMeta } from './sessionHelpers'
 import { settingsStore, useSettingsStore } from './settingsStore'
 import { UpdateQueue } from './updateQueue'
 
-const QueryKeys = {
+export const QueryKeys = {
   ChatSessionsList: ['chat-sessions-list'],
   ChatSession: (id: string) => ['chat-session', id],
+  ChatSessionSettings: (id: string) => ['chat-session-settings', id],
 }
 
 // MARK: session list operations

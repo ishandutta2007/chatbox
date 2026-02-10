@@ -74,7 +74,6 @@ vi.mock('@/adapters', () => ({
 vi.mock('@/packages/model-calls', () => ({
   generateImage: vi.fn(),
   generateText: vi.fn(),
-  streamText: vi.fn(),
 }))
 
 vi.mock('@/packages/model-setting-utils', () => ({

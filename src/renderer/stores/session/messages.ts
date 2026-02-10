@@ -7,7 +7,7 @@ import {
   ChatboxAIAPIError,
   NetworkError,
 } from '@shared/models/errors'
-import { createMessage, type Message, ModelProviderEnum } from '@shared/types'
+import { createMessage, type Message } from '@shared/types'
 import { countMessageWords } from '@shared/utils/message'
 import { createModelDependencies } from '@/adapters'
 import { runCompactionWithUIState } from '@/packages/context-management'
@@ -18,19 +18,7 @@ import * as chatStore from '../chatStore'
 import * as settingActions from '../settingActions'
 import { settingsStore } from '../settingsStore'
 import { uiStore } from '../uiStore'
-
-/**
- * Get session-level web browsing setting
- * Returns user's explicit setting if set, otherwise returns default based on provider
- */
-function getSessionWebBrowsing(sessionId: string, provider: string | undefined): boolean {
-  const sessionValue = uiStore.getState().sessionWebBrowsingMap[sessionId]
-  if (sessionValue !== undefined) {
-    return sessionValue
-  }
-  // Default: true for ChatboxAI, false for others
-  return provider === ModelProviderEnum.ChatboxAI
-}
+import { getSessionWebBrowsing } from './utils'
 
 /**
  * 在当前主题的最后插入一条消息。

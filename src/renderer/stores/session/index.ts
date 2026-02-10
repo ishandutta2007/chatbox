@@ -14,6 +14,7 @@
  * - Export (1): Export functionality
  */
 
+export { createAttachmentResolver } from './attachment-resolver'
 // CRUD operations (8 functions)
 export {
   clear,
@@ -31,7 +32,6 @@ export { exportSessionChat } from './export'
 export { createNewFork, deleteFork, expandFork, findMessageLocation, switchFork } from './forks'
 // Generation operations (8 functions)
 export {
-  createLoadingPictures,
   generate,
   generateMore,
   generateMoreInNewFork,
@@ -42,7 +42,6 @@ export {
 } from './generation'
 // Message operations (5 functions)
 export { insertMessage, insertMessageAfter, modifyMessage, removeMessage, submitNewUserMessage } from './messages'
-
 // Naming operations (4 functions)
 export {
   modifyNameAndThreadName,
@@ -50,6 +49,10 @@ export {
   scheduleGenerateNameAndThreadName,
   scheduleGenerateThreadName,
 } from './naming'
+export { getOCRModel, ocrImagesInMessages } from './ocr-helper'
+// Orchestration and AI helpers
+export { orchestrateGeneration } from './orchestration'
+export { createLoadingPictures } from './pictures'
 // Thread operations (9 functions)
 export {
   compressAndCreateThread,
@@ -62,5 +65,12 @@ export {
   startNewThread,
   switchThread,
 } from './threads'
+export { buildToolsForSession } from './tools-builder'
 // Types and state
 export * from './types'
+export {
+  findTargetMessageIndex,
+  handleGenerationError,
+  initializeTargetMessage,
+  trackGenerateEvent,
+} from './utils'

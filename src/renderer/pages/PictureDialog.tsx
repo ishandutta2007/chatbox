@@ -2,11 +2,11 @@ import CloseIcon from '@mui/icons-material/Close'
 import SaveIcon from '@mui/icons-material/Save'
 import { Fab, useTheme } from '@mui/material'
 import type { MessagePicture } from '@shared/types'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect } from 'react'
 import { TransformComponent, TransformWrapper } from 'react-zoom-pan-pinch'
 import { Img } from '@/components/Image'
+import { useBlob, useFetchBlob } from '@/hooks/useBlob'
 import platform from '@/platform'
-import storage from '@/storage'
 import { useUIStore } from '@/stores/uiStore'
 
 export default function PictureDialog(props: {}) {
@@ -33,22 +33,16 @@ function _PictureDialog(props: {
   const { picture, onSave, extraButtons } = props
   const theme = useTheme()
   const setPictureShow = useUIStore((s) => s.setPictureShow)
-  const [url, setUrl] = useState(picture.url)
+  const { data: blobData } = useBlob(picture.url ? undefined : picture.storageKey)
+  const fetchBlob = useFetchBlob()
 
-  useEffect(() => {
-    ;(async () => {
-      if (picture.url) {
-        return
-      }
-      if (picture.storageKey) {
-        const base64 = await storage.getBlob(picture.storageKey)
-        if (base64) {
-          const picBase64 = base64.startsWith('data:image/') ? base64 : `data:image/png;base64,${base64}`
-          setUrl(picBase64)
-        }
-      }
-    })()
-  }, [picture.url, picture.storageKey])
+  const url = picture.url
+    ? picture.url
+    : blobData
+      ? blobData.startsWith('data:image/')
+        ? blobData
+        : `data:image/png;base64,${blobData}`
+      : undefined
 
   const onClose = () => setPictureShow(null)
   const onSaveDefault = async () => {
@@ -57,7 +51,7 @@ function _PictureDialog(props: {
     }
     const basename = `export_${Math.random().toString(36).substring(7)}`
     if (picture.storageKey) {
-      const base64 = await storage.getBlob(picture.storageKey)
+      const base64 = await fetchBlob(picture.storageKey)
       if (!base64) {
         return
       }

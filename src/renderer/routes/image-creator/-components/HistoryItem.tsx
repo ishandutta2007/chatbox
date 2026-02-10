@@ -1,10 +1,9 @@
 import { ActionIcon, Button, Flex, Image, Popover, Skeleton, Stack, Text, Tooltip, UnstyledButton } from '@mantine/core'
 import type { ImageGeneration } from '@shared/types'
 import { IconPhoto, IconTrash } from '@tabler/icons-react'
-import { useQuery } from '@tanstack/react-query'
 import { useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import storage from '@/storage'
+import { useBlob } from '@/hooks/useBlob'
 import { blobToDataUrl, IMAGE_MODEL_FALLBACK_NAMES } from './constants'
 
 export interface HistoryItemProps {
@@ -153,13 +152,8 @@ interface HistoryThumbnailProps {
 }
 
 function HistoryThumbnail({ storageKey, size = 48 }: HistoryThumbnailProps) {
-  const { data: imageUrl } = useQuery({
-    queryKey: ['history-thumbnail', storageKey],
-    queryFn: async () => {
-      const blob = await storage.getBlob(storageKey)
-      return blob ? blobToDataUrl(blob) : null
-    },
-  })
+  const { data: blob } = useBlob(storageKey)
+  const imageUrl = blob ? blobToDataUrl(blob) : null
 
   if (!imageUrl) {
     return <Skeleton h={size} w={size} radius={0} />

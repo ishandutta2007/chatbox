@@ -32,17 +32,18 @@ import { IconInfoCircle, IconTrash, IconUpload } from '@tabler/icons-react'
 import { pick } from 'lodash'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { AssistantAvatar } from '@/components/common/Avatar'
 import { AdaptiveModal } from '@/components/common/AdaptiveModal'
+import { AssistantAvatar } from '@/components/common/Avatar'
 import LazyNumberInput from '@/components/common/LazyNumberInput'
 import MaxContextMessageCountSlider from '@/components/common/MaxContextMessageCountSlider'
+import { ScalableIcon } from '@/components/common/ScalableIcon'
+import SegmentedControl from '@/components/common/SegmentedControl'
 import SliderWithInput from '@/components/common/SliderWithInput'
 import { handleImageInputAndSave, ImageInStorage } from '@/components/Image'
 import ImageStyleSelect from '@/components/ImageStyleSelect'
-import { ScalableIcon } from '@/components/common/ScalableIcon'
-import SegmentedControl from '@/components/common/SegmentedControl'
 import { useIsSmallScreen } from '@/hooks/useScreenChange'
 import { trackingEvent } from '@/packages/event'
+import storage from '@/storage'
 import { StorageKeyGenerator } from '@/storage/StoreStorage'
 import { updateSession } from '@/stores/chatStore'
 import { getSessionMeta, mergeSettings } from '@/stores/sessionHelpers'
@@ -174,7 +175,12 @@ const SessionSettingsModal = NiceModal.create(
               onChange={(file) => {
                 if (file) {
                   const key = StorageKeyGenerator.picture(`assistant-avatar:${session?.id}`)
-                  handleImageInputAndSave(file, key, () => setEditingData({ ...editingData, assistantAvatarKey: key }))
+                  handleImageInputAndSave(
+                    file,
+                    key,
+                    () => setEditingData((prev) => ({ ...prev, assistantAvatarKey: key }) as typeof prev),
+                    (k, v) => storage.setBlob(k, v)
+                  )
                 }
               }}
             >
