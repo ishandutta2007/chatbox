@@ -41,7 +41,15 @@ export {
   regenerateInNewFork,
 } from './generation'
 // Message operations (5 functions)
-export { insertMessage, insertMessageAfter, modifyMessage, removeMessage, submitNewUserMessage } from './messages'
+export {
+  insertMessage,
+  insertMessageAfter,
+  modifyMessage,
+  persistStreamingMessage,
+  removeMessage,
+  submitNewUserMessage,
+  updateStreamingCache,
+} from './messages'
 // Naming operations (4 functions)
 export {
   modifyNameAndThreadName,

@@ -18,7 +18,7 @@ import { settingsStore } from '../settingsStore'
 import { uiStore } from '../uiStore'
 import { createAttachmentResolver } from './attachment-resolver'
 import { applyLegacyToolFallback } from './legacy-tool-fallback'
-import { modifyMessage } from './messages'
+import { persistStreamingMessage, updateStreamingCache } from './messages'
 import { getOCRModel, ocrImagesInMessages } from './ocr-helper'
 import { createInitialState, processStreamChunk } from './stream-chunk-processor'
 import { buildToolsForSession } from './tools-builder'
@@ -53,7 +53,7 @@ export async function orchestrateGeneration(
 
   targetMsg = await initializeTargetMessage(targetMsg, settings, globalSettings, session.type)
 
-  await modifyMessage(sessionId, targetMsg)
+  await persistStreamingMessage(sessionId, targetMsg)
 
   const found = findTargetMessageIndex(session, targetMsg.id)
   if (!found) return
@@ -131,7 +131,7 @@ export async function orchestrateGeneration(
       ...targetMsg,
       cancel: () => controller.abort(),
     }
-    await modifyMessage(sessionId, targetMsg, false, true)
+    updateStreamingCache(sessionId, targetMsg)
 
     const chatOptions: ChatStreamOptions = {
       sessionId: session.id,
@@ -166,7 +166,7 @@ export async function orchestrateGeneration(
             ...targetMsg,
             status: result.statusChunk.status ? [result.statusChunk.status] : [],
           }
-          void modifyMessage(sessionId, targetMsg, false, true)
+          updateStreamingCache(sessionId, targetMsg)
         }
         continue
       }
@@ -188,7 +188,11 @@ export async function orchestrateGeneration(
       }
 
       const shouldPersist = Date.now() - lastPersistTimestamp >= persistInterval
-      void modifyMessage(sessionId, targetMsg, false, !shouldPersist)
+      if (shouldPersist) {
+        void persistStreamingMessage(sessionId, targetMsg)
+      } else {
+        updateStreamingCache(sessionId, targetMsg)
+      }
       if (shouldPersist) {
         lastPersistTimestamp = Date.now()
       }
@@ -211,7 +215,7 @@ export async function orchestrateGeneration(
       usage: processorState.usage,
     }
 
-    await modifyMessage(sessionId, targetMsg, true)
+    await persistStreamingMessage(sessionId, targetMsg, { refreshCounting: true })
     appleAppStore.tickAfterMessageGenerated()
   } catch (err: unknown) {
     if (controller.signal.aborted) {
@@ -221,11 +225,11 @@ export async function orchestrateGeneration(
         cancel: undefined,
         status: [],
       }
-      await modifyMessage(sessionId, targetMsg, true)
+      await persistStreamingMessage(sessionId, targetMsg, { refreshCounting: true })
       return
     }
 
     targetMsg = handleGenerationError(err, targetMsg, settings)
-    await modifyMessage(sessionId, targetMsg, true)
+    await persistStreamingMessage(sessionId, targetMsg, { refreshCounting: true })
   }
 }

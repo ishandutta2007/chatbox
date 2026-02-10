@@ -84,6 +84,35 @@ export async function modifyMessage(
 }
 
 /**
+ * 流式输出期间的轻量级 UI 更新，仅更新 React Query 缓存触发重渲染。
+ * 不涉及 storage 写入，不检查 session 存在性（性能优先）。
+ */
+export function updateStreamingCache(sessionId: string, message: Message): void {
+  message.timestamp = Date.now()
+  chatStore.updateMessageCache(sessionId, message.id, message).catch((err) => {
+    console.error('Failed to update streaming cache:', err)
+  })
+}
+
+/**
+ * 流式输出期间的持久化写入。用于定时 persist（2s 间隔）和最终 persist。
+ * 可选刷新 wordCount/tokenCount。
+ */
+export async function persistStreamingMessage(
+  sessionId: string,
+  message: Message,
+  options?: { refreshCounting?: boolean }
+): Promise<void> {
+  if (options?.refreshCounting) {
+    message.wordCount = countMessageWords(message)
+    message.tokenCount = estimateTokensFromMessages([message])
+    message.tokenCountMap = undefined
+  }
+  message.timestamp = Date.now()
+  await chatStore.updateMessage(sessionId, message.id, message)
+}
+
+/**
  * 在会话中删除消息。如果消息存在于历史主题中，也能支持删除
  * @param sessionId
  * @param messageId
