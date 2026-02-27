@@ -8,9 +8,20 @@ interface ImageModel {
   displayName: string
 }
 
-const CHATBOXAI_IMAGE_MODEL_IDS = ['gemini-2.5-flash-image', 'gemini-3-pro-image-preview', 'gemini-3-pro-image']
+// model 白名单，与 provider models 取交集，保证只显示支持的模型
+const CHATBOXAI_IMAGE_MODEL_IDS = [
+  'gemini-2.5-flash-image',
+  'gemini-3-pro-image-preview',
+  'gemini-3-pro-image',
+  'gemini-3.1-flash-image',
+]
 const OPENAI_IMAGE_MODEL_IDS = ['gpt-image-1', 'gpt-image-1.5']
-const GEMINI_IMAGE_MODEL_IDS = ['gemini-2.5-flash-image', 'gemini-3-pro-image-preview', 'gemini-3-pro-image']
+const GEMINI_IMAGE_MODEL_IDS = [
+  'gemini-2.5-flash-image',
+  'gemini-3-pro-image-preview',
+  'gemini-3-pro-image',
+  'gemini-3.1-flash-image',
+]
 
 export const CHATBOXAI_DEFAULT_IMAGE_MODEL: ImageModel = {
   modelId: '',
@@ -24,6 +35,7 @@ const IMAGE_MODEL_FALLBACK_NAMES: Record<string, string> = {
   'gemini-2.5-flash-image': 'Nano Banana',
   'gemini-3-pro-image-preview': 'Nano Banana Pro',
   'gemini-3-pro-image': 'Nano Banana Pro',
+  'gemini-3.1-flash-image': 'Nano Banana 2',
 }
 
 function getAvailableImageModels(provider: ProviderInfo, imageModelIds: string[]): ImageModel[] {

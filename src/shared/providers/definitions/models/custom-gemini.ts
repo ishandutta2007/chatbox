@@ -8,7 +8,7 @@ import type { ProviderModelInfo } from '../../../types'
 import type { ModelDependencies } from '../../../types/adapters'
 import { normalizeGeminiHost } from '../../../utils/llm_utils'
 
-const GEMINI_IMAGE_MODELS = ['gemini-2.5-flash-image', 'gemini-3-pro-image-preview']
+const GEMINI_IMAGE_MODELS = ['gemini-2.5-flash-image', 'gemini-3-pro-image-preview', 'gemini-3.1-flash-image']
 
 interface Options {
   apiKey: string
@@ -86,7 +86,7 @@ export default class CustomGemini extends AbstractAISDKModel {
       },
     }
 
-    if (['gemini-3-pro-image-preview', 'gemini-2.5-flash-image'].includes(this.options.model.modelId)) {
+    if (GEMINI_IMAGE_MODELS.includes(this.options.model.modelId)) {
       settings.providerOptions = {
         google: {
           ...providerParams,

@@ -11,9 +11,19 @@ export const IMAGE_MODEL_FALLBACK_NAMES: Record<string, string> = {
   'gemini-3-pro-image': 'Nano Banana Pro',
 }
 
-export const CHATBOXAI_IMAGE_MODEL_IDS = ['gemini-2.5-flash-image', 'gemini-3-pro-image-preview', 'gemini-3-pro-image']
+export const CHATBOXAI_IMAGE_MODEL_IDS = [
+  'gemini-2.5-flash-image',
+  'gemini-3-pro-image-preview',
+  'gemini-3-pro-image',
+  'gemini-3.1-flash-image',
+]
 export const OPENAI_IMAGE_MODEL_IDS = ['gpt-image-1', 'gpt-image-1.5']
-export const GEMINI_IMAGE_MODEL_IDS = ['gemini-2.5-flash-image', 'gemini-3-pro-image-preview', 'gemini-3-pro-image']
+export const GEMINI_IMAGE_MODEL_IDS = [
+  'gemini-2.5-flash-image',
+  'gemini-3-pro-image-preview',
+  'gemini-3-pro-image',
+  'gemini-3.1-flash-image',
+]
 
 type ImageModelFamily = 'gpt' | 'gemini' | 'default'
 
@@ -33,6 +43,7 @@ export function getRatioOptionsForModel(modelId: string): string[] {
     case 'gemini-2.5-flash-image':
     case 'gemini-3-pro-image-preview':
     case 'gemini-3-pro-image':
+    case 'gemini-3.1-flash-image':
       return RATIO_OPTIONS.gemini
 
     default:
