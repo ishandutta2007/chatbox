@@ -14,6 +14,7 @@ const CHATBOXAI_IMAGE_MODEL_IDS = [
   'gemini-3-pro-image-preview',
   'gemini-3-pro-image',
   'gemini-3.1-flash-image-preview',
+  'gemini-3.1-flash-image',
 ]
 const OPENAI_IMAGE_MODEL_IDS = ['gpt-image-1', 'gpt-image-1.5']
 const GEMINI_IMAGE_MODEL_IDS = [
@@ -21,6 +22,7 @@ const GEMINI_IMAGE_MODEL_IDS = [
   'gemini-3-pro-image-preview',
   'gemini-3-pro-image',
   'gemini-3.1-flash-image-preview',
+  'gemini-3.1-flash-image',
 ]
 
 export const CHATBOXAI_DEFAULT_IMAGE_MODEL: ImageModel = {
@@ -36,13 +38,17 @@ const IMAGE_MODEL_FALLBACK_NAMES: Record<string, string> = {
   'gemini-3-pro-image-preview': 'Nano Banana Pro',
   'gemini-3-pro-image': 'Nano Banana Pro',
   'gemini-3.1-flash-image-preview': 'Nano Banana 2',
+  'gemini-3.1-flash-image': 'Nano Banana 2',
 }
 
 function getAvailableImageModels(provider: ProviderInfo, imageModelIds: string[]): ImageModel[] {
   const providerModels = provider.models || provider.defaultSettings?.models || []
+  const defaultModels = provider.defaultSettings?.models || []
   return imageModelIds
     .map((modelId) => {
-      const model = providerModels.find((m) => m.modelId === modelId)
+      // Check user's model list first (preserves nickname), then fall back to defaults (picks up newly added models)
+      const model =
+        providerModels.find((m) => m.modelId === modelId) || defaultModels.find((m) => m.modelId === modelId)
       if (!model) return null
       return {
         modelId,
