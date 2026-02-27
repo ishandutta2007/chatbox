@@ -44,7 +44,7 @@ export const geminiProvider = defineProvider({
         maxOutput: 8_192,
       },
       {
-        modelId: 'gemini-3.1-flash-image',
+        modelId: 'gemini-3.1-flash-image-preview',
         capabilities: ['vision'],
         contextWindow: 32_768,
         maxOutput: 8_192,

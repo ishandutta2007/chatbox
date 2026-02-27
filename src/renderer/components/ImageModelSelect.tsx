@@ -13,14 +13,14 @@ const CHATBOXAI_IMAGE_MODEL_IDS = [
   'gemini-2.5-flash-image',
   'gemini-3-pro-image-preview',
   'gemini-3-pro-image',
-  'gemini-3.1-flash-image',
+  'gemini-3.1-flash-image-preview',
 ]
 const OPENAI_IMAGE_MODEL_IDS = ['gpt-image-1', 'gpt-image-1.5']
 const GEMINI_IMAGE_MODEL_IDS = [
   'gemini-2.5-flash-image',
   'gemini-3-pro-image-preview',
   'gemini-3-pro-image',
-  'gemini-3.1-flash-image',
+  'gemini-3.1-flash-image-preview',
 ]
 
 export const CHATBOXAI_DEFAULT_IMAGE_MODEL: ImageModel = {
@@ -35,7 +35,7 @@ const IMAGE_MODEL_FALLBACK_NAMES: Record<string, string> = {
   'gemini-2.5-flash-image': 'Nano Banana',
   'gemini-3-pro-image-preview': 'Nano Banana Pro',
   'gemini-3-pro-image': 'Nano Banana Pro',
-  'gemini-3.1-flash-image': 'Nano Banana 2',
+  'gemini-3.1-flash-image-preview': 'Nano Banana 2',
 }
 
 function getAvailableImageModels(provider: ProviderInfo, imageModelIds: string[]): ImageModel[] {
