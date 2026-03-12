@@ -355,6 +355,7 @@ export const SettingsSchema = GlobalSessionSettingsSchema.extend({
 
   userAvatarKey: z.string().optional(), // 用户头像的 key
   defaultAssistantAvatarKey: z.string().optional(), // 默认助手头像的 key
+  backgroundImageKey: z.string().optional(), // 应用背景图片的 key（本地上传）
 
   enableMarkdownRendering: z.boolean().default(true),
   enableMermaidRendering: z.boolean().default(true),

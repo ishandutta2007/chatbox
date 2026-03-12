@@ -114,6 +114,7 @@ export default function Sidebar() {
       }}
       sx={{
         '& .MuiDrawer-paper': {
+          backgroundColor: isSmallScreen ? undefined : 'transparent',
           backgroundImage: 'none',
           boxSizing: 'border-box',
           width: isSmallScreen ? '75vw' : sidebarWidth,

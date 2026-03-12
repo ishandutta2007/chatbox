@@ -97,7 +97,6 @@ export const Route = createFileRoute('/settings')({
 export function RouteComponent() {
   const { t } = useTranslation()
   const router = useRouter()
-  const routerState = useRouterState()
   const canGoBack = useCanGoBack()
   const isSmallScreen = useIsSmallScreen()
 
@@ -105,7 +104,7 @@ export function RouteComponent() {
     <Page
       title={t('Settings')}
       left={
-        isSmallScreen && routerState.location.pathname !== '/settings' && canGoBack ? (
+        isSmallScreen && canGoBack ? (
           <ActionIcon
             className="controls"
             variant="subtle"

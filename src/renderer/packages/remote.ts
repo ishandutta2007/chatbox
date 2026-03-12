@@ -159,16 +159,49 @@ export async function checkNeedUpdate(version: string, os: string, config: Confi
 //     return res['data'] || []
 // }
 
-export async function listCopilots(lang: string) {
+export async function listCopilotTags(lang: string) {
   type Response = {
-    data: CopilotDetail[]
+    data: string[]
   }
-  const res = await ofetch<Response>(`${getAPIOrigin()}/api/copilots/list`, {
-    method: 'POST',
+  const res = await ofetch<Response>(`${getAPIOrigin()}/api/system_copilots/tags/${lang}`, {
+    method: 'GET',
     retry: 3,
-    body: { lang },
   })
   return res.data
+}
+
+export async function listCopilotsByCursor(
+  lang: string,
+  filters?: {
+    limit?: number
+    cursor?: string
+    tag?: string
+    search?: string
+  }
+) {
+  type Response = {
+    data: CopilotDetail[]
+    next_cursor: string | null
+  }
+  const res = await ofetch<Response>(`${getAPIOrigin()}/api/system_copilots/list`, {
+    method: 'POST',
+    retry: 3,
+    body: { lang, ...filters },
+  })
+  return res
+}
+
+export async function recordCopilotUsage(params: {
+  id: string
+  action: 'create_session' | 'create_thread' | 'create_message' | 'use_copilot'
+}) {
+  await ofetch(`${getAPIOrigin()}/api/system_copilots/record_usage`, {
+    method: 'POST',
+    body: {
+      ...params,
+      device_id: (await platform.getConfig()).uuid,
+    },
+  })
 }
 
 export async function recordCopilotShare(detail: CopilotDetail) {

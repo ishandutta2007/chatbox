@@ -1,5 +1,6 @@
 import {
   Alert,
+  Box,
   Button,
   Checkbox,
   Divider,
@@ -23,12 +24,15 @@ import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AdaptiveSelect } from '@/components/AdaptiveSelect'
 import LazySlider from '@/components/common/LazySlider'
+import { handleImageInputAndSave, ImageInStorage } from '@/components/Image'
 import { languageNameMap, languages } from '@/i18n/locales'
 import platform from '@/platform'
 import storage, { StorageKey } from '@/storage'
+import { StorageKeyGenerator } from '@/storage/StoreStorage'
 import { recoverSessionList } from '@/stores/chatStore'
 import { migrateOnData } from '@/stores/migration'
 import { useSettingsStore } from '@/stores/settingsStore'
+import { add as addToast } from '@/stores/toastActions'
 
 export const Route = createFileRoute('/settings/general')({
   component: RouteComponent,
@@ -95,6 +99,49 @@ export function RouteComponent() {
             }
           }}
         />
+
+        {/* Background Image */}
+        <Stack gap="xs">
+          <Text>{t('Background Image')}</Text>
+          <Flex align="center" gap="sm" wrap="wrap">
+            {settings.backgroundImageKey ? (
+              <Box w={160} h={90} className="overflow-hidden rounded bg-chatbox-tertiary/20 flex-shrink-0">
+                <ImageInStorage storageKey={settings.backgroundImageKey} className="object-cover w-full h-full" />
+              </Box>
+            ) : null}
+            <Flex gap="xs" align="center">
+              <FileButton
+                onChange={(file) => {
+                  if (file) {
+                    if (file.size > 5 * 1024 * 1024) {
+                      addToast(t('Support jpg or png file smaller than 5MB'))
+                      return
+                    }
+                    const key = StorageKeyGenerator.picture('background-image')
+                    handleImageInputAndSave(
+                      file,
+                      key,
+                      () => setSettings({ backgroundImageKey: key }),
+                      (k, v) => storage.setBlob(k, v)
+                    )
+                  }
+                }}
+                accept="image/png,image/jpeg"
+              >
+                {(props) => (
+                  <Button {...props} variant="outline" size="xs">
+                    {t('Upload Image')}
+                  </Button>
+                )}
+              </FileButton>
+              {!!settings.backgroundImageKey && (
+                <Button color="chatbox-gray" size="xs" onClick={() => setSettings({ backgroundImageKey: undefined })}>
+                  {t('Remove')}
+                </Button>
+              )}
+            </Flex>
+          </Flex>
+        </Stack>
 
         {/* Font Size */}
         <Stack>

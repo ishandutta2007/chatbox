@@ -75,6 +75,7 @@ export function settings(): Settings {
     showFirstTokenLatency: false,
     userAvatarKey: '',
     defaultAssistantAvatarKey: '',
+    backgroundImageKey: '',
     theme: Theme.System,
     language: 'en',
     fontSize: 14,
