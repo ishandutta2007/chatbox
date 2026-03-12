@@ -1,5 +1,7 @@
 import type { ModelInterface } from '../models/types'
-import type { Config, ProviderModelInfo, SessionSettings, Settings } from '../types'
+import { enrichModelFromRegistry } from '../model-registry/enrich'
+import { mergeSharedOAuthProviderSettings, resolveEffectiveApiKey } from '../oauth'
+import type { Config, ProviderModelInfo, ProviderSettings, SessionSettings, Settings } from '../types'
 import type { ModelDependencies } from '../types/adapters'
 // ChatboxAI must be imported first to ensure it appears at the top of provider lists
 // Import order determines display order in UI (side-effect registration into Map)
@@ -9,6 +11,10 @@ import './definitions/openai-responses'
 import './definitions/gemini'
 import './definitions/claude'
 import './definitions/deepseek'
+import './definitions/qwen'
+import './definitions/qwen-portal'
+import './definitions/minimax'
+import './definitions/moonshot'
 import './definitions/siliconflow'
 import './definitions/openrouter'
 import './definitions/ollama'
@@ -20,6 +26,7 @@ import './definitions/mistral-ai'
 import './definitions/perplexity'
 import './definitions/volcengine'
 import './definitions/chatglm'
+import './definitions/github-copilot'
 import {
   clearProviderRegistry,
   defineProvider,
@@ -41,6 +48,14 @@ export {
 }
 export type { CreateModelConfig, ProviderDefinition, ProviderDefinitionInput }
 
+export function isBuiltinProviderId(providerId: string): boolean {
+  return !!getProviderDefinition(providerId)
+}
+
+export function getBuiltinProviderIds(): string[] {
+  return getSystemProviders().map((provider) => provider.id)
+}
+
 /**
  * Get provider settings from session and global settings.
  * This is a helper function that extracts and formats provider-related settings.
@@ -60,8 +75,14 @@ export function getProviderSettings(setting: SessionSettings, globalSettings: Se
   if (!providerBaseInfo) {
     throw new Error(`Cannot find model with provider: ${setting.provider}`)
   }
-  const providerSetting = globalSettings.providers?.[provider] || {}
-  const formattedApiHost = (providerSetting.apiHost || providerBaseInfo.defaultSettings?.apiHost || '').trim()
+  const providerSetting = mergeSharedOAuthProviderSettings(provider, globalSettings.providers)
+  // When OAuth is active, use the provider's default API host (OAuth tokens are issued for specific endpoints)
+  const isOAuthActive = providerSetting.activeAuthMode === 'oauth' && !!providerSetting.oauth?.accessToken
+  const formattedApiHost = (
+    (isOAuthActive ? '' : providerSetting.apiHost) ||
+    providerBaseInfo.defaultSettings?.apiHost ||
+    ''
+  ).trim()
   return {
     providerSetting,
     formattedApiHost,
@@ -90,7 +111,10 @@ function getModelConfig(settings: SessionSettings, globalSettings: Settings, pro
       modelId: settings.modelId ?? '',
     }
   }
-  return model
+
+  // Enrich with registry metadata (capabilities, contextWindow, maxOutput)
+  // so model instances have accurate data for capability checks.
+  return enrichModelFromRegistry(model, provider)
 }
 
 /**
@@ -121,6 +145,7 @@ export function getModel(
     const { providerSetting, formattedApiHost, providerBaseInfo } = getProviderSettings(settings, globalSettings)
     const model = getModelConfig(settings, globalSettings, provider)
     const formattedApiPath = providerSetting.apiPath || providerBaseInfo.defaultSettings?.apiPath || ''
+    const effectiveApiKey = resolveEffectiveApiKey(providerSetting, dependencies.platformType || 'desktop')
 
     const createConfig: CreateModelConfig = {
       settings,
@@ -131,6 +156,7 @@ export function getModel(
       formattedApiHost,
       formattedApiPath,
       model,
+      effectiveApiKey,
     }
 
     return providerDefinition.createModel(createConfig)
@@ -142,6 +168,7 @@ export function getModel(
 
   if (providerBaseInfo.isCustom) {
     const formattedApiPath = providerSetting.apiPath || providerBaseInfo.defaultSettings?.apiPath || ''
+    const effectiveApiKey = resolveEffectiveApiKey(providerSetting, dependencies.platformType || 'desktop')
     return createCustomProviderModel(
       {
         settings,
@@ -152,6 +179,7 @@ export function getModel(
         formattedApiHost,
         formattedApiPath,
         model,
+        effectiveApiKey,
       },
       providerBaseInfo.type,
       dependencies

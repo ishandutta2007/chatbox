@@ -61,7 +61,7 @@ import {
   useContextTokens,
 } from '@/packages/context-management'
 import { trackingEvent } from '@/packages/event'
-import { getModelContextWindowSync } from '@/packages/model-context'
+import { getProviderModelContextWindowSync, useModelRegistryVersion } from '@/packages/model-registry'
 import * as picUtils from '@/packages/pic_utils'
 import platform from '@/platform'
 import storage from '@/storage'
@@ -151,6 +151,8 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
     },
     ref
   ) => {
+    useModelRegistryVersion()
+
     const { t } = useTranslation()
     const navigate = useNavigate()
     const isSmallScreen = useIsSmallScreen()
@@ -350,15 +352,19 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
 
     const contextWindowKnown = useMemo(() => {
       if (!model?.modelId) return false
-      return !!modelInfo?.contextWindow || getModelContextWindowSync(model.modelId) !== null
-    }, [model?.modelId, modelInfo?.contextWindow])
+      if (modelInfo?.contextWindow) return true
+      if (!model?.provider) return false
+      return getProviderModelContextWindowSync(model.provider, model.modelId) !== null
+    }, [model?.modelId, model?.provider, modelInfo?.contextWindow])
 
     // Use model setting contextWindow if available, otherwise fallback to models.dev data
     const effectiveContextWindow = useMemo(() => {
       if (modelInfo?.contextWindow) return modelInfo.contextWindow
-      if (model?.modelId) return getModelContextWindowSync(model.modelId)
+      if (model?.provider && model?.modelId) {
+        return getProviderModelContextWindowSync(model.provider, model.modelId)
+      }
       return null
-    }, [modelInfo?.contextWindow, model?.modelId])
+    }, [modelInfo?.contextWindow, model?.modelId, model?.provider])
 
     // Calculate token usage percentage
     const tokenPercentage = useMemo(() => {

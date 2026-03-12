@@ -10,6 +10,7 @@
   "description": "A desktop client for multiple cutting-edge AI models",
   "main": "out/main/main.js",
   "scripts": {
+    "generate:model-snapshot": "pnpm exec tsx scripts/generate-model-snapshot.ts",
     "build": "electron-vite build",
     "build:main": "electron-vite build",
     "build:preload": "electron-vite build",
