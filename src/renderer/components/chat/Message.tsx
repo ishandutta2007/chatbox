@@ -390,7 +390,7 @@ const _Message: FC<Props> = (props) => {
       <MessageStatuses statuses={msg.status} />
       <div
         className={cn(
-          isBubbleLayout ? 'inline-block max-w-full' : 'w-full',
+          isBubbleLayout ? 'inline-block max-w-full' : msg.role === 'assistant' ? 'w-full' : 'inline-block',
           isBubbleLayout
             ? cn(
                 'px-4 py-1 rounded-2xl',
