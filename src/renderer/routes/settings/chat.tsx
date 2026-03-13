@@ -1,15 +1,29 @@
-import { Button, FileButton, Flex, Slider, Stack, Switch, Text, Textarea, Title, Tooltip } from '@mantine/core'
+import {
+  Box,
+  Button,
+  FileButton,
+  Flex,
+  SegmentedControl,
+  Slider,
+  Stack,
+  Switch,
+  Text,
+  Textarea,
+  Title,
+  Tooltip,
+} from '@mantine/core'
 import { chatSessionSettings, getDefaultPrompt } from '@shared/defaults'
 import { IconInfoCircle } from '@tabler/icons-react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AssistantAvatar, UserAvatar } from '@/components/common/Avatar'
-import MaxContextMessageCountSlider from '@/components/common/MaxContextMessageCountSlider'
-import SliderWithInput from '@/components/common/SliderWithInput'
 import { Divider } from '@/components/common/Divider'
-import { handleImageInputAndSave } from '@/components/Image'
+import MaxContextMessageCountSlider from '@/components/common/MaxContextMessageCountSlider'
 import { ScalableIcon } from '@/components/common/ScalableIcon'
+import SliderWithInput from '@/components/common/SliderWithInput'
+import { handleImageInputAndSave, ImageInStorage } from '@/components/Image'
+import storage from '@/storage'
 import { StorageKeyGenerator } from '@/storage/StoreStorage'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { add as addToast } from '@/stores/toastActions'
@@ -52,7 +66,12 @@ export function RouteComponent() {
                     return
                   }
                   const key = StorageKeyGenerator.picture('user-avatar')
-                  handleImageInputAndSave(file, key, () => setSettings({ userAvatarKey: key }))
+                  handleImageInputAndSave(
+                    file,
+                    key,
+                    () => setSettings({ userAvatarKey: key }),
+                    (k, v) => storage.setBlob(k, v)
+                  )
                 }
               }}
               accept="image/png,image/jpeg"
@@ -86,7 +105,12 @@ export function RouteComponent() {
                     return
                   }
                   const key = StorageKeyGenerator.picture('default-assistant-avatar')
-                  handleImageInputAndSave(file, key, () => setSettings({ defaultAssistantAvatarKey: key }))
+                  handleImageInputAndSave(
+                    file,
+                    key,
+                    () => setSettings({ defaultAssistantAvatarKey: key }),
+                    (k, v) => storage.setBlob(k, v)
+                  )
                 }
               }}
               accept="image/png,image/jpeg"
@@ -144,6 +168,7 @@ export function RouteComponent() {
           </Button>
         </Stack>
 
+        {/* Max Context Message Count */}
         <MaxContextMessageCountSlider
           wrapperProps={{ gap: 'xxs' }}
           labelProps={{ fw: undefined }}
@@ -151,6 +176,7 @@ export function RouteComponent() {
           onChange={(v) => setSettings({ maxContextMessageCount: v })}
         />
 
+        {/* Temperature */}
         <Stack gap="xxs">
           <Flex align="center" gap="xs">
             <Text size="sm">{t('Temperature')}</Text>
@@ -171,6 +197,7 @@ export function RouteComponent() {
           <SliderWithInput value={settings?.temperature} onChange={(v) => setSettings({ temperature: v })} max={2} />
         </Stack>
 
+        {/* Top P */}
         <Stack gap="xxs">
           <Flex align="center" gap="xs">
             <Text size="sm">Top P</Text>
@@ -191,6 +218,50 @@ export function RouteComponent() {
           <SliderWithInput value={settings?.topP} onChange={(v) => setSettings({ topP: v })} max={1} />
         </Stack>
 
+        {/* Background Image */}
+        <Stack gap="xs">
+          <Text>{t('Background Image')}</Text>
+          <Flex align="center" gap="sm" wrap="wrap">
+            {settings.backgroundImageKey ? (
+              <Box w={160} h={90} className="overflow-hidden rounded bg-chatbox-tertiary/20 flex-shrink-0">
+                <ImageInStorage storageKey={settings.backgroundImageKey} className="object-cover w-full h-full" />
+              </Box>
+            ) : null}
+            <Flex gap="xs" align="center">
+              <FileButton
+                onChange={(file) => {
+                  if (file) {
+                    if (file.size > MAX_IMAGE_SIZE) {
+                      addToast(t('Support jpg or png file smaller than 5MB'))
+                      return
+                    }
+                    const key = StorageKeyGenerator.picture('background-image')
+                    handleImageInputAndSave(
+                      file,
+                      key,
+                      () => setSettings({ backgroundImageKey: key }),
+                      (k, v) => storage.setBlob(k, v)
+                    )
+                  }
+                }}
+                accept="image/png,image/jpeg"
+              >
+                {(props) => (
+                  <Button {...props} variant="outline" size="xs">
+                    {t('Upload Image')}
+                  </Button>
+                )}
+              </FileButton>
+              {!!settings.backgroundImageKey && (
+                <Button color="chatbox-gray" size="xs" onClick={() => setSettings({ backgroundImageKey: undefined })}>
+                  {t('Remove')}
+                </Button>
+              )}
+            </Flex>
+          </Flex>
+        </Stack>
+
+        {/* Stream output */}
         <Stack gap="xxs">
           <Flex align="center" gap="xs" justify="space-between">
             <Text size="sm">{t('Stream output')}</Text>
@@ -211,6 +282,34 @@ export function RouteComponent() {
         {/* Display */}
         <Stack gap="sm">
           <Text c="chatbox-tertiary">{t('Display')}</Text>
+
+          <Stack gap="xxs">
+            <Text size="sm">{t('Message Layout')}</Text>
+            <SegmentedControl
+              size="xs"
+              value={settings.messageLayout ?? 'left'}
+              onChange={(val) => setSettings({ messageLayout: val as 'left' | 'bubble' })}
+              data={[
+                { label: t('Classic'), value: 'left' },
+                { label: t('Bubble'), value: 'bubble' },
+              ]}
+            />
+            <Text size="xs" c="chatbox-tertiary">
+              {settings.messageLayout === 'bubble'
+                ? t('User messages on the right, assistant on the left')
+                : t('All messages aligned to the left')}
+            </Text>
+          </Stack>
+
+          <Switch
+            label={t('Show Avatar')}
+            checked={settings.showAvatar ?? true}
+            onChange={() =>
+              setSettings((draft) => {
+                draft.showAvatar = !(draft.showAvatar ?? true)
+              })
+            }
+          />
 
           <Switch
             label={t('show message word count')}

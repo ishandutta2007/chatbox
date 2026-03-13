@@ -71,6 +71,7 @@ function BackgroundImageOverlay() {
   const showSidebar = useUIStore((s) => s.showSidebar)
   const sidebarWidth = useSidebarWidth()
   const currentSessionId = useAtomValue(atoms.currentSessionIdAtom)
+  const isRootPage = location.pathname === '/'
   const isSessionPage = location.pathname.startsWith('/session/') && location.pathname.length > '/session/'.length
   const sessionId = isSessionPage && currentSessionId && currentSessionId !== 'new' ? currentSessionId : null
   const { session } = useSession(sessionId)
@@ -96,6 +97,8 @@ function BackgroundImageOverlay() {
       : effectiveKey && blob
         ? blobToDataUrl(blob)
         : undefined
+
+  if (!isRootPage && !isSessionPage) return null
   if (!imageUrl) return null
   return (
     <div className="absolute z-0 top-0 left-0 w-full h-full">
