@@ -309,7 +309,7 @@ const _Message: FC<Props> = (props) => {
             },
             !msg.model?.startsWith('Chatbox-AI') &&
               !(msg.role === 'assistant' && props.sessionType === 'picture') && {
-                text: t('edit'),
+                text: t('Edit'),
                 icon: IconPencil,
                 onClick: onEditClick,
               },
@@ -328,7 +328,7 @@ const _Message: FC<Props> = (props) => {
           ].filter((i) => !!i)
         : []),
       {
-        text: t('quote'),
+        text: t('Quote'),
         icon: IconQuoteFilled,
         onClick: quoteMsg,
       },
@@ -578,10 +578,10 @@ const _Message: FC<Props> = (props) => {
           <MessageActionIcon icon={IconArrowDown} tooltip={t('Reply Again Below')} onClick={onGenerateMore} />
         )}
         {!msg.model?.startsWith('Chatbox-AI') && !(msg.role === 'assistant' && props.sessionType === 'picture') && (
-          <MessageActionIcon icon={IconPencil} tooltip={t('edit')} onClick={onEditClick} />
+          <MessageActionIcon icon={IconPencil} tooltip={t('Edit')} onClick={onEditClick} />
         )}
         {!(props.sessionType === 'picture' && msg.role === 'assistant') && (
-          <MessageActionIcon icon={IconCopy} tooltip={t('copy')} onClick={onCopyMsg} />
+          <MessageActionIcon icon={IconCopy} tooltip={t('Copy')} onClick={onCopyMsg} />
         )}
         {!msg.generating && props.sessionType === 'picture' && msg.role === 'assistant' && (
           <MessageActionIcon icon={IconPhotoPlus} tooltip={t('Generate More Images Below')} onClick={onGenerateMore} />

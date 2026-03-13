@@ -522,8 +522,8 @@ export const ReasoningContentUI: FC<{
   }
 
   return (
-    <Box mb={4}>
-      <UnstyledButton onClick={toggleExpanded}>
+    <Box mb="xs">
+      <Box role="button" onClick={toggleExpanded}>
         <Group gap={6}>
           <ScalableIcon icon={IconBulb} size={14} color="var(--chatbox-tint-warning)" />
           <Text size="sm" fw={600} c="chatbox-secondary" td="underline">
@@ -533,8 +533,19 @@ export const ReasoningContentUI: FC<{
           </Text>
           {copyButton}
         </Group>
-      </UnstyledButton>
-      {reasoningCollapse}
+      </Box>
+      <Collapse in={isExpanded}>
+        <Box
+          ml={4}
+          mt={4}
+          pl="sm"
+          style={{ borderLeft: '2px solid var(--chatbox-tint-warning)', maxHeight: 400, overflowY: 'auto' }}
+        >
+          <Text size="sm" c="chatbox-tertiary" style={{ whiteSpace: 'pre-line', lineHeight: 1.5 }}>
+            {reasoningContent}
+          </Text>
+        </Box>
+      </Collapse>
     </Box>
   )
 }

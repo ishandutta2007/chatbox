@@ -206,7 +206,7 @@ const SessionSettingsModal = NiceModal.create(
             <Stack gap="xs">
               <Text fw={700}>{t('Name')}</Text>
               <Input
-                placeholder={t('name')}
+                placeholder={t('Name')}
                 autoFocus={!isSmallScreen}
                 value={editingData.name}
                 onChange={(e) => setEditingData({ ...editingData, name: e.target.value })}
@@ -347,7 +347,7 @@ const SessionSettingsModal = NiceModal.create(
 
         <AdaptiveModal.Actions>
           <AdaptiveModal.CloseButton onClick={onCancel} />
-          <Button onClick={onSave}>{t('save')}</Button>
+          <Button onClick={onSave}>{t('Save')}</Button>
         </AdaptiveModal.Actions>
       </AdaptiveModal>
     )
