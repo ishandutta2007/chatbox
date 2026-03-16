@@ -81,7 +81,7 @@ const _Message: FC<Props> = (props) => {
 
   const { t } = useTranslation()
   const theme = useTheme()
-  const isSamllScreen = useIsSmallScreen()
+  const isSmallScreen = useIsSmallScreen()
   const {
     userAvatarKey,
     showMessageTimestamp,
@@ -294,7 +294,7 @@ const _Message: FC<Props> = (props) => {
 
   const actionMenuItems = useMemo<ActionMenuItemProps[]>(
     () => [
-      ...(isSamllScreen
+      ...(isSmallScreen
         ? [
             !msg.generating &&
               msg.role === 'assistant' && {
@@ -371,7 +371,7 @@ const _Message: FC<Props> = (props) => {
       quoteMsg,
       onDelMsg,
       onViewMessageJson,
-      isSamllScreen,
+      isSmallScreen,
       handleRefresh,
       msg.generating,
       onGenerateMore,
@@ -556,17 +556,18 @@ const _Message: FC<Props> = (props) => {
   const actionButtons = buttonGroup !== 'none' && !msg.generating && (
     <Flex
       gap={0}
+      m="4px -4px -4px -4px"
       className={clsx(
         'group-hover/message:opacity-100 opacity-0 transition-opacity',
         actionMenuOpened || buttonGroup === 'always' ? 'opacity-100' : '',
-        isSamllScreen ? 'sticky bottom-4' : ''
+        isSmallScreen ? 'sticky bottom-4' : ''
       )}
       align="center"
     >
       <Flex
         gap={0}
         className={
-          isSamllScreen
+          isSmallScreen
             ? 'p-xxs bg-chatbox-background-primary rounded-md border-[0.5px] border-solid border-chatbox-border-primary shadow-sm'
             : ''
         }
@@ -597,7 +598,7 @@ const _Message: FC<Props> = (props) => {
     </Flex>
   )
 
-  const metaAndActions = (
+  const meta = (
     <Flex
       direction="column"
       gap={2}
@@ -606,11 +607,16 @@ const _Message: FC<Props> = (props) => {
       align={isUserBubble ? 'flex-end' : 'flex-start'}
     >
       {tipsElements && (
-        <Flex align="center" gap={4} wrap="wrap" justify={isUserBubble ? 'flex-end' : 'flex-start'}>
+        <Flex
+          align="center"
+          gap={4}
+          wrap="wrap"
+          justify={isUserBubble ? 'flex-end' : 'flex-start'}
+          className="overflow-hidden"
+        >
           {tipsElements}
         </Flex>
       )}
-      {actionButtons}
     </Flex>
   )
 
@@ -639,10 +645,11 @@ const _Message: FC<Props> = (props) => {
         }}
       >
         <Flex justify="flex-end" gap="xs" className="w-full">
-          <Flex direction="column" align="flex-end" className={cn('max-w-[85%]', isSamllScreen && 'max-w-[95%]')}>
+          <Flex direction="column" align="flex-end" className={cn('max-w-[85%]', isSmallScreen && 'max-w-[95%]')}>
             {messageContent}
             {(msg.files || msg.links) && <MessageAttachmentGrid files={msg.files} links={msg.links} align="end" />}
-            {metaAndActions}
+            {meta}
+            {actionButtons}
           </Flex>
           {(showAvatar ?? true) && (
             <Box className="mt-1 shrink-0">
@@ -711,7 +718,8 @@ const _Message: FC<Props> = (props) => {
             {(msg.files || msg.links) && (
               <MessageAttachmentGrid files={msg.files} links={msg.links} align={isUserBubble ? 'end' : 'start'} />
             )}
-            {metaAndActions}
+            {meta}
+            {actionButtons}
           </Grid>
         </Grid>
       </Grid>
