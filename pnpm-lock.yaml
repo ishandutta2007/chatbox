@@ -260,9 +260,6 @@ importers:
       '@radix-ui/react-dialog':
         specifier: ^1.0.5
         version: 1.1.15(@types/react-dom@18.3.7(@types/react@18.3.27))(@types/react@18.3.27)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      '@ruguoapp/jk-analytics':
-        specifier: ^1.4.21
-        version: 1.4.21
       '@sentry/react':
         specifier: ^10.12.0
         version: 10.38.0(react@18.3.1)
@@ -740,19 +737,6 @@ importers:
       zustand:
         specifier: ^5.0.6
         version: 5.0.11(@types/react@18.3.27)(immer@10.2.0)(react@18.3.1)(use-sync-external-store@1.6.0(react@18.3.1))
-    optionalDependencies:
-      '@rollup/rollup-darwin-arm64':
-        specifier: 4.48.1
-        version: 4.48.1
-      '@rollup/rollup-darwin-x64':
-        specifier: 4.48.1
-        version: 4.48.1
-      '@rollup/rollup-linux-x64-gnu':
-        specifier: 4.48.1
-        version: 4.48.1
-      '@rollup/rollup-win32-x64-msvc':
-        specifier: 4.48.1
-        version: 4.48.1
 
   release/app:
     dependencies:
@@ -4397,11 +4381,6 @@ packages:
     cpu: [arm64]
     os: [darwin]
 
-  '@rollup/rollup-darwin-arm64@4.48.1':
-    resolution: {integrity: sha512-+XjmyChHfc4TSs6WUQGmVf7Hkg8ferMAE2aNYYWjiLzAS/T62uOsdfnqv+GHRjq7rKRnYh4mwWb4Hz7h/alp8A==}
-    cpu: [arm64]
-    os: [darwin]
-
   '@rollup/rollup-darwin-arm64@4.57.1':
     resolution: {integrity: sha512-crNPrwJOrRxagUYeMn/DZwqN88SDmwaJ8Cvi/TN1HnWBU7GwknckyosC2gd0IqYRsHDEnXf328o9/HC6OkPgOg==}
     cpu: [arm64]
@@ -4409,11 +4388,6 @@ packages:
 
   '@rollup/rollup-darwin-x64@4.34.9':
     resolution: {integrity: sha512-eOojSEAi/acnsJVYRxnMkPFqcxSMFfrw7r2iD9Q32SGkb/Q9FpUY1UlAu1DH9T7j++gZ0lHjnm4OyH2vCI7l7Q==}
-    cpu: [x64]
-    os: [darwin]
-
-  '@rollup/rollup-darwin-x64@4.48.1':
-    resolution: {integrity: sha512-upGEY7Ftw8M6BAJyGwnwMw91rSqXTcOKZnnveKrVWsMTF8/k5mleKSuh7D4v4IV1pLxKAk3Tbs0Lo9qYmii5mQ==}
     cpu: [x64]
     os: [darwin]
 
@@ -4502,11 +4476,6 @@ packages:
     cpu: [x64]
     os: [linux]
 
-  '@rollup/rollup-linux-x64-gnu@4.48.1':
-    resolution: {integrity: sha512-90taWXCWxTbClWuMZD0DKYohY1EovA+W5iytpE89oUPmT5O1HFdf8cuuVIylE6vCbrGdIGv85lVRzTcpTRZ+kA==}
-    cpu: [x64]
-    os: [linux]
-
   '@rollup/rollup-linux-x64-gnu@4.57.1':
     resolution: {integrity: sha512-ABca4ceT4N+Tv/GtotnWAeXZUZuM/9AQyCyKYyKnpk4yoA7QIAuBt6Hkgpw8kActYlew2mvckXkvx0FfoInnLg==}
     cpu: [x64]
@@ -4557,18 +4526,10 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@rollup/rollup-win32-x64-msvc@4.48.1':
-    resolution: {integrity: sha512-8a/caCUN4vkTChxkaIJcMtwIVcBhi4X2PQRoT+yCK3qRYaZ7cURrmJFL5Ux9H9RaMIXj9RuihckdmkBX3zZsgg==}
-    cpu: [x64]
-    os: [win32]
-
   '@rollup/rollup-win32-x64-msvc@4.57.1':
     resolution: {integrity: sha512-mxRFDdHIWRxg3UfIIAwCm6NzvxG0jDX/wBN6KsQFTvKFqqg9vTrWUE68qEjHt19A5wwx5X5aUi2zuZT7YR0jrA==}
     cpu: [x64]
     os: [win32]
-
-  '@ruguoapp/jk-analytics@1.4.21':
-    resolution: {integrity: sha512-YPitvxVbnd5xkyMGQbk5XX2eWYAzePgcbdM9Z5dzdrO31/n89NcWQo3wH3rvXG3GSInZLhjtkc2KAF4UXEPARg==}
 
   '@sentry-internal/browser-utils@10.38.0':
     resolution: {integrity: sha512-UOJtYmdcxHCcV0NPfXFff/a95iXl/E0EhuQ1y0uE0BuZDMupWSF5t2BgC4HaE5Aw3RTjDF3XkSHWoIF6ohy7eA==}
@@ -18081,16 +18042,10 @@ snapshots:
   '@rollup/rollup-darwin-arm64@4.34.9':
     optional: true
 
-  '@rollup/rollup-darwin-arm64@4.48.1':
-    optional: true
-
   '@rollup/rollup-darwin-arm64@4.57.1':
     optional: true
 
   '@rollup/rollup-darwin-x64@4.34.9':
-    optional: true
-
-  '@rollup/rollup-darwin-x64@4.48.1':
     optional: true
 
   '@rollup/rollup-darwin-x64@4.57.1':
@@ -18144,9 +18099,6 @@ snapshots:
   '@rollup/rollup-linux-x64-gnu@4.34.9':
     optional: true
 
-  '@rollup/rollup-linux-x64-gnu@4.48.1':
-    optional: true
-
   '@rollup/rollup-linux-x64-gnu@4.57.1':
     optional: true
 
@@ -18177,15 +18129,8 @@ snapshots:
   '@rollup/rollup-win32-x64-msvc@4.34.9':
     optional: true
 
-  '@rollup/rollup-win32-x64-msvc@4.48.1':
-    optional: true
-
   '@rollup/rollup-win32-x64-msvc@4.57.1':
     optional: true
-
-  '@ruguoapp/jk-analytics@1.4.21':
-    dependencies:
-      uuid: 7.0.3
 
   '@sentry-internal/browser-utils@10.38.0':
     dependencies:
