@@ -11,7 +11,10 @@ import { getOS } from '../packages/navigator'
 import type { Platform, PlatformType } from './interfaces'
 import DesktopKnowledgeBaseController from './knowledge-base/desktop-controller'
 import WebExporter from './web_exporter'
+import { getLogger } from '@/lib/utils'
 import { parseTextFileLocally } from './web_platform_utils'
+
+const log = getLogger('desktop-platform')
 
 const store = localforage.createInstance({ name: 'chatboxstore' })
 
@@ -213,6 +216,7 @@ export default class DesktopPlatform implements Platform {
       result = JSON.parse(resultJSON)
     }
     if (!result.isSupported) {
+      log.error(`parseFileLocally: unsupported file "${file.name}" (path=${file.path || 'none'})`)
       return { isSupported: false }
     }
     const key = `parseFile-` + uuidv4()

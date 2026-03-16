@@ -253,6 +253,7 @@ export async function preprocessFile(
       try {
         result = await parseFileWithLocalParser(file, uniqKey)
       } catch (error) {
+        log.error(`Local parsing failed for text file "${file.name}":`, error)
         throw new Error('local_parser_failed')
       }
     } else {
@@ -270,7 +271,7 @@ export async function preprocessFile(
           try {
             result = await parseFileWithLocalParser(file, uniqKey)
           } catch (error) {
-            // Local parsing failed, throw appropriate error
+            log.error(`Local parsing failed for "${file.name}":`, error)
             throw new Error('local_parser_failed')
           }
           break
@@ -281,7 +282,7 @@ export async function preprocessFile(
           try {
             result = await parseFileWithChatboxAI(file, uniqKey)
           } catch (error) {
-            // Chatbox AI parsing failed
+            log.error(`Chatbox AI parsing failed for "${file.name}":`, error)
             throw new Error('chatbox_ai_parser_failed')
           }
           break
@@ -296,6 +297,7 @@ export async function preprocessFile(
           try {
             result = await parseFileWithMineruService(file, uniqKey, apiToken)
           } catch (error) {
+            log.error(`MinerU parsing failed for "${file.name}":`, error)
             // Re-throw known errors, wrap unknown ones
             if (error instanceof Error && error.message.startsWith('third_party_parser')) {
               throw error

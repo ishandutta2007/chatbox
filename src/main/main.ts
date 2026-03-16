@@ -689,6 +689,7 @@ ipcMain.handle('parseFileLocally', async (event, dataJSON: string) => {
     const data = await parseFile(params.filePath)
     return JSON.stringify({ text: data, isSupported: true })
   } catch (e) {
+    log.error(`parseFileLocally failed: "${params.filePath}"`, e)
     return JSON.stringify({ isSupported: false })
   }
 })
