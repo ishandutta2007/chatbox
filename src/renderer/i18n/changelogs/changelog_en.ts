@@ -1,4 +1,8 @@
 const changelog = `
+## v1.19.1 - 2026.02.27
+1. Image generation tool now supports Nano Banana 2
+2. Fixed drag-and-drop file parsing on desktop
+
 ## v1.19.0
 1. New context management: automatic context compression, token usage percentage display, and context length error detection
 2. Default max context messages changed to unlimited
