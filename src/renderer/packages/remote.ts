@@ -845,8 +845,7 @@ export async function listLicensesByUser(): Promise<UserLicense[]> {
 
 // ========== Image Generation API ==========
 
-// TODO: remove & 改回 getAPIOrigin()
-const IMAGE_GEN_API_ORIGIN = 'https://api-beta.chatboxai.app'
+const IMAGE_GEN_API_ORIGIN = getAPIOrigin()
 
 export interface ImageCompletionRequest {
   model: string
@@ -855,7 +854,7 @@ export interface ImageCompletionRequest {
   style?: string
   aspect_ratio?: string
   quantity?: number
-  images?: Array<{ url?: string; data?: string }>
+  images?: Array<{ image_url: string }>
 }
 
 // Zod schemas for runtime validation
