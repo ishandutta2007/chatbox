@@ -46,7 +46,11 @@ import useNeedRoomForWinControls from '@/hooks/useNeedRoomForWinControls'
 import { useProviders } from '@/hooks/useProviders'
 import { useIsSmallScreen } from '@/hooks/useScreenChange'
 import { useTaskContextTokens } from '@/hooks/useTaskContextTokens'
-import { getProviderModelContextWindowSync, useModelRegistryVersion } from '@/packages/model-registry'
+import {
+  getModelContextWindowSync,
+  getProviderModelContextWindowSync,
+  useModelRegistryVersion,
+} from '@/packages/model-registry'
 import platform from '@/platform'
 import { lastUsedModelStore } from '@/stores/lastUsedModelStore'
 import * as settingActions from '@/stores/settingActions'
@@ -345,7 +349,7 @@ function TaskMessageBubble({ message, sessionName }: { message: Message; session
 }
 
 function TaskChat({ session }: { session: NonNullable<ReturnType<typeof useTaskSessionRecord>['data']> }) {
-  useModelRegistryVersion()
+  const modelRegistryVersion = useModelRegistryVersion()
 
   const { t } = useTranslation()
   const queryClient = useQueryClient()
@@ -392,11 +396,14 @@ function TaskChat({ session }: { session: NonNullable<ReturnType<typeof useTaskS
     }
 
     if (model?.provider && model?.modelId) {
-      return getProviderModelContextWindowSync(model.provider, model.modelId)
+      const providerWindow = getProviderModelContextWindowSync(model.provider, model.modelId)
+      if (providerWindow !== null) return providerWindow
     }
 
+    // Fallback: provider-agnostic lookup (same as compaction detector)
+    if (model?.modelId) return getModelContextWindowSync(model.modelId)
     return null
-  }, [model?.modelId, model?.provider, providerModelInfo?.contextWindow])
+  }, [model?.modelId, model?.provider, providerModelInfo?.contextWindow, modelRegistryVersion])
 
   const tokenPercentage = useMemo(() => {
     if (!contextWindow || contextWindow <= 0) return null

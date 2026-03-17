@@ -62,7 +62,11 @@ import {
   useContextTokens,
 } from '@/packages/context-management'
 import { trackingEvent } from '@/packages/event'
-import { getProviderModelContextWindowSync, useModelRegistryVersion } from '@/packages/model-registry'
+import {
+  getModelContextWindowSync,
+  getProviderModelContextWindowSync,
+  useModelRegistryVersion,
+} from '@/packages/model-registry'
 import * as picUtils from '@/packages/pic_utils'
 import platform from '@/platform'
 import { StorageKeyGenerator } from '@/storage/StoreStorage'
@@ -151,7 +155,7 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
     },
     ref
   ) => {
-    useModelRegistryVersion()
+    const modelRegistryVersion = useModelRegistryVersion()
 
     const { t } = useTranslation()
     const navigate = useNavigate()
@@ -354,18 +358,22 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
     const contextWindowKnown = useMemo(() => {
       if (!model?.modelId) return false
       if (modelInfo?.contextWindow) return true
-      if (!model?.provider) return false
-      return getProviderModelContextWindowSync(model.provider, model.modelId) !== null
-    }, [model?.modelId, model?.provider, modelInfo?.contextWindow])
+      if (model?.provider && getProviderModelContextWindowSync(model.provider, model.modelId) !== null) return true
+      // Fallback: provider-agnostic lookup (same as compaction detector)
+      return getModelContextWindowSync(model.modelId) !== null
+    }, [model?.modelId, model?.provider, modelInfo?.contextWindow, modelRegistryVersion])
 
     // Use model setting contextWindow if available, otherwise fallback to models.dev data
     const effectiveContextWindow = useMemo(() => {
       if (modelInfo?.contextWindow) return modelInfo.contextWindow
       if (model?.provider && model?.modelId) {
-        return getProviderModelContextWindowSync(model.provider, model.modelId)
+        const providerWindow = getProviderModelContextWindowSync(model.provider, model.modelId)
+        if (providerWindow !== null) return providerWindow
       }
+      // Fallback: provider-agnostic lookup (same as compaction detector)
+      if (model?.modelId) return getModelContextWindowSync(model.modelId)
       return null
-    }, [modelInfo?.contextWindow, model?.modelId, model?.provider])
+    }, [modelInfo?.contextWindow, model?.modelId, model?.provider, modelRegistryVersion])
 
     // Calculate token usage percentage
     const tokenPercentage = useMemo(() => {
