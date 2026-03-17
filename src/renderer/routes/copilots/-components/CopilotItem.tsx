@@ -115,7 +115,7 @@ export function CopilotItem({ copilot, type = 'local' }: CopilotItemProps) {
                   ...(copilot.starred
                     ? [
                         {
-                          text: t('unstar'),
+                          text: t('Unstar'),
                           icon: IconStarFilled,
                           onClick: () => {
                             store.addOrUpdate({
@@ -127,7 +127,7 @@ export function CopilotItem({ copilot, type = 'local' }: CopilotItemProps) {
                       ]
                     : [
                         {
-                          text: t('star'),
+                          text: t('Star'),
                           icon: IconStar,
                           onClick: () => {
                             store.addOrUpdate({
