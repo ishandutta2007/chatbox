@@ -62,7 +62,7 @@ import * as premiumActions from '@/stores/premiumActions'
 import * as settingActions from '@/stores/settingActions'
 import { initSettingsStore, settingsStore, useLanguage, useSettingsStore, useTheme } from '@/stores/settingsStore'
 import { useUIStore } from '@/stores/uiStore'
-import { CHATBOX_BUILD_PLATFORM } from '@/variables'
+import { CHATBOX_BUILD_CHANNEL, CHATBOX_BUILD_PLATFORM } from '@/variables'
 import { blobToDataUrl } from './image-creator/-components/constants'
 
 function BackgroundImageOverlay() {
@@ -161,10 +161,13 @@ function Root() {
         return
       }
 
-      // On iOS, wait for version to load before making guide/navigation decisions.
+      // On store builds (iOS / Google Play), wait for version to load before making guide/navigation decisions.
       // Without this, isExceeded is initially false (version not yet loaded),
-      // which would incorrectly navigate to the guide during App Store review.
-      if (CHATBOX_BUILD_PLATFORM === 'ios' && !versionLoaded) {
+      // which would incorrectly navigate to the guide during store review.
+      const isStoreReviewPlatform =
+        CHATBOX_BUILD_PLATFORM === 'ios' ||
+        (CHATBOX_BUILD_PLATFORM === 'android' && CHATBOX_BUILD_CHANNEL === 'google_play')
+      if (isStoreReviewPlatform && !versionLoaded) {
         return
       }
 
