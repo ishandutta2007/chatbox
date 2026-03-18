@@ -1,4 +1,14 @@
 const changelog = `
+## v1.20.0-beta.1 - 2026.03.18
+1. Unified model list that automatically fetches the latest model information from all providers
+2. Redesigned thinking process and web search display for clearer AI reasoning visualization
+3. New Copilot system with pre-configured AI assistants for common tasks
+4. Switched to Shiki for code syntax highlighting with better language support and themes
+5. Support session background images for personalized chat experience
+6. Added OAuth login for Qwen, MiniMax, and Moonshot providers
+7. Font size setting now only affects chat messages instead of the entire UI
+8. Multiple mobile UI improvements including sticky action bar and model selector
+
 ## v1.19.1 - 2026.02.27
 1. Image generation tool now supports Nano Banana 2
 2. Fixed drag-and-drop file parsing on desktop
@@ -9,6 +19,7 @@ const changelog = `
 3. AI SDK upgraded from v5 to v6
 4. Image generation refactored into a standalone tool page
 5. Chatbox AI settings moved from provider level to top-level settings for easier access
+6. Brand new conversational onboarding experience
 
 ## v1.18.4 - 2026.01.16
 1. Fixed compatibility issues on some older devices
