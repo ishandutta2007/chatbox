@@ -255,79 +255,100 @@ export default function Sidebar() {
             variant="light"
             p="xs"
           />
-          <NavLink
-            c="chatbox-secondary"
-            className="rounded"
-            label={t('Settings')}
-            leftSection={<ScalableIcon icon={IconSettingsFilled} size={20} />}
-            onClick={() => {
-              navigateToSettings()
-              if (isSmallScreen) {
-                setShowSidebar(false)
-              }
-            }}
-            variant="light"
-            p="xs"
-          />
-          {!versionHook.isExceeded && (
-            <NavLink
-              c="chatbox-secondary"
-              className="rounded"
-              label={t('Help')}
-              leftSection={<ScalableIcon icon={IconHelpCircle} size={20} />}
-              onClick={() => {
-                navigate({
-                  to: '/guide',
-                })
-                if (isSmallScreen) {
+          {isSmallScreen ? (
+            <Flex gap="xs" align="center">
+              <Tooltip label={t('Settings')}>
+                <ActionIcon
+                  variant="transparent"
+                  color="chatbox-secondary"
+                  size="lg"
+                  onClick={() => {
+                    navigateToSettings()
+                    setShowSidebar(false)
+                  }}
+                >
+                  <ScalableIcon icon={IconSettingsFilled} size={20} />
+                </ActionIcon>
+              </Tooltip>
+              {!versionHook.isExceeded && (
+                <Tooltip label={t('Help')}>
+                  <ActionIcon
+                    variant="transparent"
+                    color="chatbox-secondary"
+                    size="lg"
+                    onClick={() => {
+                      navigate({ to: '/guide' })
+                      setShowSidebar(false)
+                    }}
+                  >
+                    <ScalableIcon icon={IconHelpCircle} size={20} />
+                  </ActionIcon>
+                </Tooltip>
+              )}
+              <Text
+                c="chatbox-tertiary"
+                size="sm"
+                ml="auto"
+                className="cursor-pointer"
+                onClick={() => {
+                  navigate({ to: '/about' })
                   setShowSidebar(false)
+                }}
+              >
+                {`${t('About')} ${/\d/.test(versionHook.version) ? `(${versionHook.version})` : ''}`}
+              </Text>
+            </Flex>
+          ) : (
+            <>
+              <NavLink
+                c="chatbox-secondary"
+                className="rounded"
+                label={t('Settings')}
+                leftSection={<ScalableIcon icon={IconSettingsFilled} size={20} />}
+                onClick={() => navigateToSettings()}
+                variant="light"
+                p="xs"
+              />
+              {!versionHook.isExceeded && (
+                <NavLink
+                  c="chatbox-secondary"
+                  className="rounded"
+                  label={t('Help')}
+                  leftSection={<ScalableIcon icon={IconHelpCircle} size={20} />}
+                  onClick={() => navigate({ to: '/guide' })}
+                  variant="light"
+                  p="xs"
+                />
+              )}
+              {FORCE_ENABLE_DEV_PAGES && (
+                <NavLink
+                  c="chatbox-secondary"
+                  className="rounded"
+                  label="Dev Tools"
+                  leftSection={<ScalableIcon icon={IconCode} size={20} />}
+                  onClick={() => navigate({ to: '/dev' })}
+                  variant="light"
+                  p="xs"
+                />
+              )}
+              <NavLink
+                c="chatbox-tertiary"
+                className="rounded"
+                label={
+                  <Flex align="center" gap={6}>
+                    <span>{`${t('About')} ${/\d/.test(versionHook.version) ? `(${versionHook.version})` : ''}`}</span>
+                    {CHATBOX_BUILD_PLATFORM === 'android' && versionHook.needCheckUpdate && (
+                      <Box w={8} h={8} miw={8} bg="chatbox-brand" style={{ borderRadius: '50%' }} />
+                    )}
+                  </Flex>
                 }
-              }}
-              variant="light"
-              p="xs"
-            />
+                leftSection={<ScalableIcon icon={IconInfoCircle} size={20} />}
+                onClick={() => navigate({ to: '/about' })}
+                variant="light"
+                p="xs"
+              />
+            </>
           )}
-          {FORCE_ENABLE_DEV_PAGES && (
-            <NavLink
-              c="chatbox-secondary"
-              className="rounded"
-              label="Dev Tools"
-              leftSection={<ScalableIcon icon={IconCode} size={20} />}
-              onClick={() => {
-                navigate({
-                  to: '/dev',
-                })
-                if (isSmallScreen) {
-                  setShowSidebar(false)
-                }
-              }}
-              variant="light"
-              p="xs"
-            />
-          )}
-          <NavLink
-            c="chatbox-tertiary"
-            className="rounded"
-            label={
-              <Flex align="center" gap={6}>
-                <span>{`${t('About')} ${/\d/.test(versionHook.version) ? `(${versionHook.version})` : ''}`}</span>
-                {CHATBOX_BUILD_PLATFORM === 'android' && versionHook.needCheckUpdate && (
-                  <Box w={8} h={8} miw={8} bg="chatbox-brand" style={{ borderRadius: '50%' }} />
-                )}
-              </Flex>
-            }
-            leftSection={<ScalableIcon icon={IconInfoCircle} size={20} />}
-            onClick={() => {
-              navigate({
-                to: '/about',
-              })
-              if (isSmallScreen) {
-                setShowSidebar(false)
-              }
-            }}
-            variant="light"
-            p="xs"
-          />
         </Stack>
         {!isSmallScreen && (
           <Box
