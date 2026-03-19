@@ -330,10 +330,7 @@ export function cancelGeneration(): void {
       currentAbortController = null
     }
 
-    void updateRecord(store.currentGeneratingId, {
-      status: 'error',
-      error: 'Generation cancelled',
-    })
+    // Keep status as 'generating' so "Resume Generation" button appears
     store.setCurrentGeneratingId(null)
     queryClient.invalidateQueries({ queryKey: [IMAGE_GEN_LIST_QUERY_KEY] })
   }

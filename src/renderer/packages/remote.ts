@@ -926,7 +926,6 @@ export async function pollImageTask(
 }
 
 const POLL_INTERVAL_MS = 2000
-const POLL_TIMEOUT_MS = 5 * 60 * 1000 // 5 minutes
 
 export async function pollTaskUntilComplete(
   taskId: string,
@@ -936,15 +935,9 @@ export async function pollTaskUntilComplete(
     onPoll?: (response: ImageGenerationTaskResponse) => void
   }
 ): Promise<ImageGenerationTaskResponse> {
-  const startTime = Date.now()
-
   while (true) {
     if (options?.signal?.aborted) {
       throw new DOMException('Polling aborted', 'AbortError')
-    }
-
-    if (Date.now() - startTime > POLL_TIMEOUT_MS) {
-      throw new Error('Image generation timed out after 3 minutes')
     }
 
     const result = await pollImageTask(taskId, licenseKey, options?.signal)

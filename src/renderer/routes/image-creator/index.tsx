@@ -33,7 +33,7 @@ import { useIsSmallScreen } from '@/hooks/useScreenChange'
 import { getLogger } from '@/lib/utils'
 import storage from '@/storage'
 import { StorageKeyGenerator } from '@/storage/StoreStorage'
-import { createAndGenerate, resumeGeneration, retryGeneration } from '@/stores/imageGenerationActions'
+import { cancelGeneration, createAndGenerate, resumeGeneration, retryGeneration } from '@/stores/imageGenerationActions'
 import {
   deleteRecord,
   IMAGE_GEN_LIST_QUERY_KEY,
@@ -646,17 +646,17 @@ function ImageCreatorPage() {
                       }}
                     />
 
-                    {/* Send Button */}
+                    {/* Send / Stop Button */}
                     <ActionIcon
                       size={32}
                       variant="filled"
                       color={isCurrentlyGenerating ? 'dark' : 'chatbox-brand'}
                       radius="xl"
-                      onClick={isCurrentlyGenerating ? undefined : handleSubmit}
+                      onClick={isCurrentlyGenerating ? cancelGeneration : handleSubmit}
                       disabled={!prompt.trim() && !isCurrentlyGenerating}
                       className={`shrink-0 mb-1 ${!prompt.trim() && !isCurrentlyGenerating ? 'disabled:!opacity-100 !text-white' : ''}`}
                       style={{
-                        cursor: isCurrentlyGenerating ? 'default' : undefined,
+                        cursor: isCurrentlyGenerating ? 'pointer' : undefined,
                         ...(!prompt.trim() && !isCurrentlyGenerating
                           ? { backgroundColor: 'rgba(222, 226, 230, 1)' }
                           : {}),
