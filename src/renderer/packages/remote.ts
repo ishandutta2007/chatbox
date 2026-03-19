@@ -926,7 +926,7 @@ export async function pollImageTask(
 }
 
 const POLL_INTERVAL_MS = 2000
-const POLL_TIMEOUT_MS = 3 * 60 * 1000 // 3 minutes
+const POLL_TIMEOUT_MS = 5 * 60 * 1000 // 5 minutes
 
 export async function pollTaskUntilComplete(
   taskId: string,
