@@ -30,7 +30,13 @@ import type {
 } from '../types'
 import type { ModelDependencies } from '../types/adapters'
 import { ApiError, ChatboxAIAPIError } from './errors'
-import type { CallChatCompletionOptions, ModelInterface } from './types'
+import type {
+  CallChatCompletionOptions,
+  ChatStreamOptions,
+  ModelInterface,
+  ModelStatus,
+  ModelStreamPart,
+} from './types'
 
 const RETRY_CONFIG = {
   MAX_ATTEMPTS: 5,
@@ -155,6 +161,104 @@ export default abstract class AbstractAISDKModel implements ModelInterface {
     }
   }
 
+  public async *chatStream<T extends ToolSet>(
+    messages: ModelMessage[],
+    options: ChatStreamOptions
+  ): AsyncGenerator<ModelStreamPart<T>> {
+    let baseModel = this.getChatModel(options)
+    const callSettings = this.getCallSettings(options)
+
+    if (this.options.stream === false) {
+      baseModel = wrapLanguageModel({
+        model: baseModel,
+        middleware: simulateStreamingMiddleware(),
+      })
+    }
+
+    const statusQueue: ModelStatus[] = []
+
+    const retryable5xx = (context: RetryContext<LanguageModelV3>) => {
+      if (isErrorAttempt(context.current)) {
+        const { error } = context.current
+        if (is5xxError(error)) {
+          return {
+            model: baseModel,
+            maxAttempts: RETRY_CONFIG.MAX_ATTEMPTS,
+            delay: RETRY_CONFIG.INITIAL_DELAY_MS,
+            backoffFactor: RETRY_CONFIG.BACKOFF_FACTOR,
+          }
+        }
+      }
+      return undefined
+    }
+
+    const model = createRetryable({
+      model: baseModel,
+      retries: [retryable5xx],
+      onError: (context) => {
+        if (isErrorAttempt(context.current)) {
+          const { error } = context.current
+          const errorMessage = error instanceof Error ? error.message : String(error)
+          console.debug(`[ai-retry] Error on attempt ${context.attempts.length}:`, errorMessage)
+        }
+      },
+      onRetry: (context) => {
+        const attemptNumber = context.attempts.length + 1
+        const lastError = context.attempts[context.attempts.length - 1]
+        const errorMessage =
+          lastError && 'error' in lastError
+            ? lastError.error instanceof Error
+              ? lastError.error.message
+              : String(lastError.error)
+            : 'Unknown error'
+
+        console.debug(`[ai-retry] Retrying attempt ${attemptNumber}/${RETRY_CONFIG.MAX_ATTEMPTS}`)
+
+        statusQueue.push({
+          type: 'retrying',
+          attempt: attemptNumber,
+          maxAttempts: RETRY_CONFIG.MAX_ATTEMPTS,
+          error: errorMessage,
+        })
+      },
+    })
+
+    const result = streamText({
+      model,
+      messages,
+      stopWhen: stepCountIs(options.maxSteps || Number.MAX_SAFE_INTEGER),
+      tools: options.tools as T | undefined,
+      abortSignal: options.signal,
+      ...callSettings,
+    })
+
+    for await (const chunk of result.fullStream) {
+      while (statusQueue.length > 0) {
+        const status = statusQueue.shift()
+        if (status) {
+          yield { type: 'status', status }
+        }
+      }
+
+      if (chunk.type === 'error') {
+        this.handleError(chunk.error)
+      }
+
+      yield chunk
+    }
+
+    while (statusQueue.length > 0) {
+      const status = statusQueue.shift()
+      if (status) {
+        yield { type: 'status', status }
+      }
+    }
+
+    const totalUsage = await result.totalUsage
+    console.debug('[token-usage] totalUsage', totalUsage)
+    yield { type: 'usage', usage: totalUsage }
+  }
+
   public async paint(
     params: {
       prompt: string
@@ -163,7 +267,7 @@ export default abstract class AbstractAISDKModel implements ModelInterface {
       aspectRatio?: string
     },
     signal?: AbortSignal,
-    callback?: (picBase64: string) => void
+    callback?: (picBase64: string) => void | Promise<void>
   ): Promise<string[]> {
     const imageModel = this.getImageModel()
     if (!imageModel) {
@@ -178,7 +282,7 @@ export default abstract class AbstractAISDKModel implements ModelInterface {
     })
     const dataUrls = result.images.map((image) => `data:${image.mediaType};base64,${image.base64}`)
     for (const dataUrl of dataUrls) {
-      callback?.(dataUrl)
+      await callback?.(dataUrl)
     }
     return dataUrls
   }
@@ -434,7 +538,8 @@ export default abstract class AbstractAISDKModel implements ModelInterface {
 
   private handleError(error: unknown, context: string = ''): never {
     if (APICallError.isInstance(error)) {
-      throw new ApiError(`Error from ${this.name}${context}`, error.responseBody)
+      const responseBody = this.sanitizeResponseBody(error.statusCode, error.responseBody)
+      throw new ApiError(`Error from ${this.name}${context}`, responseBody, error.statusCode)
     }
     if (error instanceof ApiError) {
       throw error
@@ -443,6 +548,24 @@ export default abstract class AbstractAISDKModel implements ModelInterface {
       throw error
     }
     throw new ApiError(`Error from ${this.name}${context}: ${error}`)
+  }
+
+  /**
+   * Sanitize HTML error pages (e.g., 502/503/504 gateway errors) from response bodies.
+   */
+  private sanitizeResponseBody(statusCode: number | undefined, responseBody: string | undefined): string {
+    if (!responseBody) return ''
+    const trimmed = responseBody.trimStart().toLowerCase()
+    if (trimmed.startsWith('<!doctype') || trimmed.startsWith('<html')) {
+      const statusMessages: Record<number, string> = {
+        502: 'Bad Gateway',
+        503: 'Service Unavailable',
+        504: 'Gateway Timeout',
+      }
+      const statusMsg = statusCode ? statusMessages[statusCode] || `HTTP ${statusCode}` : 'Server Error'
+      return `${statusMsg} - The server returned an HTML error page instead of a valid response.`
+    }
+    return responseBody
   }
 
   /**
