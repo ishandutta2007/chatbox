@@ -26,7 +26,7 @@ export function ExpandableSearch({ onSearch }: ExpandableSearchProps) {
     setValue(e.currentTarget.value)
   }
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyUp = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       handleSearch()
     }
@@ -60,7 +60,7 @@ export function ExpandableSearch({ onSearch }: ExpandableSearchProps) {
               placeholder={t('Search copilots...') ?? ''}
               value={value}
               onChange={handleChange}
-              onKeyDown={handleKeyDown}
+              onKeyUp={handleKeyUp}
               onBlur={handleBlur}
               size="xs"
               w={isSmallScreen ? 160 : 200}

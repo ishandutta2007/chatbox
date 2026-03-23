@@ -48,17 +48,19 @@ function CopilotSearch() {
 
   return (
     <Stack px="sm" py="xl" gap="lg" className="max-w-7xl">
-      <Stack gap="md">
-        <Text>{t('My Created & Added Copilots')}</Text>
+      {filteredMyCopilots.length > 0 && (
+        <Stack gap="md">
+          <Text>{t('My Created & Added Copilots')}</Text>
 
-        <Grid gutter="xs" align="stretch">
-          {filteredMyCopilots.map((copilot) => (
-            <Grid.Col span={{ base: 12, md: 6, lg: 4 }} key={copilot.id} className="flex flex-row items-stretch">
-              <CopilotItem copilot={copilot} type="local" />
-            </Grid.Col>
-          ))}
-        </Grid>
-      </Stack>
+          <Grid gutter="xs" align="stretch">
+            {filteredMyCopilots.map((copilot) => (
+              <Grid.Col span={{ base: 12, md: 6, lg: 4, xl: 3 }} key={copilot.id}>
+                <CopilotItem copilot={copilot} type="local" highlightTerm={term} />
+              </Grid.Col>
+            ))}
+          </Grid>
+        </Stack>
+      )}
 
       <Stack gap="md">
         <Text>{t('Chatbox Featured')}</Text>
@@ -82,8 +84,8 @@ function CopilotSearch() {
         {!isLoading && remoteCopilots.length > 0 && (
           <Grid gutter="xs" align="stretch">
             {remoteCopilots.map((copilot) => (
-              <Grid.Col span={{ base: 12, md: 6, lg: 4 }} key={copilot.id} className="flex flex-row items-stretch">
-                <CopilotItem copilot={copilot} type="remote" />
+              <Grid.Col span={{ base: 12, md: 6, lg: 4, xl: 3 }} key={copilot.id}>
+                <CopilotItem copilot={copilot} type="remote" highlightTerm={term} />
               </Grid.Col>
             ))}
           </Grid>

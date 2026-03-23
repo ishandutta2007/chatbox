@@ -1,5 +1,5 @@
 import NiceModal from '@ebay/nice-modal-react'
-import { ActionIcon, Avatar, Flex, Stack, Text } from '@mantine/core'
+import { ActionIcon, Avatar, Flex, Highlight, Stack, Text } from '@mantine/core'
 import type { CopilotDetail } from '@shared/types'
 import { IconDots, IconEdit, IconMessageCircle2Filled, IconStar, IconStarFilled, IconTrash } from '@tabler/icons-react'
 import { useNavigate } from '@tanstack/react-router'
@@ -15,14 +15,15 @@ import CopilotDetailModal from './CopilotDetailModal'
 export interface CopilotItemProps {
   copilot: CopilotDetail
   type?: 'local' | 'remote'
+  highlightTerm?: string
 }
 
-export function CopilotItem({ copilot, type = 'local' }: CopilotItemProps) {
+export function CopilotItem({ copilot, type = 'local', highlightTerm = '' }: CopilotItemProps) {
   const { t, i18n } = useTranslation()
   const navigate = useNavigate()
   const store = useMyCopilots()
   const [detailOpened, setDetailOpened] = useState(false)
-  const { name, avatar, picUrl, prompt, tags, createdAt } = copilot
+  const { name, avatar, picUrl, description, prompt, tags, createdAt } = copilot
 
   const handleUse = (detail: CopilotDetail) => {
     void remote
@@ -87,9 +88,16 @@ export function CopilotItem({ copilot, type = 'local' }: CopilotItemProps) {
             </Stack>
           )}
 
-          <Text fw={600} size="xs" c="chatbox-secondary" lineClamp={1} className="flex-1 leading-snug">
+          <Highlight
+            highlight={highlightTerm}
+            fw={600}
+            size="sm"
+            c="chatbox-secondary"
+            lineClamp={2}
+            className="flex-1 leading-snug"
+          >
             {name}
-          </Text>
+          </Highlight>
 
           <Flex gap={0} align="center" onClick={(e) => e.stopPropagation()}>
             {type === 'local' && (
@@ -169,9 +177,15 @@ export function CopilotItem({ copilot, type = 'local' }: CopilotItemProps) {
         </Flex>
 
         {/* Description */}
-        <Text size="xs" c="chatbox-secondary" lineClamp={4} className="flex-shrink-0 leading-snug md:h-[5.5em]">
-          {prompt}
-        </Text>
+        <Highlight
+          highlight={highlightTerm}
+          size="xs"
+          c="chatbox-secondary"
+          lineClamp={2}
+          className="flex-shrink-0 leading-snug"
+        >
+          {description || prompt}
+        </Highlight>
 
         {/* Footer: Tags + Date */}
         <Flex align="center" justify="space-between" mt="auto">
@@ -181,10 +195,10 @@ export function CopilotItem({ copilot, type = 'local' }: CopilotItemProps) {
               <Text
                 key={tag}
                 span
-                size="xxs"
+                size="xs"
                 c="chatbox-brand"
                 px={6}
-                pt={2}
+                py={2}
                 className=" block rounded-full bg-chatbox-background-brand-secondary"
               >
                 {t(tag)}
@@ -194,7 +208,7 @@ export function CopilotItem({ copilot, type = 'local' }: CopilotItemProps) {
 
           {/* Publish Date */}
           {formattedDate && (
-            <Text size="xxs" c="chatbox-tertiary" className="whitespace-nowrap ml-2">
+            <Text size="xs" c="chatbox-tertiary" className="whitespace-nowrap ml-2">
               {type === 'local'
                 ? t('Created on {{date}}', { date: formattedDate })
                 : t('Published on {{date}}', { date: formattedDate })}

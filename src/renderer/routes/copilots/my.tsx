@@ -25,7 +25,7 @@ function MyCopilots() {
         // Copilots Grid
         <Grid gutter="xs">
           {copilots.map((copilot) => (
-            <Grid.Col span={{ base: 12, md: 6, lg: 4 }} key={copilot.id}>
+            <Grid.Col span={{ base: 12, md: 6, lg: 4, xl: 3 }} key={copilot.id}>
               <CopilotItem copilot={copilot} />
             </Grid.Col>
           ))}
