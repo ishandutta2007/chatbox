@@ -2,17 +2,81 @@ import NiceModal from '@ebay/nice-modal-react'
 import { Avatar, Button, CloseButton, Flex, ScrollArea, Stack, Text } from '@mantine/core'
 import type { CopilotDetail, ImageSource } from '@shared/types'
 import { IconEdit, IconMessageCircle2Filled } from '@tabler/icons-react'
+import { useQuery } from '@tanstack/react-query'
+import { useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Gallery, Item as GalleryItem } from 'react-photoswipe-gallery'
 import { AdaptiveModal } from '@/components/common/AdaptiveModal'
 import { ScalableIcon } from '@/components/common/ScalableIcon'
 import { ImageInStorage } from '@/components/Image'
+import { useFetchBlob } from '@/hooks/useBlob'
 import { useMyCopilots } from '@/hooks/useCopilots'
 
-function CopilotImage({ source, className, alt }: { source: ImageSource; className?: string; alt?: string }) {
+function loadImageSize(src: string): Promise<{ width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    const img = new window.Image()
+    img.onload = () => resolve({ width: img.width, height: img.height })
+    img.onerror = reject
+    img.src = src
+  })
+}
+
+function CopilotScreenshotGalleryItem({
+  source,
+  alt,
+  className,
+}: {
+  source: ImageSource
+  alt?: string
+  className?: string
+}) {
   if (source.type === 'storage-key') {
-    return <ImageInStorage storageKey={source.storageKey} className={className} />
+    return <StorageKeyGalleryItem storageKey={source.storageKey} className={className} />
   }
-  return <img src={source.url} alt={alt} className={className} />
+  return <UrlGalleryItem url={source.url} alt={alt} className={className} />
+}
+
+function UrlGalleryItem({ url, alt, className }: { url: string; alt?: string; className?: string }) {
+  const { data: size } = useQuery({
+    queryKey: ['copilot-screenshot-url-size', url],
+    queryFn: () => loadImageSize(url),
+    staleTime: Infinity,
+    gcTime: 60 * 1000,
+  })
+
+  return (
+    <GalleryItem original={url} thumbnail={url} width={size?.width ?? 1024} height={size?.height ?? 1024}>
+      {({ ref, open }) => (
+        <img ref={ref} src={url} alt={alt} className={`cursor-pointer ${className || ''}`} onClick={open} />
+      )}
+    </GalleryItem>
+  )
+}
+
+function StorageKeyGalleryItem({ storageKey, className }: { storageKey: string; className?: string }) {
+  const fetchBlob = useFetchBlob()
+  const { data: pic } = useQuery({
+    queryKey: ['copilot-screenshot-gallery', storageKey],
+    queryFn: async () => {
+      const blob = await fetchBlob(storageKey)
+      if (!blob) return null
+      const base64 = blob.startsWith('data:image/') ? blob : `data:image/png;base64,${blob}`
+      const size = await loadImageSize(base64)
+      return { data: base64, ...size }
+    },
+    staleTime: Infinity,
+    gcTime: 60 * 1000,
+  })
+
+  if (!pic) return <ImageInStorage storageKey={storageKey} className={className} />
+
+  return (
+    <GalleryItem original={pic.data} thumbnail={pic.data} width={pic.width} height={pic.height}>
+      {({ ref, open }) => (
+        <img ref={ref} src={pic.data} className={`cursor-pointer ${className || ''}`} onClick={open} />
+      )}
+    </GalleryItem>
+  )
 }
 
 interface CopilotDetailModalProps {
@@ -26,6 +90,12 @@ interface CopilotDetailModalProps {
 export function CopilotDetailModal({ opened, onClose, type, copilot, onUse }: CopilotDetailModalProps) {
   const { t, i18n } = useTranslation()
   const { addOrUpdate } = useMyCopilots()
+  const galleryOpenRef = useRef(false)
+
+  const handleClose = useCallback(() => {
+    if (galleryOpenRef.current) return
+    onClose()
+  }, [onClose])
 
   if (!copilot) return null
 
@@ -42,7 +112,7 @@ export function CopilotDetailModal({ opened, onClose, type, copilot, onUse }: Co
   return (
     <AdaptiveModal
       opened={opened}
-      onClose={onClose}
+      onClose={handleClose}
       centered
       size="lg"
       trapFocus={false}
@@ -142,19 +212,28 @@ export function CopilotDetailModal({ opened, onClose, type, copilot, onUse }: Co
               <Text size="sm" c="chatbox-secondary">
                 {t('Screenshots')}
               </Text>
-              <Flex gap="xs" wrap="wrap" className="overflow-x-auto pb-xs">
-                {screenshots.map((screenshot) => {
-                  const key = screenshot.type === 'storage-key' ? screenshot.storageKey : screenshot.url
-                  return (
-                    <CopilotImage
-                      key={key}
-                      source={screenshot}
-                      alt={name}
-                      className="h-[200px] rounded-sm border border-solid border-chatbox-border-primary"
-                    />
-                  )
-                })}
-              </Flex>
+              <Gallery
+                onOpen={(pswp) => {
+                  galleryOpenRef.current = true
+                  pswp.on('close', () => {
+                    galleryOpenRef.current = false
+                  })
+                }}
+              >
+                <Flex gap="xs" wrap="wrap" className="overflow-x-auto pb-xs">
+                  {screenshots.map((screenshot) => {
+                    const key = screenshot.type === 'storage-key' ? screenshot.storageKey : screenshot.url
+                    return (
+                      <CopilotScreenshotGalleryItem
+                        key={key}
+                        source={screenshot}
+                        alt={name}
+                        className="h-[120px] w-[120px] rounded-sm border border-solid border-chatbox-border-primary object-cover"
+                      />
+                    )
+                  })}
+                </Flex>
+              </Gallery>
             </Stack>
           )}
         </Stack>
