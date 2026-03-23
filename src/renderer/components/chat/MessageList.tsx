@@ -80,6 +80,7 @@ export function clearScrollPositionCache(sessionId: string) {
 export interface MessageListRef {
   scrollToTop: (behavior?: ScrollBehavior) => void
   scrollToBottom: (behavior?: ScrollBehavior) => void
+  setIsNewMessage: (flag: boolean) => void
 }
 
 export interface MessageListProps {
@@ -171,6 +172,7 @@ const MessageList = forwardRef<MessageListRef, MessageListProps>((props, ref) =>
   const virtuoso = useRef<VirtuosoHandle>(null)
   const messageListRef = useRef<HTMLDivElement>(null)
   const [messageViewportHeight, setMessageViewportHeight] = useState(0)
+  const [isNewMessage, setIsNewMessage] = useState(false)
 
   const setMessageListElement = useUIStore((s) => s.setMessageListElement)
   const setMessageScrolling = useUIStore((s) => s.setMessageScrolling)
@@ -385,6 +387,7 @@ const MessageList = forwardRef<MessageListRef, MessageListProps>((props, ref) =>
   useImperativeHandle(ref, () => ({
     scrollToTop: (behavior = 'auto') => virtuoso.current?.scrollTo({ top: 0, behavior }),
     scrollToBottom: (behavior = 'auto') => virtuoso.current?.scrollTo({ top: Infinity, behavior }),
+    setIsNewMessage: (value: boolean) => setIsNewMessage(value),
   }))
 
   return (
@@ -417,7 +420,11 @@ const MessageList = forwardRef<MessageListRef, MessageListProps>((props, ref) =>
                   <div className={itemClassName}>
                     <div
                       className="flex flex-col pt-5"
-                      style={messageViewportHeight > 0 ? { minHeight: `${messageViewportHeight}px` } : undefined} // key
+                      style={
+                        messageViewportHeight > 0 && isNewMessage
+                          ? { minHeight: `${messageViewportHeight}px` }
+                          : undefined
+                      } // key
                     >
                       {item.messages.map((message, messageIndex) =>
                         renderMessageBlock(message, {
@@ -425,7 +432,7 @@ const MessageList = forwardRef<MessageListRef, MessageListProps>((props, ref) =>
                           isLastItem: isLastItem && messageIndex === item.messages.length - 1,
                         })
                       )}
-                      <div aria-hidden="true" className="flex-1" />
+                      {/* <div aria-hidden="true" className="flex-1" /> */}
                     </div>
                   </div>
                 )

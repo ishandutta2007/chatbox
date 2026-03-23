@@ -112,6 +112,8 @@ function RouteComponent() {
       needGenerating?: boolean
       onUserMessageReady?: () => void
     }) => {
+      messageListRef.current?.setIsNewMessage(true)
+
       if (!currentSession) {
         return
       }
