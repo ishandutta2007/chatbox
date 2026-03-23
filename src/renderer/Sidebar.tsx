@@ -163,6 +163,11 @@ export default function Sidebar() {
               <Text span c="chatbox-secondary" size="xl" lh={1.2} fw="700">
                 Chatbox
               </Text>
+              {/\d/.test(versionHook.version) && (
+                <Text span c="chatbox-tertiary" size="sm">
+                  {versionHook.version}
+                </Text>
+              )}
             </Flex>
             {FORCE_ENABLE_DEV_PAGES && <ThemeSwitchButton size="xs" />}
           </Flex>
@@ -239,53 +244,50 @@ export default function Sidebar() {
               </>
             )}
           </Stack>
-          <NavLink
-            c="chatbox-secondary"
-            className="rounded"
-            label={t('My Copilots')}
-            leftSection={<ScalableIcon icon={IconMessageChatbot} size={20} />}
-            onClick={() => {
-              navigate({
-                to: '/copilots',
-              })
-              if (isSmallScreen) {
-                setShowSidebar(false)
-              }
-            }}
-            variant="light"
-            p="xs"
-          />
+
           {isSmallScreen ? (
-            <Flex gap="xs" align="center">
-              <Tooltip label={t('Settings')}>
+            <Flex gap="md" align="center">
+              <NavLink
+                c="chatbox-secondary"
+                className="rounded"
+                label={t('My Copilots')}
+                leftSection={<ScalableIcon icon={IconMessageChatbot} size={20} />}
+                onClick={() => {
+                  navigate({
+                    to: '/copilots',
+                  })
+                  setShowSidebar(false)
+                }}
+                variant="light"
+                p="xs"
+              />
+
+              {!versionHook.isExceeded && (
                 <ActionIcon
                   variant="transparent"
                   color="chatbox-secondary"
-                  size="lg"
+                  size={24}
                   onClick={() => {
-                    navigateToSettings()
+                    navigate({ to: '/guide' })
                     setShowSidebar(false)
                   }}
                 >
-                  <ScalableIcon icon={IconSettingsFilled} size={20} />
+                  <ScalableIcon icon={IconHelpCircle} size={20} />
                 </ActionIcon>
-              </Tooltip>
-              {!versionHook.isExceeded && (
-                <Tooltip label={t('Help')}>
-                  <ActionIcon
-                    variant="transparent"
-                    color="chatbox-secondary"
-                    size="lg"
-                    onClick={() => {
-                      navigate({ to: '/guide' })
-                      setShowSidebar(false)
-                    }}
-                  >
-                    <ScalableIcon icon={IconHelpCircle} size={20} />
-                  </ActionIcon>
-                </Tooltip>
               )}
-              <Text
+              <ActionIcon
+                variant="transparent"
+                color="chatbox-secondary"
+                size={24}
+                onClick={() => {
+                  navigateToSettings()
+                  setShowSidebar(false)
+                }}
+              >
+                <ScalableIcon icon={IconSettingsFilled} size={20} />
+              </ActionIcon>
+
+              {/* <Text
                 c="chatbox-tertiary"
                 size="sm"
                 ml="auto"
@@ -296,10 +298,26 @@ export default function Sidebar() {
                 }}
               >
                 {`${t('About')} ${/\d/.test(versionHook.version) ? `(${versionHook.version})` : ''}`}
-              </Text>
+              </Text> */}
             </Flex>
           ) : (
             <>
+              <NavLink
+                c="chatbox-secondary"
+                className="rounded"
+                label={t('My Copilots')}
+                leftSection={<ScalableIcon icon={IconMessageChatbot} size={20} />}
+                onClick={() => {
+                  navigate({
+                    to: '/copilots',
+                  })
+                  if (isSmallScreen) {
+                    setShowSidebar(false)
+                  }
+                }}
+                variant="light"
+                p="xs"
+              />
               <NavLink
                 c="chatbox-secondary"
                 className="rounded"

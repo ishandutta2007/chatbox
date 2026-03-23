@@ -8,6 +8,7 @@ import {
   IconChevronRight,
   IconCircleDottedLetterM,
   IconFileText,
+  IconInfoCircle,
   IconKeyboard,
   IconMessages,
   IconSparkles,
@@ -190,6 +191,36 @@ export function SettingsRoot() {
               {isSmallScreen && <Divider />}
             </Link>
           ))}
+
+          {isSmallScreen && (
+            <Link to={`/about`} className={'block no-underline w-full'}>
+              <Flex
+                component="span"
+                gap="xs"
+                p="md"
+                pr="xl"
+                py="sm"
+                align="center"
+                c={'chatbox-secondary'}
+                className={clsx(' cursor-pointer select-none rounded-md')}
+              >
+                <Box component="span" flex="0 0 auto" w={20} h={20} mr="xs">
+                  <ScalableIcon icon={IconInfoCircle} size={20} />
+                </Box>
+                <Text
+                  flex={1}
+                  lineClamp={1}
+                  span={true}
+                  className={`!text-inherit ${isSmallScreen ? 'min-h-[32px] leading-[32px]' : ''}`}
+                >
+                  {t('About')}
+                </Text>
+                <ScalableIcon icon={IconChevronRight} size={20} className="!text-chatbox-tint-tertiary" />
+              </Flex>
+
+              {isSmallScreen && <Divider />}
+            </Link>
+          )}
         </Stack>
       )}
       {!(isSmallScreen && routerState.location.pathname === '/settings') && (
