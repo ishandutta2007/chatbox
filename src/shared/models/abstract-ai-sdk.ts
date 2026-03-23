@@ -253,10 +253,6 @@ export default abstract class AbstractAISDKModel implements ModelInterface {
         yield { type: 'status', status }
       }
     }
-
-    const totalUsage = await result.totalUsage
-    console.debug('[token-usage] totalUsage', totalUsage)
-    yield { type: 'usage', usage: totalUsage }
   }
 
   public async paint(

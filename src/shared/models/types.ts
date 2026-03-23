@@ -1,4 +1,4 @@
-import type { LanguageModelUsage, ModelMessage, TextStreamPart, ToolSet } from 'ai'
+import type { ModelMessage, TextStreamPart, ToolSet } from 'ai'
 import {
   type MessageContentParts,
   type MessageStatus,
@@ -72,7 +72,4 @@ export interface ChatStreamOptions {
 export type ModelStatus = MessageStatus
 
 // ModelStreamPart extends AI SDK's TextStreamPart with custom status events
-export type ModelStreamPart<T extends ToolSet = ToolSet> =
-  | TextStreamPart<T>
-  | { type: 'status'; status: MessageStatus }
-  | { type: 'usage'; usage: LanguageModelUsage }
+export type ModelStreamPart<T extends ToolSet = ToolSet> = TextStreamPart<T> | { type: 'status'; status: MessageStatus }

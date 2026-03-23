@@ -131,11 +131,8 @@ export async function processStreamChunk(
     }
     case 'finish': {
       finishReason = 'finishReason' in chunk ? chunk.finishReason : finishReason
-      break
-    }
-    case 'usage': {
-      if ('usage' in chunk) {
-        usage = chunk.usage as Message['usage']
+      if ('totalUsage' in chunk && chunk.totalUsage) {
+        usage = chunk.totalUsage as Message['usage']
       }
       break
     }
