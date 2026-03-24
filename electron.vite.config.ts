@@ -26,6 +26,25 @@ export function injectBaseTag(): Plugin {
 }
 
 /**
+ * Vite plugin to inject window.chatbox_release_date for web builds
+ */
+export function injectReleaseDate(): Plugin {
+  const releaseDate = new Date().toISOString().slice(0, 10)
+  return {
+    name: 'inject-release-date',
+    transformIndexHtml() {
+      return [
+        {
+          tag: 'script',
+          children: `window.chatbox_release_date="${releaseDate}";`,
+          injectTo: 'head-prepend',
+        },
+      ]
+    },
+  }
+}
+
+/**
  * Vite plugin to replace dvh units with vh units
  * This replaces the webpack string-replace-loader functionality
  */
@@ -156,6 +175,7 @@ export default defineConfig(({ mode }) => {
         react({}),
         dvhToVh(),
         isWeb ? injectBaseTag() : undefined,
+        injectReleaseDate(),
         visualizer({
           filename: 'release/app/dist/renderer/stats.html',
           open: false,
