@@ -11,6 +11,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { z } from 'zod'
 import { trackJkClickEvent } from '@/analytics/jk'
 import { JK_EVENTS, JK_PAGE_NAMES } from '@/analytics/jk-events'
+import { MessageLayoutSelector } from '@/components/common/MessageLayoutPreview'
 import { ScalableIcon } from '@/components/common/ScalableIcon'
 import { ImageInStorage } from '@/components/Image'
 import InputBox, { type InputBoxPayload } from '@/components/InputBox/InputBox'
@@ -45,7 +46,10 @@ export const Route = createFileRoute('/')({
 function Index() {
   const { t } = useTranslation()
   const isSmallScreen = useIsSmallScreen()
+  const messageLayout = useSettingsStore((s) => s.messageLayout)
+  const [tempMessageLayout, setTempMessageLayout] = useState<'left' | 'bubble' | undefined>(undefined)
 
+  const setSettings = useSettingsStore((s) => s.setSettings)
   const newSessionState = useUIStore((s) => s.newSessionState)
   const setNewSessionState = useUIStore((s) => s.setNewSessionState)
   const addSessionKnowledgeBase = useUIStore((s) => s.addSessionKnowledgeBase)
@@ -225,12 +229,63 @@ function Index() {
   return (
     <Page title="">
       <div className="p-0 flex flex-col h-full">
-        <Stack align="center" justify="center" gap="sm" flex={1}>
-          <HomepageIcon className="h-8" />
-          <Text fw="600" size={isSmallScreen ? 'sm' : 'md'}>
-            {t('What can I help you with today?')}
-          </Text>
-        </Stack>
+        {messageLayout ? (
+          <Stack align="center" justify="center" gap="sm" flex={1}>
+            <HomepageIcon className="h-8" />
+            <Text fw="600" size={isSmallScreen ? 'sm' : 'md'}>
+              {t('What can I help you with today?')}
+            </Text>
+          </Stack>
+        ) : (
+          <Stack align="center" justify="center" gap="sm" flex={1} p="sm">
+            <Stack
+              align="center"
+              justify="center"
+              gap="lg"
+              w={isSmallScreen ? '100%' : '80%'}
+              maw={386}
+              p="xl"
+              className="border border-solid border-chatbox-border-primary rounded-lg relative"
+            >
+              <div className="absolute top-0 right-0">
+                <ActionIcon
+                  variant="transparent"
+                  color="chatbox-tertiary"
+                  m={10}
+                  onClick={() => setSettings({ messageLayout: 'left' })}
+                >
+                  <ScalableIcon icon={IconX} size={20} className="text-chatbox-tint-tertiary" />
+                </ActionIcon>
+              </div>
+              <Text size="md" fw="600">
+                {t('Message Layout')}
+              </Text>
+              <Stack gap="sm">
+                <MessageLayoutSelector
+                  w="100%"
+                  value={tempMessageLayout || 'left'}
+                  onValueChange={(val) => setTempMessageLayout(val)}
+                />
+
+                <Text size="xs" c="chatbox-secondary">
+                  {t('You can change this setting later in Settings → ')}
+                  <a className="cursor-pointer !text-chatbox-tint-brand" onClick={() => navigateToSettings('chat')}>
+                    {t('Conversation Settings')}
+                  </a>
+                </Text>
+              </Stack>
+
+              <Button
+                variant="filled"
+                size="md"
+                className="w-full"
+                onClick={() => setSettings({ messageLayout: tempMessageLayout || 'left' })}
+              >
+                {t('Save')}
+              </Button>
+            </Stack>
+          </Stack>
+        )}
 
         {welcomeCardMode !== 'none' && (
           <Box px="sm">

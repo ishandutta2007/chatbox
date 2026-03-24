@@ -1,17 +1,4 @@
-import {
-  Box,
-  Button,
-  FileButton,
-  Flex,
-  SegmentedControl,
-  Slider,
-  Stack,
-  Switch,
-  Text,
-  Textarea,
-  Title,
-  Tooltip,
-} from '@mantine/core'
+import { Box, Button, FileButton, Flex, Slider, Stack, Switch, Text, Textarea, Title, Tooltip } from '@mantine/core'
 import { chatSessionSettings, getDefaultPrompt } from '@shared/defaults'
 import { IconInfoCircle } from '@tabler/icons-react'
 import { createFileRoute } from '@tanstack/react-router'
@@ -20,6 +7,7 @@ import { useTranslation } from 'react-i18next'
 import { AssistantAvatar, UserAvatar } from '@/components/common/Avatar'
 import { Divider } from '@/components/common/Divider'
 import MaxContextMessageCountSlider from '@/components/common/MaxContextMessageCountSlider'
+import { MessageLayoutSelector } from '@/components/common/MessageLayoutPreview'
 import { ScalableIcon } from '@/components/common/ScalableIcon'
 import SliderWithInput from '@/components/common/SliderWithInput'
 import { handleImageInputAndSave, ImageInStorage } from '@/components/Image'
@@ -283,23 +271,10 @@ export function RouteComponent() {
         <Stack gap="sm">
           <Text c="chatbox-tertiary">{t('Display')}</Text>
 
-          <Stack gap="xxs">
-            <Text size="sm">{t('Message Layout')}</Text>
-            <SegmentedControl
-              size="xs"
-              value={settings.messageLayout ?? 'left'}
-              onChange={(val) => setSettings({ messageLayout: val as 'left' | 'bubble' })}
-              data={[
-                { label: t('Classic'), value: 'left' },
-                { label: t('Bubble'), value: 'bubble' },
-              ]}
-            />
-            <Text size="xs" c="chatbox-tertiary">
-              {settings.messageLayout === 'bubble'
-                ? t('User messages on the right, assistant on the left')
-                : t('All messages aligned to the left')}
-            </Text>
-          </Stack>
+          <MessageLayoutSelector
+            value={settings.messageLayout ?? 'left'}
+            onValueChange={(val) => setSettings({ messageLayout: val })}
+          />
 
           <Switch
             label={t('Show Avatar')}
