@@ -26,6 +26,12 @@ export const StorageKeyGenerator = {
   file(sessionId: string, msgId: string) {
     return `file:${sessionId}:${msgId}:${uuidv4()}`
   },
+  fileUniqKey(file: File) {
+    return `file:${file.path || file.name}-${file.size}-${file.lastModified}`
+  },
+  linkUniqKey(url: string) {
+    return `link:${url}`
+  },
 }
 
 export default class StoreStorage extends BaseStorage {
