@@ -204,9 +204,9 @@ const _Message: FC<Props> = (props) => {
           tooltip: t('First token latency') as string,
         })
     }
-    if (showTokenCount && !msg.generating) {
-      if (msg.tokenCount) tips.push({ label: `${msg.tokenCount} tkn`, tooltip: t('Token count') as string })
-    }
+    // if (showTokenCount && !msg.generating) {
+    //   if (msg.tokenCount) tips.push({ label: `${msg.tokenCount} tkn`, tooltip: t('Token count') as string })
+    // }
   } else if (props.sessionType === 'picture') {
     if (showModelName && props.msg.role === 'assistant') {
       tips.push({ label: props.msg.model || 'unknown', tooltip: t('Model') as string })
