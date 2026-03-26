@@ -216,7 +216,9 @@ export function CopilotDetailModal({ opened, onClose, type, copilot, onUse }: Co
                 onOpen={(pswp) => {
                   galleryOpenRef.current = true
                   pswp.on('close', () => {
-                    galleryOpenRef.current = false
+                    setTimeout(() => {
+                      galleryOpenRef.current = false
+                    }, 100)
                   })
                 }}
               >
