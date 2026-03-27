@@ -45,6 +45,18 @@ export function injectReleaseDate(): Plugin {
 }
 
 /**
+ * Vite plugin to replace Plausible data-domain for web builds
+ */
+export function replacePlausibleDomain(): Plugin {
+  return {
+    name: 'replace-plausible-domain',
+    transformIndexHtml(html) {
+      return html.replace('data-domain="app.chatboxai.app"', 'data-domain="web.chatboxai.app"')
+    },
+  }
+}
+
+/**
  * Vite plugin to replace dvh units with vh units
  * This replaces the webpack string-replace-loader functionality
  */
@@ -176,6 +188,7 @@ export default defineConfig(({ mode }) => {
         dvhToVh(),
         isWeb ? injectBaseTag() : undefined,
         injectReleaseDate(),
+        isWeb ? replacePlausibleDomain() : undefined,
         visualizer({
           filename: 'release/app/dist/renderer/stats.html',
           open: false,
