@@ -229,7 +229,7 @@ function Index() {
   return (
     <Page title="">
       <div className="p-0 flex flex-col h-full">
-        {messageLayout && welcomeCardMode !== 'none' ? (
+        {messageLayout || welcomeCardMode !== 'none' ? (
           <Stack align="center" justify="center" gap="sm" flex={1}>
             <HomepageIcon className="h-8" />
             <Text fw="600" size={isSmallScreen ? 'sm' : 'md'}>
