@@ -30,7 +30,7 @@ export function MessageAttachmentGrid({ files, links }: MessageAttachmentGridPro
     <div className="mt-1 mb-1 max-w-[500px]">
       <div className="grid grid-cols-2 gap-1.5">
         {fileItems.slice(0, visibleFileCount).map((file) => (
-          <div key={file.id} className="group/attachment min-w-0">
+          <div key={file.id} className="group/attachment min-w-0 overflow-hidden">
             <MessageAttachment
               label={file.name}
               filename={file.name}
@@ -41,7 +41,7 @@ export function MessageAttachmentGrid({ files, links }: MessageAttachmentGridPro
           </div>
         ))}
         {linkItems.slice(0, visibleLinkCount).map((link) => (
-          <div key={link.id} className="group/attachment min-w-0">
+          <div key={link.id} className="group/attachment min-w-0 overflow-hidden">
             <MessageAttachment
               label={link.title}
               url={link.url}

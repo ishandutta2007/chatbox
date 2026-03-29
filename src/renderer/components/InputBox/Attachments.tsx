@@ -151,7 +151,7 @@ export function MessageAttachment(props: {
   return (
     <Tooltip title={isClickable ? t('Click to view parsed content') : label}>
       <div
-        className={`flex items-center gap-2 px-2 py-1.5 min-w-0
+        className={`flex items-center gap-2 px-2 py-1.5 min-w-0 overflow-hidden
             rounded-md
             bg-chatbox-background-secondary
             ${isClickable ? 'cursor-pointer hover:bg-chatbox-background-secondary-hover transition-colors' : ''}`}
@@ -161,8 +161,8 @@ export function MessageAttachment(props: {
           {filename && <FileIcon filename={filename} className="w-4 h-4" />}
           {url && !filename && <Link2 className="w-4 h-4 text-chatbox-secondary" strokeWidth={1.5} />}
         </div>
-        <div className="min-w-0 flex-1">
-          <Typography className="text-xs leading-tight" noWrap>
+        <div className="min-w-0 flex-1 overflow-hidden">
+          <Typography className="text-xs leading-tight truncate" noWrap>
             {label}
           </Typography>
           {subtitle && (
