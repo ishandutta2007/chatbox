@@ -1,6 +1,8 @@
 import { ModelProviderEnum, ModelProviderType } from '../../types'
+import { createOAuthCredentialManager, createOpenAIOAuthFetch } from '../../oauth'
 import { defineProvider } from '../registry'
 import OpenAI from './models/openai'
+import OpenAIResponses from './models/openai-responses'
 
 export const openaiProvider = defineProvider({
   id: ModelProviderEnum.OpenAI,
@@ -74,9 +76,39 @@ export const openaiProvider = defineProvider({
     ],
   },
   createModel: (config) => {
+    const isOAuth = config.providerSetting.activeAuthMode === 'oauth' && !!config.providerSetting.oauth?.accessToken
+    const credentialManager = createOAuthCredentialManager(
+      ModelProviderEnum.OpenAI,
+      config.providerSetting,
+      config.dependencies
+    )
+    const oauthFetch =
+      isOAuth && credentialManager ? createOpenAIOAuthFetch(config.dependencies, credentialManager) : undefined
+
+    if (isOAuth) {
+      return new OpenAIResponses(
+        {
+          apiKey: 'oauth-placeholder',
+          apiHost: config.formattedApiHost,
+          apiPath: '/responses',
+          model: config.model,
+          temperature: config.settings.temperature,
+          topP: config.settings.topP,
+          maxOutputTokens: config.settings.maxTokens,
+          stream: config.settings.stream,
+          useProxy: false,
+          customFetch: oauthFetch,
+          listModelsFallback: config.providerSetting.models || openaiProvider.defaultSettings?.models,
+          skipRemoteModelList: true,
+          forceStatelessResponses: true,
+        },
+        config.dependencies
+      )
+    }
+
     return new OpenAI(
       {
-        apiKey: config.providerSetting.apiKey || '',
+        apiKey: config.effectiveApiKey,
         apiHost: config.formattedApiHost,
         model: config.model,
         dalleStyle: config.settings.dalleStyle || 'vivid',

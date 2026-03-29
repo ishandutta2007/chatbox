@@ -1,4 +1,5 @@
 import { ModelProviderEnum, ModelProviderType } from '../../types'
+import { createOAuthCredentialManager, createOpenAIOAuthFetch } from '../../oauth'
 import { defineProvider } from '../registry'
 import OpenAIResponses from './models/openai-responses'
 
@@ -39,9 +40,15 @@ export const openaiResponsesProvider = defineProvider({
     ],
   },
   createModel: (config) => {
+    const isOAuth = config.providerSetting.activeAuthMode === 'oauth' && !!config.providerSetting.oauth?.accessToken
+    const credentialManager = createOAuthCredentialManager(
+      ModelProviderEnum.OpenAIResponses,
+      config.providerSetting,
+      config.dependencies
+    )
     return new OpenAIResponses(
       {
-        apiKey: config.providerSetting.apiKey || '',
+        apiKey: isOAuth ? 'oauth-placeholder' : config.effectiveApiKey,
         apiHost: config.formattedApiHost,
         apiPath:
           config.providerSetting.apiPath ||
@@ -53,6 +60,13 @@ export const openaiResponsesProvider = defineProvider({
         maxOutputTokens: config.settings.maxTokens,
         stream: config.settings.stream,
         useProxy: config.providerSetting.useProxy,
+        customFetch:
+          isOAuth && credentialManager ? createOpenAIOAuthFetch(config.dependencies, credentialManager) : undefined,
+        listModelsFallback: isOAuth
+          ? config.providerSetting.models || openaiResponsesProvider.defaultSettings?.models
+          : undefined,
+        skipRemoteModelList: isOAuth,
+        forceStatelessResponses: isOAuth,
       },
       config.dependencies
     )
