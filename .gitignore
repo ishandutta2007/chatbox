@@ -177,4 +177,14 @@ electron-builder.env
 **/routeTree.gen.ts
 
 .env.sentry-build-plugin
+
+temp.md
 .sisyphus/
+.playwright-cli/
+node-compile-cache/
+
+*storybook.log
+storybook-static
+.gstack/
+.worktrees/
+.claude/worktrees/
