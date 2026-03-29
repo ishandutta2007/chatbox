@@ -69,6 +69,7 @@ export interface CallSettings {
   topP?: number
   maxOutputTokens?: number
   providerOptions?: Record<string, Record<string, JSONValue>>
+  system?: string
 }
 
 interface ToolExecutionResult {
