@@ -26,7 +26,6 @@ import './definitions/mistral-ai'
 import './definitions/perplexity'
 import './definitions/volcengine'
 import './definitions/chatglm'
-import './definitions/github-copilot'
 import {
   clearProviderRegistry,
   defineProvider,
