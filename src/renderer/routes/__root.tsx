@@ -240,17 +240,6 @@ function Root() {
     }
   }, [])
 
-  // Route → sidebar mode sync
-  const setSidebarMode = useUIStore((s) => s.setSidebarMode)
-  useEffect(() => {
-    const pathname = location.pathname
-    if (pathname === '/task' || pathname.startsWith('/task/')) {
-      setSidebarMode('task')
-    } else if (pathname === '/' || pathname.startsWith('/session/')) {
-      setSidebarMode('chat')
-    }
-    // Other routes (settings, copilots, about, etc.) don't change sidebarMode
-  }, [location.pathname, setSidebarMode])
 
 
   const { needRoomForMacWindowControls } = useNeedRoomForWinControls()
