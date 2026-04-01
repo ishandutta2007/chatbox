@@ -196,7 +196,32 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
       [currentSessionId, setSessionWebBrowsing]
     )
 
-    const { messageInput, setMessageInput, clearDraft } = useMessageInput('', { isNewSession })
+    // messageInput lives inside the MessageInputField child component to avoid
+    // re-rendering the entire InputBox (20+ hooks, 1300+ lines) on every keystroke.
+    // The parent only keeps a ref to the latest text and a boolean for empty/non-empty.
+    const messageInputFieldRef = useRef<MessageInputFieldRef>(null)
+    const latestInputRef = useRef('')
+    const [hasTextContent, setHasTextContent] = useState(false)
+
+    const debouncedUpdateTimerRef = useRef<ReturnType<typeof setTimeout>>()
+    const resetHistoryIndexRef = useRef<() => void>(() => {})
+
+    // Called only on real user typing (not programmatic setValue), to avoid resetting history navigation
+    const onUserInput = useCallback(() => {
+      resetHistoryIndexRef.current()
+    }, [])
+
+    const onMessageInputValueChange = useCallback((value: string) => {
+      latestInputRef.current = value
+      const hasContent = value.trim().length > 0
+      setHasTextContent((prev) => {
+        if (prev === hasContent) return prev
+        return hasContent
+      })
+      // Schedule debounced pre-constructed message update
+      clearTimeout(debouncedUpdateTimerRef.current)
+      debouncedUpdateTimerRef.current = setTimeout(() => flushRef.current(), 300)
+    }, [])
 
     // Pre-constructed message state (scoped by session)
     const [preConstructedMessage, setPreConstructedMessage] = useAtom(
@@ -224,30 +249,32 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
     const [links, setLinks] = useAtom(atoms.inputBoxLinksFamily(currentSessionId || 'new'))
     const [isSubmitting, setIsSubmitting] = useState(false)
 
-    useEffect(() => {
+    const flushPreConstructedMessage = useCallback(() => {
+      clearTimeout(debouncedUpdateTimerRef.current)
+      const text = latestInputRef.current
       const constructedMessage = sessionHelpers.constructUserMessage(
-        messageInput,
+        text,
         pictureKeys,
         preConstructedMessage.preprocessedFiles,
         preConstructedMessage.preprocessedLinks
       )
       setPreConstructedMessage((prev) => ({
         ...prev,
-        text: messageInput,
+        text,
         pictureKeys,
         attachments,
         links,
         message: constructedMessage,
       }))
-    }, [
-      messageInput,
-      pictureKeys,
-      attachments,
-      links,
-      preConstructedMessage.preprocessedFiles,
-      preConstructedMessage.preprocessedLinks,
-      setPreConstructedMessage,
-    ])
+    }, [pictureKeys, attachments, links, preConstructedMessage.preprocessedFiles, preConstructedMessage.preprocessedLinks, setPreConstructedMessage])
+
+    const flushRef = useRef(flushPreConstructedMessage)
+    flushRef.current = flushPreConstructedMessage
+
+    // When non-text deps change (pictures, attachments, links), flush immediately
+    useEffect(() => {
+      flushRef.current()
+    }, [flushPreConstructedMessage])
 
     const pictureInputRef = useRef<HTMLInputElement | null>(null)
     const fileInputRef = useRef<HTMLInputElement | null>(null)
@@ -275,8 +302,8 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
     }, [preConstructedMessage.preprocessingStatus])
 
     const disableSubmit = useMemo(
-      () => !(messageInput.trim() || links?.length || attachments?.length || pictureKeys?.length),
-      [messageInput, links, attachments, pictureKeys]
+      () => !(hasTextContent || links?.length || attachments?.length || pictureKeys?.length),
+      [hasTextContent, links, attachments, pictureKeys]
     )
 
     const { providers } = useProviders()
@@ -439,22 +466,29 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
       }
     }, [showRollbackThreadButton])
 
-    const inputRef = useRef<HTMLTextAreaElement | null>(null)
-
     useImperativeHandle(
       ref,
       () => ({
         // 暂时并没有用到，还是使用了之前atom的方案
         setQuote: (data) => {
-          setMessageInput((prev) => `${prev}\n\n${data}`)
+          messageInputFieldRef.current?.setValue((prev) => `${prev}\n\n${data}`)
           dom.focusMessageInput()
           dom.setMessageInputCursorToEnd()
         },
       }),
-      [setMessageInput]
+      []
     )
 
     const { addInputBoxHistory, getPreviousHistoryInput, getNextHistoryInput, resetHistoryIndex } = useInputBoxHistory()
+    resetHistoryIndexRef.current = resetHistoryIndex
+
+    const handleSubmitRef = useRef<(needGenerating?: boolean) => void>(() => {})
+    const getPreviousHistoryInputRef = useRef(getPreviousHistoryInput)
+    getPreviousHistoryInputRef.current = getPreviousHistoryInput
+    const getNextHistoryInputRef = useRef(getNextHistoryInput)
+    getNextHistoryInputRef.current = getNextHistoryInput
+    const insertFilesRef = useRef<(files: File[]) => void>(() => {})
+    const insertLinksRef = useRef<(urls: string[]) => void>(() => {})
 
     const closeSelectModelErrorTipCb = useRef<NodeJS.Timeout>()
     const handleSubmit = async (needGenerating = true) => {
@@ -480,22 +514,31 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
         return
       }
 
+      // Cancel any pending debounce so it won't overwrite the reset after send
+      clearTimeout(debouncedUpdateTimerRef.current)
+
       setIsSubmitting(true)
       try {
-        // Use the already constructed message
-        if (!preConstructedMessage.message) {
+        // Build the message with the latest input text, bypassing debounce delay
+        const latestMessage = sessionHelpers.constructUserMessage(
+          latestInputRef.current,
+          pictureKeys,
+          preConstructedMessage.preprocessedFiles,
+          preConstructedMessage.preprocessedLinks
+        )
+        if (!latestMessage) {
           console.error('No constructed message available')
           return
         }
 
         const messageTextForHistory =
-          preConstructedMessage.message.contentParts.find((p) => p.type === 'text')?.text || ''
+          latestMessage.contentParts.find((p) => p.type === 'text')?.text || ''
 
         const params = {
-          constructedMessage: preConstructedMessage.message,
+          constructedMessage: latestMessage,
           needGenerating,
           onUserMessageReady: () => {
-            clearDraft()
+            messageInputFieldRef.current?.clearDraft()
             setLinks([])
             setPreConstructedMessage({
               text: '',
@@ -531,17 +574,9 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
         setIsSubmitting(false)
       }
     }
+    handleSubmitRef.current = handleSubmit
 
-    const onMessageInput = useCallback(
-      (event: React.ChangeEvent<HTMLTextAreaElement>) => {
-        const input = event.target.value
-        setMessageInput(input)
-        resetHistoryIndex()
-      },
-      [setMessageInput, resetHistoryIndex]
-    )
-
-    const onKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    const onKeyDown = useCallback((event: React.KeyboardEvent<HTMLTextAreaElement>) => {
       const isPressedHash: Record<ShortcutSendValue, boolean> = {
         '': false,
         Enter: event.keyCode === 13 && !event.shiftKey && !event.ctrlKey && !event.altKey && !event.metaKey,
@@ -559,36 +594,38 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
           return
         }
         event.preventDefault()
-        handleSubmit()
+        handleSubmitRef.current()
         return
       }
 
       // 发送消息但不生成回复
       if (isPressedHash[shortcuts.inputBoxSendMessageWithoutResponse]) {
         event.preventDefault()
-        handleSubmit(false)
+        handleSubmitRef.current(false)
         return
       }
 
       // 向上向下键翻阅历史消息
+      const currentInput = latestInputRef.current
+      const inputElement = messageInputFieldRef.current?.getElement()
       if (
         (event.key === 'ArrowUp' || event.key === 'ArrowDown') &&
-        inputRef.current &&
-        inputRef.current === document.activeElement && // 聚焦在输入框
-        (messageInput.length === 0 || window.getSelection()?.toString() === messageInput) // 要么为空，要么输入框全选
+        inputElement &&
+        inputElement === document.activeElement && // 聚焦在输入框
+        (currentInput.length === 0 || window.getSelection()?.toString() === currentInput) // 要么为空，要么输入框全选
       ) {
         event.preventDefault()
         if (event.key === 'ArrowUp') {
-          const previousInput = getPreviousHistoryInput()
+          const previousInput = getPreviousHistoryInputRef.current()
           if (previousInput !== undefined) {
-            setMessageInput(previousInput)
-            setTimeout(() => inputRef.current?.select(), 10)
+            messageInputFieldRef.current?.setValue(previousInput)
+            setTimeout(() => inputElement?.select(), 10)
           }
         } else if (event.key === 'ArrowDown') {
-          const nextInput = getNextHistoryInput()
+          const nextInput = getNextHistoryInputRef.current()
           if (nextInput !== undefined) {
-            setMessageInput(nextInput)
-            setTimeout(() => inputRef.current?.select(), 10)
+            messageInputFieldRef.current?.setValue(nextInput)
+            setTimeout(() => inputElement?.select(), 10)
           }
         }
       }
@@ -597,9 +634,9 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
       // value to its defaultValue, causing controlled-input state to desync.
       if (event.key === 'Escape') {
         event.preventDefault()
-        inputRef.current?.blur()
+        messageInputFieldRef.current?.getElement()?.blur()
       }
-    }
+    }, [shortcuts, isSmallScreen])
 
     const startNewThread = () => {
       const res = onStartNewThread?.()
@@ -747,6 +784,8 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
         }
       }
     }
+    insertFilesRef.current = insertFiles
+    insertLinksRef.current = insertLinks
 
     const onFileInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
       if (!event.target.files) {
@@ -773,7 +812,7 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
       // await storage.delBlob(picKey)
     }
 
-    const onPaste = (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const onPaste = useCallback((event: React.ClipboardEvent<HTMLTextAreaElement>) => {
       if (sessionType === 'picture') {
         return
       }
@@ -783,13 +822,15 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
         // 保持默认的粘贴行为，这时候会粘贴从文档中复制的文本和图片。我认为应该保留图片，因为文档中的表格、图表等图片信息也很重要，很难通过文本格式来表述。
         // 仅在只粘贴图片或文件时阻止默认行为，防止插入文件或图片的名字
         let hasText = false
+        // Capture pre-paste text before async getAsString callback runs (browser will have inserted pasted text by then)
+        const prePasteText = latestInputRef.current
         for (let i = 0; i < event.clipboardData.items.length; i++) {
           const item = event.clipboardData.items[i]
           if (item.kind === 'file') {
             // Insert files and images
             const file = item.getAsFile()
             if (file) {
-              insertFiles([file])
+              insertFilesRef.current([file])
             }
             continue
           }
@@ -803,14 +844,14 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
                   .split(/\s+/)
                   .map((url) => url.trim())
                   .filter((url) => url.startsWith('http://') || url.startsWith('https://'))
-                insertLinks(urls)
+                insertLinksRef.current(urls)
               }
               if (pasteLongTextAsAFile && raw.length > 3000) {
-                const file = new File([text], `pasted_text_${attachments?.length || 0}.txt`, {
+                const file = new File([text], `pasted_text_${Date.now()}.txt`, {
                   type: 'text/plain',
                 })
-                insertFiles([file])
-                setMessageInput(messageInput) // 删除掉默认粘贴进去的长文本
+                insertFilesRef.current([file])
+                messageInputFieldRef.current?.setValue(prePasteText) // 删除掉默认粘贴进去的长文本
               }
             })
           }
@@ -820,7 +861,7 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
           event.preventDefault()
         }
       }
-    }
+    }, [sessionType, pasteLongTextAsAFile])
 
     const handleAttachLink = async () => {
       const links: string[] = await NiceModal.show('attach-link')
@@ -854,7 +895,7 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
         // TODO: 支持引用消息中的图片
         // TODO: 支持引用消息中的文件
         setQuote('')
-        setMessageInput((val) => {
+        messageInputFieldRef.current?.setValue((val) => {
           const newValue = !val
             ? quote
             : val + '\n'.repeat(Math.max(0, 2 - (val.match(/(\n)+$/)?.[0].length || 0))) + quote
@@ -915,30 +956,18 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
           >
             {/* Input Row */}
             <Flex align="flex-end" gap={4}>
-              <Textarea
-                unstyled={true}
-                styles={{ input: { fontSize: 14 } }}
-                classNames={{
-                  root: 'flex-1',
-                  wrapper: 'flex-1',
-                  input:
-                    'block w-full outline-none border-none px-2 py-1 resize-none bg-transparent text-chatbox-tint-primary leading-6',
-                }}
-                size="sm"
-                id={dom.messageInputID}
-                ref={inputRef}
+              <MessageInputField
+                ref={messageInputFieldRef}
+                isNewSession={isNewSession}
+                isSmallScreen={isSmallScreen}
+                viewportHeight={viewportHeight}
+                isReadOnly={isCompactionRunning}
                 placeholder={t('Type your question here...') || ''}
-                bg="transparent"
-                autosize={true}
-                minRows={2}
-                maxRows={Math.max(4, Math.floor(viewportHeight / 100))}
-                value={messageInput}
                 autoFocus={!isSmallScreen}
-                readOnly={isCompactionRunning}
-                onChange={onMessageInput}
+                onValueChange={onMessageInputValueChange}
+                onUserInput={onUserInput}
                 onKeyDown={onKeyDown}
                 onPaste={onPaste}
-                data-testid="message-input"
               />
 
               {/* Send Button */}
@@ -1347,3 +1376,94 @@ const AttachmentMenu: React.FC<{
 
 // Memoize the InputBox component to prevent unnecessary re-renders during streaming
 export default memo(InputBox)
+
+// ============================================================================
+// MessageInputField — isolated textarea to prevent parent re-renders on typing
+// ============================================================================
+
+export type MessageInputFieldRef = {
+  getValue: () => string
+  setValue: (val: string | ((prev: string) => string)) => void
+  clearDraft: () => void
+  getElement: () => HTMLTextAreaElement | null
+}
+
+type MessageInputFieldProps = {
+  isNewSession: boolean
+  isSmallScreen: boolean
+  viewportHeight: number
+  isReadOnly: boolean
+  placeholder: string
+  autoFocus: boolean
+  /** Called on every value change (including programmatic setValue). */
+  onValueChange: (value: string) => void
+  /** Called only on real user typing (onChange), not programmatic setValue. */
+  onUserInput?: () => void
+  onKeyDown: (event: React.KeyboardEvent<HTMLTextAreaElement>) => void
+  onPaste: (event: React.ClipboardEvent<HTMLTextAreaElement>) => void
+}
+
+const MessageInputField = memo(
+  forwardRef<MessageInputFieldRef, MessageInputFieldProps>(
+    (
+      { isNewSession, isSmallScreen, viewportHeight, isReadOnly, placeholder, autoFocus, onValueChange, onUserInput, onKeyDown, onPaste },
+      ref
+    ) => {
+      const { messageInput, setMessageInput, clearDraft } = useMessageInput('', { isNewSession })
+      const inputRef = useRef<HTMLTextAreaElement | null>(null)
+      const messageInputRef = useRef(messageInput)
+      messageInputRef.current = messageInput
+
+      useEffect(() => {
+        onValueChange(messageInput)
+      }, [messageInput, onValueChange])
+
+      useImperativeHandle(
+        ref,
+        () => ({
+          getValue: () => messageInputRef.current,
+          setValue: (val) => setMessageInput(val),
+          clearDraft: () => clearDraft(),
+          getElement: () => inputRef.current,
+        }),
+        [setMessageInput, clearDraft]
+      )
+
+      const onChange = useCallback(
+        (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+          setMessageInput(event.target.value)
+          onUserInput?.()
+        },
+        [setMessageInput, onUserInput]
+      )
+
+      return (
+        <Textarea
+          unstyled={true}
+          styles={{ input: { fontSize: 14 } }}
+          classNames={{
+            root: 'flex-1',
+            wrapper: 'flex-1',
+            input:
+              'block w-full outline-none border-none px-2 py-1 resize-none bg-transparent text-chatbox-tint-primary leading-6',
+          }}
+          size="sm"
+          id={dom.messageInputID}
+          ref={inputRef}
+          placeholder={placeholder || ''}
+          bg="transparent"
+          autosize={true}
+          minRows={2}
+          maxRows={Math.max(4, Math.floor(viewportHeight / 100))}
+          value={messageInput}
+          autoFocus={autoFocus}
+          readOnly={isReadOnly}
+          onChange={onChange}
+          onKeyDown={onKeyDown}
+          onPaste={onPaste}
+          data-testid="message-input"
+        />
+      )
+    }
+  )
+)
