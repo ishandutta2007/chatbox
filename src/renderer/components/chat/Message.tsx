@@ -1,7 +1,6 @@
 import NiceModal from '@ebay/nice-modal-react'
 import { ActionIcon, type ActionIconProps, Flex, Image as Img, Loader, Text, Tooltip as Tooltip1 } from '@mantine/core'
-import { Grid, useTheme } from '@mui/material'
-import Box from '@mui/material/Box'
+import { Box, Grid, useTheme } from '@mui/material'
 import type { Message, MessagePicture, MessageToolCallPart, SessionType } from '@shared/types'
 import { getMessageText } from '@shared/utils/message'
 import {
