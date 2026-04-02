@@ -255,7 +255,7 @@ export const LicenseKeyView = forwardRef<HTMLDivElement, LicenseKeyViewProps>(({
                   trackingEvent('click_manage_license_button', { event_category: 'user' })
                 }}
               >
-                {t('Manage License and Devices')}
+                {t('Manage License')}
               </Button>
               <Button
                 variant="outline"
