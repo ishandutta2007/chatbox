@@ -13,6 +13,7 @@ export const CHATBOX_BUILD_CHANNEL = (process.env.CHATBOX_BUILD_CHANNEL || 'unkn
 // api.chatboxai.app
 export const USE_LOCAL_API = process.env.USE_LOCAL_API || ''
 export const USE_BETA_API = process.env.USE_BETA_API || ''
+export const USE_NEWDB_API = process.env.USE_NEWDB_API || ''
 
 // chatboxai.app
 export const USE_LOCAL_CHATBOX = process.env.USE_LOCAL_CHATBOX || ''

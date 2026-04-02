@@ -3,7 +3,14 @@ import { z } from 'zod'
 import { getLogger } from '@/lib/utils'
 import platform from '@/platform'
 import { authInfoStore } from '@/stores/authInfoStore'
-import { CHATBOX_BUILD_CHANNEL, USE_BETA_API, USE_BETA_CHATBOX, USE_LOCAL_API, USE_LOCAL_CHATBOX } from '@/variables'
+import {
+  CHATBOX_BUILD_CHANNEL,
+  USE_BETA_API,
+  USE_BETA_CHATBOX,
+  USE_LOCAL_API,
+  USE_LOCAL_CHATBOX,
+  USE_NEWDB_API,
+} from '@/variables'
 import * as chatboxaiAPI from '../../shared/request/chatboxai_pool'
 import { createAfetch, createAuthenticatedAfetch, uploadFile } from '../../shared/request/request'
 import {
@@ -95,6 +102,8 @@ function getAPIOrigin() {
     return 'http://localhost:8002'
   } else if (USE_BETA_API) {
     return 'https://api-beta.chatboxai.app'
+  } else if (USE_NEWDB_API) {
+    return 'https://beta-new-db.chatboxai.app'
   } else {
     return chatboxaiAPI.getChatboxAPIOrigin()
   }
