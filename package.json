@@ -3,7 +3,7 @@
   "productName": "xyz.chatboxapp.ce",
   "version": "0.0.1",
   "engines": {
-    "node": ">=20.0.0 <23.0.0",
+    "node": ">=22.12.0 <25.0.0",
     "pnpm": ">=10.17.0"
   },
   "private": true,
@@ -105,8 +105,8 @@
     "@dnd-kit/sortable": "^7.0.2",
     "@dnd-kit/utilities": "^3.2.1",
     "@ebay/nice-modal-react": "^1.2.13",
-    "@electron/notarize": "^2.0.0",
-    "@electron/rebuild": "^3.2.13",
+    "@electron/notarize": "^3.1.1",
+    "@electron/rebuild": "^4.0.3",
     "@emotion/babel-plugin": "^11.13.5",
     "@emotion/babel-preset-css-prop": "^11.12.0",
     "@emotion/css": "^11.13.5",
@@ -189,14 +189,15 @@
     "deepmerge": "^4.3.1",
     "detect-port": "^1.5.1",
     "dotenv": "^16.3.1",
-    "electron": "^26.6.10",
-    "electron-builder": "^24.2.1",
+    "electron": "^35.7.5",
+    "electron-builder": "^26.8.1",
     "electron-vite": "^4.0.1",
     "electronmon": "^2.0.2",
     "emittery": "^1.1.0",
     "file-loader": "^6.2.0",
     "fork-ts-checker-webpack-plugin": "^7.2.13",
     "form-data": "^4.0.0",
+    "gray-matter": "^4.0.3",
     "highlight.js": "^11.7.0",
     "html-webpack-plugin": "^5.5.1",
     "husky": "^9.0.11",
@@ -300,7 +301,7 @@
     "electron-devtools-installer": "^3.2.0",
     "electron-log": "^5.3.4",
     "electron-store": "^8.1.0",
-    "electron-updater": "^6.3.9",
+    "electron-updater": "^6.8.3",
     "epub": "^1.3.0",
     "es-toolkit": "^1.43.0",
     "fs-extra": "^11.1.1",
@@ -321,7 +322,7 @@
     "logLevel": "quiet"
   },
   "lint-staged": {
-    "*.{js,jsx,ts,tsx}": "biome format --write"
+    "*.{js,jsx,ts,tsx}": "biome format --write --no-errors-on-unmatched"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
