@@ -10,10 +10,9 @@ import {
   IconTrash,
 } from '@tabler/icons-react'
 import { useSetAtom } from 'jotai'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useIsLargeScreen, useIsSmallScreen } from '@/hooks/useScreenChange'
-import platform from '@/platform'
 import { router } from '@/router'
 import * as atoms from '@/stores/atoms'
 import { deleteSession, getSession } from '@/stores/chatStore'
@@ -24,7 +23,6 @@ import Broom from '../icons/Broom'
 import LayoutExpand from '../icons/LayoutExpand'
 import LayoutShrink from '../icons/LayoutShrink'
 import { ScalableIcon } from '../common/ScalableIcon'
-import UpdateAvailableButton from '../UpdateAvailableButton'
 
 /**
  * 顶部标题工具栏（右侧）
@@ -35,20 +33,10 @@ export default function Toolbar({ sessionId }: { sessionId: string }) {
   const isSmallScreen = useIsSmallScreen()
   const isLargeScreen = useIsLargeScreen()
 
-  const [showUpdateNotification, setShowUpdateNotification] = useState(false)
   const setOpenSearchDialog = useUIStore((s) => s.setOpenSearchDialog)
   const setThreadHistoryDrawerOpen = useSetAtom(atoms.showThreadHistoryDrawerAtom)
   const widthFull = useUIStore((s) => s.widthFull)
   const setWidthFull = useUIStore((s) => s.setWidthFull)
-
-  useEffect(() => {
-    const offUpdateDownloaded = platform.onUpdateDownloaded(() => {
-      setShowUpdateNotification(true)
-    })
-    return () => {
-      offUpdateDownloaded()
-    }
-  }, [])
 
   const handleExportAndSave = () => {
     NiceModal.show('export-chat')
@@ -74,8 +62,6 @@ export default function Toolbar({ sessionId }: { sessionId: string }) {
 
   return !isSmallScreen ? (
     <Flex align="center" gap="md" className="controls">
-      {showUpdateNotification && <UpdateAvailableButton />}
-
       {!isSmallScreen ? (
         <Button
           h={28}

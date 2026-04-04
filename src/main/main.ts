@@ -12,7 +12,7 @@
 import { app, BrowserWindow, globalShortcut, ipcMain, Menu, nativeTheme, session, shell, Tray } from 'electron'
 import electronDebug from 'electron-debug'
 import log from 'electron-log/main'
-import { autoUpdater } from 'electron-updater'
+import fs from 'node:fs'
 import os from 'os'
 import path from 'path'
 // @ts-expect-error - source-map-support doesn't have type definitions
@@ -436,7 +436,7 @@ if (!gotTheLock) {
       ensureTray()
       // Remove this if your app does not use auto updates
       // eslint-disable-next-line
-      new AppUpdater(() => mainWindow?.webContents.send('update-downloaded', {}))
+      new AppUpdater(() => mainWindow)
 
       // 处理启动时的 Deep Link (Windows/Linux)
       // macOS 会通过 open-url 事件处理，不需要在这里处理
@@ -719,10 +719,6 @@ ipcMain.handle('setFullscreen', (event, enable: boolean) => {
     }
     mainWindow.hide()
   }
-})
-
-ipcMain.handle('install-update', () => {
-  autoUpdater.quitAndInstall()
 })
 
 ipcMain.handle('switch-theme', (event, theme: 'dark' | 'light') => {

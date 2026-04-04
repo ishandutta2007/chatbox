@@ -5,26 +5,15 @@ import type { ElectronIPC } from 'src/shared/electron-types'
 
 // export type Channels = 'ipc-example';
 
-const electronHandler: ElectronIPC = {
-  // ipcRenderer: {
-  //     sendMessage(channel: Channels, ...args: unknown[]) {
-  //         ipcRenderer.send(channel, ...args);
-  //     },
-  //     on(channel: Channels, func: (...args: unknown[]) => void) {
-  //         const subscription = (
-  //             _event: IpcRendererEvent,
-  //             ...args: unknown[]
-  //         ) => func(...args);
-  //         ipcRenderer.on(channel, subscription);
+function createListener<T extends unknown[]>(channel: string) {
+  return (callback: (...args: T) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, ...args: T) => callback(...args)
+    ipcRenderer.on(channel, handler)
+    return () => ipcRenderer.removeListener(channel, handler)
+  }
+}
 
-  //         return () => {
-  //             ipcRenderer.removeListener(channel, subscription);
-  //         };
-  //     },
-  //     once(channel: Channels, func: (...args: unknown[]) => void) {
-  //         ipcRenderer.once(channel, (_event, ...args) => func(...args));
-  //     },
-  // },
+const electronHandler: ElectronIPC = {
   invoke: ipcRenderer.invoke,
   onSystemThemeChange: (callback: () => void) => {
     ipcRenderer.on('system-theme-updated', callback)
@@ -58,6 +47,14 @@ const electronHandler: ElectronIPC = {
     ipcRenderer.on('navigate-to', listener)
     return () => ipcRenderer.off('navigate-to', listener)
   },
+
+  // Auto-updater events
+  onUpdaterChecking: createListener('updater:checking'),
+  onUpdaterAvailable: createListener('updater:available'),
+  onUpdaterNotAvailable: createListener('updater:not-available'),
+  onUpdaterProgress: createListener('updater:progress'),
+  onUpdaterDownloaded: createListener('updater:downloaded'),
+  onUpdaterError: createListener('updater:error'),
 }
 
 contextBridge.exposeInMainWorld('electronAPI', electronHandler)

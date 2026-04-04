@@ -39,6 +39,7 @@ import './setup/protect'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { initLastUsedModelStore } from './stores/lastUsedModelStore'
 import { initSettingsStore } from './stores/settingsStore'
+import { initUpdateListeners } from './stores/updateStore'
 
 // 开发环境下引入错误测试工具
 // if (process.env.NODE_ENV === 'development') {
@@ -137,6 +138,13 @@ initializeApp()
     const [settings] = await Promise.all([initSettingsStore(), initLastUsedModelStore()])
 
     i18n.changeLanguage(settings.language)
+
+    // Initialize auto-updater event listeners (desktop only, idempotent)
+    if (platform.type === 'desktop') {
+      initUpdateListeners()
+    }
+    // Cleanup is intentionally not captured — listeners persist for the app lifetime
+
     // 初始化完成，可以开始渲染
     ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
       <StrictMode>

@@ -59,6 +59,29 @@ export default class DesktopPlatform implements Platform {
   public onUpdateDownloaded(callback: () => void): () => void {
     return this.ipc.onUpdateDownloaded(callback)
   }
+  public onUpdaterChecking(callback: () => void): () => void {
+    return this.ipc.onUpdaterChecking(callback)
+  }
+  public onUpdaterAvailable(callback: (data: { version: string }) => void): () => void {
+    return this.ipc.onUpdaterAvailable(callback)
+  }
+  public onUpdaterNotAvailable(callback: () => void): () => void {
+    return this.ipc.onUpdaterNotAvailable(callback)
+  }
+  public onUpdaterProgress(
+    callback: (data: { percent: number; bytesPerSecond: number; transferred: number; total: number }) => void
+  ): () => void {
+    return this.ipc.onUpdaterProgress(callback)
+  }
+  public onUpdaterDownloaded(callback: (data: { version: string }) => void): () => void {
+    return this.ipc.onUpdaterDownloaded(callback)
+  }
+  public onUpdaterError(callback: (data: { message: string }) => void): () => void {
+    return this.ipc.onUpdaterError(callback)
+  }
+  public async checkForUpdate(): Promise<{ started: boolean }> {
+    return this.ipc.invoke('updater:check')
+  }
   public onNavigate(callback: (path: string) => void): () => void {
     return window.electronAPI.onNavigate(callback)
   }

@@ -7,6 +7,7 @@ import {
   Flex,
   Image,
   Popover,
+  Progress,
   Stack,
   Text,
   Title,
@@ -20,9 +21,11 @@ import {
   IconMail,
   IconMessage2,
   IconPencil,
+  IconRefresh,
+  IconX,
 } from '@tabler/icons-react'
 import { createFileRoute } from '@tanstack/react-router'
-import { Fragment, type ReactElement } from 'react'
+import { Fragment, type ReactElement, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ScalableIcon } from '@/components/common/ScalableIcon'
 import BrandGithub from '@/components/icons/BrandGithub'
@@ -36,6 +39,7 @@ import platform from '@/platform'
 import iconPNG from '@/static/icon.png'
 import IMG_WECHAT_QRCODE from '@/static/wechat_qrcode.png'
 import { useLanguage } from '@/stores/settingsStore'
+import { installUpdate, useUpdateStore } from '@/stores/updateStore'
 
 export const Route = createFileRoute('/about')({
   component: RouteComponent,
@@ -59,15 +63,7 @@ function RouteComponent() {
                   Chatbox {/\d/.test(version.version) ? `(v${version.version})` : ''}
                 </Title>
 
-                <Button
-                  size="xs"
-                  variant="default"
-                  radius="xl"
-                  className="flex-shrink-0"
-                  onClick={() => platform.openLink(buildChatboxUrl(`/redirect_app/check_update/${language}`))}
-                >
-                  {t('Check Update')}
-                </Button>
+                <UpdateSection language={language} needCheckUpdate={version.needCheckUpdate} />
               </Flex>
               <Text>{t('about-slogan')}</Text>
               <Text c="chatbox-tertiary">{t('about-introduction')}</Text>
@@ -120,7 +116,7 @@ function RouteComponent() {
           <List>
             <ListItem
               icon={<IconHome className="w-full h-full" />}
-              title={t('Homepage')}
+              title={t('Official Site')}
               link={buildChatboxUrl(`/redirect_app/homepage/${language}`)}
             />
             <ListItem
@@ -151,16 +147,161 @@ function RouteComponent() {
             />
           </List>
         </Stack>
-
-        {/* 开发环境下显示错误测试面板 */}
-        {/* {process.env.NODE_ENV === 'development' && (
-          <div className="mt-8 max-w-md">
-            <ErrorTestPanel />
-          </div>
-        )} */}
       </Container>
     </Page>
   )
+}
+
+/**
+ * Update section in the About page hero.
+ * Desktop: check button, progress bar, error/retry, restart & install.
+ * Mobile: "New version available" hint linking to app store.
+ */
+function UpdateSection({ language, needCheckUpdate }: { language: string; needCheckUpdate: boolean }) {
+  const isDesktop = platform.type === 'desktop'
+
+  if (isDesktop) {
+    return <DesktopUpdateSection />
+  }
+
+  // Mobile and Web both use external link
+  return <MobileUpdateHint language={language} needCheckUpdate={needCheckUpdate} />
+}
+
+function MobileUpdateHint({ language, needCheckUpdate }: { language: string; needCheckUpdate: boolean }) {
+  const { t } = useTranslation()
+
+  if (needCheckUpdate) {
+    return (
+      <Button
+        size="xs"
+        variant="light"
+        color="chatbox-brand"
+        radius="xl"
+        className="flex-shrink-0"
+        onClick={() => platform.openLink(buildChatboxUrl(`/redirect_app/check_update/${language}`))}
+      >
+        {t('New version available')}
+      </Button>
+    )
+  }
+
+  return (
+    <Button
+      size="xs"
+      variant="default"
+      radius="xl"
+      className="flex-shrink-0"
+      onClick={() => platform.openLink(buildChatboxUrl(`/redirect_app/check_update/${language}`))}
+    >
+      {t('Check Update')}
+    </Button>
+  )
+}
+
+function DesktopUpdateSection() {
+  const { t } = useTranslation()
+  const status = useUpdateStore((s) => s.status)
+  const progress = useUpdateStore((s) => s.progress)
+  const updateVersion = useUpdateStore((s) => s.version)
+  const error = useUpdateStore((s) => s.error)
+
+  const handleCheck = async () => {
+    useUpdateStore.setState({ status: 'checking', error: null })
+    try {
+      const result = await platform.checkForUpdate?.()
+      // If check was skipped (another check already in progress), reset UI
+      if (result && !result.started) {
+        const { status: currentStatus } = useUpdateStore.getState()
+        if (currentStatus === 'checking') {
+          useUpdateStore.setState({ status: 'idle' })
+        }
+      }
+    } catch {
+      useUpdateStore.setState({ status: 'idle' })
+    }
+    // Safety timeout: if still stuck at 'checking' after 30s, reset
+    setTimeout(() => {
+      if (useUpdateStore.getState().status === 'checking') {
+        useUpdateStore.setState({ status: 'idle' })
+      }
+    }, 30_000)
+  }
+
+  const handleInstall = installUpdate
+
+  switch (status) {
+    case 'checking':
+      return (
+        <Button size="xs" variant="default" radius="xl" className="flex-shrink-0" loading>
+          {t('Checking...')}
+        </Button>
+      )
+
+    case 'available':
+    case 'downloading':
+      return (
+        <Stack gap={4} flex={1} maw={200}>
+          <Text size="xs" c="chatbox-brand" ta="right">
+            {status === 'downloading'
+              ? `${t('Downloading...')} ${progress}%`
+              : `${t('New version available')}${updateVersion ? ` v${updateVersion}` : ''}`}
+          </Text>
+          {status === 'downloading' && <Progress value={progress} size="xs" color="chatbox-brand" animated />}
+        </Stack>
+      )
+
+    case 'downloaded':
+      return (
+        <Button
+          size="xs"
+          variant="filled"
+          color="chatbox-brand"
+          radius="xl"
+          className="flex-shrink-0"
+          leftSection={<ScalableIcon icon={IconRefresh} size={14} />}
+          onClick={handleInstall}
+        >
+          {t('Restart & Update')}
+          {updateVersion ? ` (v${updateVersion})` : ''}
+        </Button>
+      )
+
+    case 'error':
+      return (
+        <Stack gap={2} align="flex-end" className="flex-shrink-0">
+          <Flex gap="xs" align="center">
+            <Text size="xs" c="chatbox-error">
+              {t('Update failed')}
+            </Text>
+            <Button size="xs" variant="default" radius="xl" onClick={handleCheck}>
+              {t('Retry')}
+            </Button>
+          </Flex>
+          <Anchor
+            size="xs"
+            c="chatbox-tertiary"
+            onClick={() => platform.openLink(buildChatboxUrl('/redirect_app/homepage/'))}
+          >
+            {t('Download from official site')}
+          </Anchor>
+        </Stack>
+      )
+
+    case 'up-to-date':
+      return (
+        <Text size="xs" c="chatbox-tertiary" className="flex-shrink-0">
+          {t('Already up to date')}
+        </Text>
+      )
+
+    default:
+      return (
+        <Button size="xs" variant="default" radius="xl" className="flex-shrink-0" onClick={handleCheck}>
+          {t('Check Update')}
+        </Button>
+      )
+  }
 }
 
 function WechatQRCode() {
@@ -238,4 +379,3 @@ function ListItem({
     </Flex>
   )
 }
-
