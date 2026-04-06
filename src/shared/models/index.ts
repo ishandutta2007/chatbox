@@ -23,6 +23,7 @@ export const aiProviderNameHash: Record<ModelProviderEnum, string> = {
   [ModelProviderEnum.XAI]: 'xAI API',
   [ModelProviderEnum.OpenRouter]: 'OpenRouter API',
   [ModelProviderEnum.Bedrock]: 'AWS Bedrock',
+  [ModelProviderEnum.VercelAIGateway]: 'Vercel AI Gateway',
   [ModelProviderEnum.Custom]: 'Custom Provider',
 }
 
@@ -106,6 +107,11 @@ export const AIModelProviderMenuOptionList = [
   {
     value: ModelProviderEnum.Bedrock,
     label: aiProviderNameHash[ModelProviderEnum.Bedrock],
+    disabled: false,
+  },
+  {
+    value: ModelProviderEnum.VercelAIGateway,
+    label: aiProviderNameHash[ModelProviderEnum.VercelAIGateway],
     disabled: false,
   },
   {

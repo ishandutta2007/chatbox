@@ -26,6 +26,7 @@ export enum ModelProviderEnum {
   XAI = 'xAI',
   OpenRouter = 'openrouter',
   Bedrock = 'bedrock',
+  VercelAIGateway = 'vercel-ai-gateway',
   Custom = 'custom',
 }
 
