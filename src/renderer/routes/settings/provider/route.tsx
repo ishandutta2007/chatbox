@@ -3,12 +3,13 @@ import { SystemProviders } from '@shared/defaults'
 import type { ModelProviderEnum, ProviderInfo, ProviderSettings } from '@shared/types'
 import { createFileRoute, Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
 import { zodValidator } from '@tanstack/zod-adapter'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { z } from 'zod'
 import { AddProviderModal } from '@/components/settings/provider/AddProviderModal'
 import { ImportProviderModal } from '@/components/settings/provider/ImportProviderModal'
 import { ProviderList } from '@/components/settings/provider/ProviderList'
+import ProviderSpotlight, { providerSpotlight } from '@/components/settings/provider/ProviderSpotlight'
 import { useProviderImport } from '@/hooks/useProviderImport'
 import { useIsSmallScreen } from '@/hooks/useScreenChange'
 import useVersion from '@/hooks/useVersion'
@@ -52,7 +53,29 @@ export function RouteComponent() {
     [customProviders, isExceeded, providersMap]
   )
 
+  const allSystemProviders = useMemo(() => {
+    return providers.filter((p) => !p.isCustom)
+  }, [providers])
+
   const [newProviderModalOpened, setNewProviderModalOpened] = useState(false)
+
+  const handleOpenSpotlight = useCallback(() => {
+    providerSpotlight.open()
+  }, [])
+
+  const handleAddCustomProvider = useCallback(() => {
+    setNewProviderModalOpened(true)
+  }, [])
+
+  const handleSelectProvider = useCallback(
+    (providerId: string) => {
+      navigate({
+        to: providerId === 'chatbox-ai' ? '/settings/provider/chatbox-ai' : '/settings/provider/$providerId',
+        params: { providerId },
+      })
+    },
+    [navigate]
+  )
 
   // Import hook
   const {
@@ -129,9 +152,7 @@ export function RouteComponent() {
       {(!isSmallScreen || routerState.location.pathname === '/settings/provider') && (
         <ProviderList
           providers={providers}
-          onAddProvider={() => setNewProviderModalOpened(true)}
-          onImportProvider={handleClipboardImport}
-          isImporting={isImporting}
+          onAddProvider={handleOpenSpotlight}
         />
       )}
       {!(isSmallScreen && routerState.location.pathname === '/settings/provider') && (
@@ -147,6 +168,14 @@ export function RouteComponent() {
         onClose={handleImportModalClose}
         importedConfig={importedConfig}
         existingProvider={existingProvider}
+      />
+
+      <ProviderSpotlight
+        allSystemProviders={allSystemProviders}
+        onSelectProvider={handleSelectProvider}
+        onAddCustomProvider={handleAddCustomProvider}
+        onImportProvider={handleClipboardImport}
+        isImporting={isImporting}
       />
     </Flex>
   )
