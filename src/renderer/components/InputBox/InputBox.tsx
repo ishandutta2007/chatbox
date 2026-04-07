@@ -266,7 +266,14 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
         links,
         message: constructedMessage,
       }))
-    }, [pictureKeys, attachments, links, preConstructedMessage.preprocessedFiles, preConstructedMessage.preprocessedLinks, setPreConstructedMessage])
+    }, [
+      pictureKeys,
+      attachments,
+      links,
+      preConstructedMessage.preprocessedFiles,
+      preConstructedMessage.preprocessedLinks,
+      setPreConstructedMessage,
+    ])
 
     const flushRef = useRef(flushPreConstructedMessage)
     flushRef.current = flushPreConstructedMessage
@@ -531,8 +538,7 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
           return
         }
 
-        const messageTextForHistory =
-          latestMessage.contentParts.find((p) => p.type === 'text')?.text || ''
+        const messageTextForHistory = latestMessage.contentParts.find((p) => p.type === 'text')?.text || ''
 
         const params = {
           constructedMessage: latestMessage,
@@ -576,67 +582,70 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
     }
     handleSubmitRef.current = handleSubmit
 
-    const onKeyDown = useCallback((event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      const isPressedHash: Record<ShortcutSendValue, boolean> = {
-        '': false,
-        Enter: event.keyCode === 13 && !event.shiftKey && !event.ctrlKey && !event.altKey && !event.metaKey,
-        'CommandOrControl+Enter': event.keyCode === 13 && (event.ctrlKey || event.metaKey) && !event.shiftKey,
-        'Ctrl+Enter': event.keyCode === 13 && event.ctrlKey && !event.shiftKey,
-        'Command+Enter': event.keyCode === 13 && event.metaKey,
-        'Shift+Enter': event.keyCode === 13 && event.shiftKey,
-        'Ctrl+Shift+Enter': event.keyCode === 13 && event.ctrlKey && event.shiftKey,
-      }
+    const onKeyDown = useCallback(
+      (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        const isPressedHash: Record<ShortcutSendValue, boolean> = {
+          '': false,
+          Enter: event.keyCode === 13 && !event.shiftKey && !event.ctrlKey && !event.altKey && !event.metaKey,
+          'CommandOrControl+Enter': event.keyCode === 13 && (event.ctrlKey || event.metaKey) && !event.shiftKey,
+          'Ctrl+Enter': event.keyCode === 13 && event.ctrlKey && !event.shiftKey,
+          'Command+Enter': event.keyCode === 13 && event.metaKey,
+          'Shift+Enter': event.keyCode === 13 && event.shiftKey,
+          'Ctrl+Shift+Enter': event.keyCode === 13 && event.ctrlKey && event.shiftKey,
+        }
 
-      // 发送消息
-      if (isPressedHash[shortcuts.inputBoxSendMessage]) {
-        if (platform.type === 'mobile' && isSmallScreen && shortcuts.inputBoxSendMessage === 'Enter') {
-          // 移动端点击回车不会发送消息
+        // 发送消息
+        if (isPressedHash[shortcuts.inputBoxSendMessage]) {
+          if (platform.type === 'mobile' && isSmallScreen && shortcuts.inputBoxSendMessage === 'Enter') {
+            // 移动端点击回车不会发送消息
+            return
+          }
+          event.preventDefault()
+          handleSubmitRef.current()
           return
         }
-        event.preventDefault()
-        handleSubmitRef.current()
-        return
-      }
 
-      // 发送消息但不生成回复
-      if (isPressedHash[shortcuts.inputBoxSendMessageWithoutResponse]) {
-        event.preventDefault()
-        handleSubmitRef.current(false)
-        return
-      }
+        // 发送消息但不生成回复
+        if (isPressedHash[shortcuts.inputBoxSendMessageWithoutResponse]) {
+          event.preventDefault()
+          handleSubmitRef.current(false)
+          return
+        }
 
-      // 向上向下键翻阅历史消息
-      const currentInput = latestInputRef.current
-      const inputElement = messageInputFieldRef.current?.getElement()
-      if (
-        (event.key === 'ArrowUp' || event.key === 'ArrowDown') &&
-        inputElement &&
-        inputElement === document.activeElement && // 聚焦在输入框
-        (currentInput.length === 0 || window.getSelection()?.toString() === currentInput) // 要么为空，要么输入框全选
-      ) {
-        event.preventDefault()
-        if (event.key === 'ArrowUp') {
-          const previousInput = getPreviousHistoryInputRef.current()
-          if (previousInput !== undefined) {
-            messageInputFieldRef.current?.setValue(previousInput)
-            setTimeout(() => inputElement?.select(), 10)
-          }
-        } else if (event.key === 'ArrowDown') {
-          const nextInput = getNextHistoryInputRef.current()
-          if (nextInput !== undefined) {
-            messageInputFieldRef.current?.setValue(nextInput)
-            setTimeout(() => inputElement?.select(), 10)
+        // 向上向下键翻阅历史消息
+        const currentInput = latestInputRef.current
+        const inputElement = messageInputFieldRef.current?.getElement()
+        if (
+          (event.key === 'ArrowUp' || event.key === 'ArrowDown') &&
+          inputElement &&
+          inputElement === document.activeElement && // 聚焦在输入框
+          (currentInput.length === 0 || window.getSelection()?.toString() === currentInput) // 要么为空，要么输入框全选
+        ) {
+          event.preventDefault()
+          if (event.key === 'ArrowUp') {
+            const previousInput = getPreviousHistoryInputRef.current()
+            if (previousInput !== undefined) {
+              messageInputFieldRef.current?.setValue(previousInput)
+              setTimeout(() => inputElement?.select(), 10)
+            }
+          } else if (event.key === 'ArrowDown') {
+            const nextInput = getNextHistoryInputRef.current()
+            if (nextInput !== undefined) {
+              messageInputFieldRef.current?.setValue(nextInput)
+              setTimeout(() => inputElement?.select(), 10)
+            }
           }
         }
-      }
 
-      // Prevent Chromium's native Escape behaviour which reverts textarea
-      // value to its defaultValue, causing controlled-input state to desync.
-      if (event.key === 'Escape') {
-        event.preventDefault()
-        messageInputFieldRef.current?.getElement()?.blur()
-      }
-    }, [shortcuts, isSmallScreen])
+        // Prevent Chromium's native Escape behaviour which reverts textarea
+        // value to its defaultValue, causing controlled-input state to desync.
+        if (event.key === 'Escape') {
+          event.preventDefault()
+          messageInputFieldRef.current?.getElement()?.blur()
+        }
+      },
+      [shortcuts, isSmallScreen]
+    )
 
     const startNewThread = () => {
       const res = onStartNewThread?.()
@@ -812,56 +821,59 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
       // await storage.delBlob(picKey)
     }
 
-    const onPaste = useCallback((event: React.ClipboardEvent<HTMLTextAreaElement>) => {
-      if (sessionType === 'picture') {
-        return
-      }
-      if (event.clipboardData?.items) {
-        // 对于 Doc/PPT/XLS 等文件中的内容，粘贴时一般会有 4 个 items，分别是 text 文本、html、某格式和图片
-        // 因为 getAsString 为异步操作，无法根据 items 中的内容来定制不同的粘贴行为，因此这里选择了最简单的做法：
-        // 保持默认的粘贴行为，这时候会粘贴从文档中复制的文本和图片。我认为应该保留图片，因为文档中的表格、图表等图片信息也很重要，很难通过文本格式来表述。
-        // 仅在只粘贴图片或文件时阻止默认行为，防止插入文件或图片的名字
-        let hasText = false
-        // Capture pre-paste text before async getAsString callback runs (browser will have inserted pasted text by then)
-        const prePasteText = latestInputRef.current
-        for (let i = 0; i < event.clipboardData.items.length; i++) {
-          const item = event.clipboardData.items[i]
-          if (item.kind === 'file') {
-            // Insert files and images
-            const file = item.getAsFile()
-            if (file) {
-              insertFilesRef.current([file])
-            }
-            continue
-          }
-          hasText = true
-          if (item.kind === 'string' && item.type === 'text/plain') {
-            // 插入链接：如果复制的是链接，则插入链接
-            item.getAsString((text) => {
-              const raw = text.trim()
-              if (raw.startsWith('http://') || raw.startsWith('https://')) {
-                const urls = raw
-                  .split(/\s+/)
-                  .map((url) => url.trim())
-                  .filter((url) => url.startsWith('http://') || url.startsWith('https://'))
-                insertLinksRef.current(urls)
-              }
-              if (pasteLongTextAsAFile && raw.length > 3000) {
-                const file = new File([text], `pasted_text_${Date.now()}.txt`, {
-                  type: 'text/plain',
-                })
+    const onPaste = useCallback(
+      (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
+        if (sessionType === 'picture') {
+          return
+        }
+        if (event.clipboardData?.items) {
+          // 对于 Doc/PPT/XLS 等文件中的内容，粘贴时一般会有 4 个 items，分别是 text 文本、html、某格式和图片
+          // 因为 getAsString 为异步操作，无法根据 items 中的内容来定制不同的粘贴行为，因此这里选择了最简单的做法：
+          // 保持默认的粘贴行为，这时候会粘贴从文档中复制的文本和图片。我认为应该保留图片，因为文档中的表格、图表等图片信息也很重要，很难通过文本格式来表述。
+          // 仅在只粘贴图片或文件时阻止默认行为，防止插入文件或图片的名字
+          let hasText = false
+          // Capture pre-paste text before async getAsString callback runs (browser will have inserted pasted text by then)
+          const prePasteText = latestInputRef.current
+          for (let i = 0; i < event.clipboardData.items.length; i++) {
+            const item = event.clipboardData.items[i]
+            if (item.kind === 'file') {
+              // Insert files and images
+              const file = item.getAsFile()
+              if (file) {
                 insertFilesRef.current([file])
-                messageInputFieldRef.current?.setValue(prePasteText) // 删除掉默认粘贴进去的长文本
               }
-            })
+              continue
+            }
+            hasText = true
+            if (item.kind === 'string' && item.type === 'text/plain') {
+              // 插入链接：如果复制的是链接，则插入链接
+              item.getAsString((text) => {
+                const raw = text.trim()
+                if (raw.startsWith('http://') || raw.startsWith('https://')) {
+                  const urls = raw
+                    .split(/\s+/)
+                    .map((url) => url.trim())
+                    .filter((url) => url.startsWith('http://') || url.startsWith('https://'))
+                  insertLinksRef.current(urls)
+                }
+                if (pasteLongTextAsAFile && raw.length > 3000) {
+                  const file = new File([text], `pasted_text_${Date.now()}.txt`, {
+                    type: 'text/plain',
+                  })
+                  insertFilesRef.current([file])
+                  messageInputFieldRef.current?.setValue(prePasteText) // 删除掉默认粘贴进去的长文本
+                }
+              })
+            }
+          }
+          // 如果没有任何文本，则说明只是复制了图片或文件。这里阻止默认行为，防止插入文件或图片的名字
+          if (!hasText) {
+            event.preventDefault()
           }
         }
-        // 如果没有任何文本，则说明只是复制了图片或文件。这里阻止默认行为，防止插入文件或图片的名字
-        if (!hasText) {
-          event.preventDefault()
-        }
-      }
-    }, [sessionType, pasteLongTextAsAFile])
+      },
+      [sessionType, pasteLongTextAsAFile]
+    )
 
     const handleAttachLink = async () => {
       const links: string[] = await NiceModal.show('attach-link')
@@ -1406,7 +1418,18 @@ type MessageInputFieldProps = {
 const MessageInputField = memo(
   forwardRef<MessageInputFieldRef, MessageInputFieldProps>(
     (
-      { isNewSession, isSmallScreen, viewportHeight, isReadOnly, placeholder, autoFocus, onValueChange, onUserInput, onKeyDown, onPaste },
+      {
+        isNewSession,
+        isSmallScreen,
+        viewportHeight,
+        isReadOnly,
+        placeholder,
+        autoFocus,
+        onValueChange,
+        onUserInput,
+        onKeyDown,
+        onPaste,
+      },
       ref
     ) => {
       const { messageInput, setMessageInput, clearDraft } = useMessageInput('', { isNewSession })

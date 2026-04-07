@@ -52,13 +52,11 @@ export class QueritSearch extends WebSearch {
       }
 
       // Extract result
-      const items = response.results.result.map(
-        (result: { title: string; url: string; snippet: string }) => ({
-          title: result.title,
-          link: result.url,
-          snippet: result.snippet,
-        })
-      )
+      const items = response.results.result.map((result: { title: string; url: string; snippet: string }) => ({
+        title: result.title,
+        link: result.url,
+        snippet: result.snippet,
+      }))
 
       return { items }
     } catch (error) {

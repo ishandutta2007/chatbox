@@ -902,11 +902,7 @@ function ProviderSettings({ providerId }: { providerId: string }) {
 
             <Flex gap="xs" align="center">
               <Tooltip
-                disabled={
-                  !!providerSettings?.accessKey &&
-                  !!providerSettings?.secretKey &&
-                  displayModels.length > 0
-                }
+                disabled={!!providerSettings?.accessKey && !!providerSettings?.secretKey && displayModels.length > 0}
                 label={
                   !providerSettings?.accessKey || !providerSettings?.secretKey
                     ? t('AWS Access Key ID and Secret Access Key are required to check connection')
@@ -917,11 +913,7 @@ function ProviderSettings({ providerId }: { providerId: string }) {
               >
                 <Button
                   size="sm"
-                  disabled={
-                    !providerSettings?.accessKey ||
-                    !providerSettings?.secretKey ||
-                    displayModels.length === 0
-                  }
+                  disabled={!providerSettings?.accessKey || !providerSettings?.secretKey || displayModels.length === 0}
                   loading={modelTestResult?.testing || false}
                   onClick={() => setShowTestModelSelector(true)}
                 >

@@ -336,7 +336,9 @@ export function RouteComponent() {
               <Flex align="center" gap="xs">
                 <Text size="sm">{t('Max Results')}</Text>
                 <Tooltip label={t('Maximum number of results to return.')}>
-                  <Text size="sm" c="gray">ⓘ</Text>
+                  <Text size="sm" c="gray">
+                    ⓘ
+                  </Text>
                 </Tooltip>
               </Flex>
               <Select
@@ -375,7 +377,9 @@ export function RouteComponent() {
               <Flex align="center" gap="xs">
                 <Text size="sm">{t('Time Range')}</Text>
                 <Tooltip label={t('Time range of the search. For example, the last month.')}>
-                  <Text size="sm" c="gray">ⓘ</Text>
+                  <Text size="sm" c="gray">
+                    ⓘ
+                  </Text>
                 </Tooltip>
               </Flex>
               <Select

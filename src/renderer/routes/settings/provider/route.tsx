@@ -150,10 +150,7 @@ export function RouteComponent() {
   return (
     <Flex h="100%" w="100%">
       {(!isSmallScreen || routerState.location.pathname === '/settings/provider') && (
-        <ProviderList
-          providers={providers}
-          onAddProvider={handleOpenSpotlight}
-        />
+        <ProviderList providers={providers} onAddProvider={handleOpenSpotlight} />
       )}
       {!(isSmallScreen && routerState.location.pathname === '/settings/provider') && (
         <Box flex="1 1 75%" p="md" className="overflow-auto">

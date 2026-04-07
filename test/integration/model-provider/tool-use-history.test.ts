@@ -26,7 +26,11 @@ function claude() {
 const calculatorTool = {
   calculator: {
     description: 'A simple calculator',
-    parameters: { type: 'object' as const, properties: { expression: { type: 'string' as const } }, required: ['expression'] },
+    parameters: {
+      type: 'object' as const,
+      properties: { expression: { type: 'string' as const } },
+      required: ['expression'],
+    },
   },
 }
 
@@ -41,13 +45,23 @@ function buildSingleToolHistory(): ModelMessage[] {
     {
       role: 'assistant',
       content: [
-        { type: 'tool-call', toolCallId: 'call_001', toolName: 'calculator', input: { expression: '2+2' } } satisfies ToolCallPart,
+        {
+          type: 'tool-call',
+          toolCallId: 'call_001',
+          toolName: 'calculator',
+          input: { expression: '2+2' },
+        } satisfies ToolCallPart,
       ],
     },
     {
       role: 'tool',
       content: [
-        { type: 'tool-result', toolCallId: 'call_001', toolName: 'calculator', output: { type: 'json', value: { result: 4 } } } satisfies ToolResultPart,
+        {
+          type: 'tool-result',
+          toolCallId: 'call_001',
+          toolName: 'calculator',
+          output: { type: 'json', value: { result: 4 } },
+        } satisfies ToolResultPart,
       ],
     },
     { role: 'assistant', content: [{ type: 'text', text: 'The answer is 4.' }] },
@@ -66,15 +80,35 @@ function buildMultiToolHistory(): ModelMessage[] {
     {
       role: 'assistant',
       content: [
-        { type: 'tool-call', toolCallId: 'call_010', toolName: 'calculator', input: { expression: '2+2' } } satisfies ToolCallPart,
-        { type: 'tool-call', toolCallId: 'call_011', toolName: 'calculator', input: { expression: '3+3' } } satisfies ToolCallPart,
+        {
+          type: 'tool-call',
+          toolCallId: 'call_010',
+          toolName: 'calculator',
+          input: { expression: '2+2' },
+        } satisfies ToolCallPart,
+        {
+          type: 'tool-call',
+          toolCallId: 'call_011',
+          toolName: 'calculator',
+          input: { expression: '3+3' },
+        } satisfies ToolCallPart,
       ],
     },
     {
       role: 'tool',
       content: [
-        { type: 'tool-result', toolCallId: 'call_010', toolName: 'calculator', output: { type: 'json', value: { result: 4 } } } satisfies ToolResultPart,
-        { type: 'tool-result', toolCallId: 'call_011', toolName: 'calculator', output: { type: 'json', value: { result: 6 } } } satisfies ToolResultPart,
+        {
+          type: 'tool-result',
+          toolCallId: 'call_010',
+          toolName: 'calculator',
+          output: { type: 'json', value: { result: 4 } },
+        } satisfies ToolResultPart,
+        {
+          type: 'tool-result',
+          toolCallId: 'call_011',
+          toolName: 'calculator',
+          output: { type: 'json', value: { result: 6 } },
+        } satisfies ToolResultPart,
       ],
     },
     { role: 'assistant', content: [{ type: 'text', text: '2+2=4 and 3+3=6.' }] },
@@ -94,13 +128,23 @@ function buildMixedContentHistory(): ModelMessage[] {
       role: 'assistant',
       content: [
         { type: 'text', text: 'Let me calculate that.' },
-        { type: 'tool-call', toolCallId: 'call_020', toolName: 'calculator', input: { expression: '5+5' } } satisfies ToolCallPart,
+        {
+          type: 'tool-call',
+          toolCallId: 'call_020',
+          toolName: 'calculator',
+          input: { expression: '5+5' },
+        } satisfies ToolCallPart,
       ],
     },
     {
       role: 'tool',
       content: [
-        { type: 'tool-result', toolCallId: 'call_020', toolName: 'calculator', output: { type: 'json', value: { result: 10 } } } satisfies ToolResultPart,
+        {
+          type: 'tool-result',
+          toolCallId: 'call_020',
+          toolName: 'calculator',
+          output: { type: 'json', value: { result: 10 } },
+        } satisfies ToolResultPart,
       ],
     },
     { role: 'assistant', content: [{ type: 'text', text: '5+5=10.' }] },
@@ -119,13 +163,23 @@ function buildErrorToolHistory(): ModelMessage[] {
     {
       role: 'assistant',
       content: [
-        { type: 'tool-call', toolCallId: 'call_030', toolName: 'calculator', input: { expression: '1/0' } } satisfies ToolCallPart,
+        {
+          type: 'tool-call',
+          toolCallId: 'call_030',
+          toolName: 'calculator',
+          input: { expression: '1/0' },
+        } satisfies ToolCallPart,
       ],
     },
     {
       role: 'tool',
       content: [
-        { type: 'tool-result', toolCallId: 'call_030', toolName: 'calculator', output: { type: 'error-text', value: 'Division by zero error' } },
+        {
+          type: 'tool-result',
+          toolCallId: 'call_030',
+          toolName: 'calculator',
+          output: { type: 'error-text', value: 'Division by zero error' },
+        },
       ],
     },
     { role: 'assistant', content: [{ type: 'text', text: 'The calculation failed due to division by zero.' }] },
@@ -146,13 +200,23 @@ function buildToolCallOnlyHistory(): ModelMessage[] {
     {
       role: 'assistant',
       content: [
-        { type: 'tool-call', toolCallId: 'call_040', toolName: 'calculator', input: { expression: '9+9' } } satisfies ToolCallPart,
+        {
+          type: 'tool-call',
+          toolCallId: 'call_040',
+          toolName: 'calculator',
+          input: { expression: '9+9' },
+        } satisfies ToolCallPart,
       ],
     },
     {
       role: 'tool',
       content: [
-        { type: 'tool-result', toolCallId: 'call_040', toolName: 'calculator', output: { type: 'json', value: { result: 18 } } } satisfies ToolResultPart,
+        {
+          type: 'tool-result',
+          toolCallId: 'call_040',
+          toolName: 'calculator',
+          output: { type: 'json', value: { result: 18 } },
+        } satisfies ToolResultPart,
       ],
     },
     { role: 'user', content: [{ type: 'text', text: 'Double that result.' }] },
