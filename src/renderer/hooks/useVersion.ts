@@ -69,10 +69,17 @@ export default function useVersion() {
     }
   }, [])
 
+  // True when all async data needed to evaluate isExceeded has loaded.
+  // On non-store platforms this is always true (no defense to evaluate).
+  // On store platforms we must wait for both version AND remoteConfig.current_version
+  // before the guide-navigation guard in __root.tsx can make a reliable decision.
+  const isExceededResolved = isStoreReviewPlatform ? !!(version && remoteConfig.current_version) : true
+
   return {
     version,
     versionLoaded: !!version,
     isExceeded,
+    isExceededResolved,
     needCheckUpdate,
   }
 }

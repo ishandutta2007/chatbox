@@ -130,7 +130,7 @@ function BackgroundImageOverlay() {
 }
 
 function Root() {
-  const { isExceeded, versionLoaded } = useVersion()
+  const { isExceeded, isExceededResolved } = useVersion()
   const location = useLocation()
   const spellCheck = useSettingsStore((state) => state.spellCheck)
   const language = useLanguage()
@@ -161,13 +161,14 @@ function Root() {
         return
       }
 
-      // On store builds (iOS / Google Play), wait for version to load before making guide/navigation decisions.
-      // Without this, isExceeded is initially false (version not yet loaded),
-      // which would incorrectly navigate to the guide during store review.
+      // On store builds (iOS / Google Play), wait for both version AND remoteConfig.current_version
+      // before making guide/navigation decisions. isExceeded depends on both async data sources;
+      // if we only wait for version, remoteConfig may still be empty, causing isExceeded to be
+      // falsely falsy and letting the guide navigation slip through during store review.
       const isStoreReviewPlatform =
         CHATBOX_BUILD_PLATFORM === 'ios' ||
         (CHATBOX_BUILD_PLATFORM === 'android' && CHATBOX_BUILD_CHANNEL === 'google_play')
-      if (isStoreReviewPlatform && !versionLoaded) {
+      if (isStoreReviewPlatform && !isExceededResolved) {
         return
       }
 
@@ -192,7 +193,7 @@ function Root() {
         return
       }
     })()
-  }, [setOpenAboutDialog, setRemoteConfig, location.pathname, isExceeded, versionLoaded])
+  }, [setOpenAboutDialog, setRemoteConfig, location.pathname, isExceeded, isExceededResolved])
 
   const showSidebar = useUIStore((s) => s.showSidebar)
   const sidebarWidth = useSidebarWidth()
