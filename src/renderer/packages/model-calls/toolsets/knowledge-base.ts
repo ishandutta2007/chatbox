@@ -6,12 +6,7 @@ export const queryKnowledgeBaseTool = (kbId: number) => {
   return tool({
     description: `Search the knowledge base with a semantic query. Returns relevant document chunks.
 
-CRITICAL: You MUST call this tool FIRST for every new user question before attempting to answer.
-- Do NOT rely on your own knowledge - always search the knowledge base first
-- Do NOT assume previous search results cover the current question
-- Even for follow-up questions, search again if the topic shifts
-- Searching is fast and low-cost - when in doubt, search
-- Only skip searching if the user explicitly asks about something unrelated to the documents`,
+Call this when the user's question is related to the attached documents and searching would help you answer more accurately. For greetings, chit-chat, or questions clearly unrelated to the knowledge base, answer directly. For follow-up questions on the same topic, reuse earlier results when they still apply.`,
     inputSchema: z.object({
       query: z.string().describe('The search query - rephrase the user question for better semantic matching'),
     }),
@@ -97,16 +92,15 @@ You have access to a knowledge base containing these documents:
 ${fileListStr}
 
 ### Tools:
-- **query_knowledge_base** - Semantic search (fast, low cost). Use liberally.
+- **query_knowledge_base** - Semantic search over the documents.
 - **read_file_chunks** - Read document content.
 - **get_files_meta** - Get file metadata.
 - **list_files** - List all files (paginated).
 
-### IMPORTANT - When to search:
-- **For EVERY new question**, independently consider whether the knowledge base might help
-- Even if you searched before, **search again** if the current question touches a different topic
-- Previous search results may not cover the current question - don't assume you already have the answer
-- When in doubt, search. It's better to search and find nothing than to miss relevant information.
+### When to search:
+- Search when the user's question is related to these documents and searching would help you answer accurately.
+- For greetings, small talk, or questions clearly unrelated to the knowledge base, answer directly without searching.
+- For follow-ups on the same topic, reuse earlier results; re-search when the topic meaningfully shifts or earlier results don't cover the new question.
 `
 }
 

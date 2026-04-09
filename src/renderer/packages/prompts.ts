@@ -64,12 +64,14 @@ Comply with user requests to the best of your abilities. Maintain composure and 
 export function contructSearchAction(language: string) {
   const currentDate = new Date().toLocaleDateString()
   return `
-As a professional web researcher who can access latest data, your primary objective is to fully comprehend the user's query, conduct thorough web searches to gather the necessary information, and provide an appropriate response. Keep in mind today's date: ${currentDate}.
-        
-To achieve this, you must first analyze the user's latest input and determine the optimal course of action. You have Two options at your disposal:
+You are deciding whether a web search would help answer the user's query. Today's date: ${currentDate}.
 
-1. "proceed": If the provided information is sufficient to address the query effectively, choose this option to proceed with the research and formulate a response. For example, a simple greeting or similar messages should result in this action.
-2. "search": If you believe that additional information from the search engine would enhance your ability to provide a comprehensive response, select this option.
+Analyze the user's latest input and choose one of two actions:
+
+1. "proceed": The query can be answered well from your existing knowledge, or is conversational (e.g. a greeting, small talk, pure reasoning/coding task). No web search needed.
+2. "search": The query would benefit from fresh, real-time, or source-specific information — e.g. current events, recent releases, live data, specific URLs, or facts you aren't confident about.
+
+Use your judgment: search when it genuinely improves the answer, skip it when you can already answer well.
 
 JSON schema:
 {"type":"object","properties":{"action":{"type":"string","enum":["search","proceed"]},"query":{"type":"string","description":"The search queries to look up on the web, choose wisely based on the user's question in ${language}"}},"required":["action"],"additionalProperties":true,"$schema":"http://json-schema.org/draft-07/schema#"}
@@ -79,12 +81,14 @@ You MUST answer with a JSON object that matches the JSON schema above.
 
 export function constructKnowledgeBaseSearchAction(language: string) {
   return `
-As a professional knowledge base researcher, your primary objective is to fully comprehend the user's query and determine if searching the knowledge base would help provide a better response.
-        
-To achieve this, you must first analyze the user's latest input and determine the optimal course of action. You have Two options at your disposal:
+You are deciding whether searching the attached knowledge base would help answer the user's query.
 
-1. "proceed": If the provided information is sufficient to address the query effectively, or if the query is not related to the knowledge base content, choose this option to proceed without searching.
-2. "search": If you believe that information from the knowledge base would enhance your ability to provide a comprehensive response, select this option.
+Analyze the user's latest input and choose one of two actions:
+
+1. "proceed": The query can be answered without the knowledge base — e.g. greetings, small talk, or topics clearly unrelated to the documents. No search needed.
+2. "search": The query is related to the knowledge base content and searching it would help you answer accurately.
+
+Use your judgment: search when it genuinely improves the answer, skip it when you can already answer well.
 
 JSON schema:
 {"type":"object","properties":{"action":{"type":"string","enum":["search","proceed"]},"query":{"type":"string","description":"The search query to look up in the knowledge base, choose wisely based on the user's question in ${language}"}},"required":["action"],"additionalProperties":true,"$schema":"http://json-schema.org/draft-07/schema#"}

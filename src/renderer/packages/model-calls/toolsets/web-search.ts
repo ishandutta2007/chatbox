@@ -7,18 +7,18 @@ import platform from '@/platform'
 import * as settingActions from '@/stores/settingActions'
 
 const toolSetDescription = `
-Use these tools to search the web and extract content from URLs.
+Use these tools to search the web and extract content from URLs when doing so would genuinely improve your answer.
 
 ## web_search
-Search the web for current information. Use short, concise queries (English preferred).
+Search the web when the question benefits from fresh, real-time, or source-specific information — e.g. current events, recent releases, live data, or facts you aren't confident about. For questions you can already answer well from your own knowledge, answer directly. Use short, concise queries (English preferred).
 
 ## parse_link
-Extract readable content from a URL. Use when you need detailed information from a specific webpage.
+Extract readable content from a specific URL — typically one the user shared or that a prior search returned.
 `
 
 export const webSearchTool = tool({
   description:
-    'Search the web for current events and real-time information. Use short, concise queries (English preferred).',
+    'Search the web for information. Use it when fresh, real-time, or source-specific data would improve the answer (current events, recent releases, live data, facts you are unsure about). For questions you can answer confidently from your own knowledge, answer directly instead. Use short, concise queries (English preferred).',
   inputSchema: z.object({
     query: z.string().describe('the search query'),
   }),
@@ -31,7 +31,7 @@ const DEFAULT_PARSE_LINK_MAX_CHARS = 12_000
 
 export const parseLinkTool = tool({
   description:
-    'Parses the readable content of a web page. Use this when you need to extract detailed information from a specific URL shared by the user.',
+    'Parses the readable content of a web page. Use this when you need detailed information from a specific URL — typically one the user shared or that was returned by a prior search.',
   inputSchema: z.object({
     url: z.string().url().describe('The URL to parse. Always include the schema, e.g. https://example.com'),
     maxLength: z
