@@ -97,7 +97,7 @@ async function getAuthenticatedAfetch() {
 // ========== API ORIGIN 根据可用性维护 ==========
 
 // const RELEASE_ORIGIN = 'https://releases.chatboxai.app'
-function getAPIOrigin() {
+export function getAPIOrigin() {
   if (USE_LOCAL_API) {
     return 'http://localhost:8002'
   } else if (USE_BETA_API) {
