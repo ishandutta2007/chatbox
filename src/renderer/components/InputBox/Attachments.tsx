@@ -35,7 +35,10 @@ export function ImageMiniCard(props: { storageKey: string; onDelete: () => void 
         <MiniButton
           className="hidden group-hover/image-mini-card:inline-block
                     absolute top-0 right-0 m-1 p-1 rounded-full shadow-lg bg-white/90 dark:bg-gray-800/90 text-red-500 hover:bg-white dark:hover:bg-gray-800"
-          onClick={onDelete}
+          onClick={(e) => {
+            e.stopPropagation()
+            onDelete()
+          }}
         >
           <Trash2 size="22" strokeWidth={2} />
         </MiniButton>
@@ -92,9 +95,12 @@ export function FileMiniCard(props: {
 
       {onDelete && (
         <MiniButton
-          className="hidden group-hover/file-mini-card:inline-block 
+          className="hidden group-hover/file-mini-card:inline-block
                     absolute top-0 right-0 m-1 p-1 rounded-full shadow-lg text-red-500"
-          onClick={onDelete}
+          onClick={(e) => {
+            e.stopPropagation()
+            onDelete()
+          }}
         >
           <Trash2 size="18" strokeWidth={2} />
         </MiniButton>
@@ -220,9 +226,12 @@ export function LinkMiniCard(props: {
       </Tooltip>
       {onDelete && (
         <MiniButton
-          className="hidden group-hover/file-mini-card:inline-block 
+          className="hidden group-hover/file-mini-card:inline-block
                     absolute top-0 right-0 m-1 p-1 rounded-full shadow-lg text-red-500"
-          onClick={onDelete}
+          onClick={(e) => {
+            e.stopPropagation()
+            onDelete()
+          }}
         >
           <Trash2 size="18" strokeWidth={2} />
         </MiniButton>
