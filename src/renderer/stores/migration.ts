@@ -57,7 +57,7 @@ type MigrateStore = {
   setBlob?: (key: string, value: string) => Promise<void>
 }
 
-export const CurrentVersion = 14
+export const CurrentVersion = 15
 
 async function doMigrateStorage(oldStorage: Storage) {
   // 找到老版本的数据，说明是升级，执行数据迁移操作
@@ -203,6 +203,7 @@ export async function migrateOnData(dataStore: MigrateStore, canRelaunch = true)
     migrate_11_to_12,
     migrate_12_to_13,
     migrate_13_to_14,
+    migrate_14_to_15,
   ]
 
   for (; configVersion < CurrentVersion; configVersion++) {
@@ -801,5 +802,29 @@ async function migrate_13_to_14(dataStore: MigrateStore) {
   }
 
   log.info(`migrate_13_to_14, migrated ${migratedCount} image generation records`)
+  return false
+}
+
+async function migrate_14_to_15(dataStore: MigrateStore) {
+  const chatSessionList = await dataStore.getData<SessionMeta[]>(StorageKey.ChatSessionsList, [])
+  log.info(`migrate_14_to_15, total sessions: ${chatSessionList.length}`)
+
+  if (chatSessionList.length === 0) {
+    return false
+  }
+
+  const sessionMetaStorage = platform.getSessionMetaStorage()
+  await sessionMetaStorage.initialize()
+
+  const now = Date.now()
+  const records = chatSessionList.map((meta, i) => ({
+    ...meta,
+    createdAt: now - (chatSessionList.length - i) * 1000,
+    sortOrder: now - (chatSessionList.length - 1 - i) * 1000,
+  }))
+
+  await sessionMetaStorage.createMany(records)
+
+  log.info(`migrate_14_to_15, migrated ${records.length} session meta records to DB`)
   return false
 }

@@ -18,9 +18,9 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import NiceModal from '@ebay/nice-modal-react'
 import { ActionIcon, Flex, Text, Tooltip } from '@mantine/core'
-import { IconArchive, IconSearch } from '@tabler/icons-react'
+import { IconArchive, IconLoader2, IconSearch } from '@tabler/icons-react'
 import { useRouterState } from '@tanstack/react-router'
-import type { MutableRefObject } from 'react'
+import { type MutableRefObject, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Virtuoso } from 'react-virtuoso'
 import { useSessionList } from '@/stores/chatStore'
@@ -34,7 +34,7 @@ export interface Props {
 
 export default function SessionList(props: Props) {
   const { t } = useTranslation()
-  const { sessionMetaList: sortedSessions, refetch } = useSessionList()
+  const { sessionMetaList: sortedSessions, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } = useSessionList()
   const setOpenSearchDialog = useUIStore((s) => s.setOpenSearchDialog)
   const sensors = useSensors(
     useSensor(TouchSensor, {
@@ -69,6 +69,24 @@ export default function SessionList(props: Props) {
     }
   }
   const routerState = useRouterState()
+  const onEndReached = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage()
+    }
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage])
+  const virtuosoComponents = useMemo(
+    () =>
+      hasNextPage
+        ? {
+            Footer: () => (
+              <Flex justify="center" py="xs">
+                <IconLoader2 size={16} className="animate-spin" style={{ color: 'var(--mantine-color-dimmed)' }} />
+              </Flex>
+            ),
+          }
+        : {},
+    [hasNextPage]
+  )
 
   return (
     <>
@@ -116,6 +134,8 @@ export default function SessionList(props: Props) {
                   props.sessionListViewportRef.current = ref
                 }
               }}
+              endReached={onEndReached}
+              components={virtuosoComponents}
               itemContent={(_index, session) => (
                 <SortableItem id={session.id}>
                   <SessionItem

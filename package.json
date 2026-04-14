@@ -196,6 +196,7 @@
     "electron-vite": "^4.0.1",
     "electronmon": "^2.0.2",
     "emittery": "^1.1.0",
+    "fake-indexeddb": "^6.2.5",
     "file-loader": "^6.2.0",
     "fork-ts-checker-webpack-plugin": "^7.2.13",
     "form-data": "^4.0.0",

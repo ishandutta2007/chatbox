@@ -7,21 +7,26 @@ import {
   type Message,
   type Session,
   type SessionMeta,
+  type SessionMetaPage,
+  type SessionMetaRecord,
   type SessionSettings,
   SessionSettingsSchema,
   type Updater,
   type UpdaterFn,
 } from '@shared/types'
-import { useQuery } from '@tanstack/react-query'
+import { type InfiniteData, useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import compact from 'lodash/compact'
 import isEmpty from 'lodash/isEmpty'
 import { useMemo } from 'react'
 import { v4 as uuidv4 } from 'uuid'
+import platform from '@/platform'
 import storage, { StorageKey } from '@/storage'
+import type { SessionMetaStorage } from '@/storage/SessionMetaStorage'
+import { sortSessionRecords } from '@/storage/SessionMetaStorage'
 import { StorageKeyGenerator } from '@/storage/StoreStorage'
 import * as defaults from '../../shared/defaults'
 import { getLogger } from '../lib/utils'
-import { migrateSession, sortSessions } from '../utils/session-utils'
+import { migrateSession } from '../utils/session-utils'
 import { uiStore } from './uiStore'
 
 const log = getLogger('chat-store')
@@ -40,50 +45,97 @@ export const QueryKeys = {
   ChatSessionSettings: (id: string) => ['chat-session-settings', id],
 }
 
+// MARK: session meta storage
+
+let _metaStorage: SessionMetaStorage | null = null
+
+export async function getMetaStorage(): Promise<SessionMetaStorage> {
+  if (!_metaStorage) {
+    _metaStorage = platform.getSessionMetaStorage()
+    await _metaStorage.initialize()
+  }
+  return _metaStorage
+}
+
 // MARK: session list operations
 
-// list sessions meta
-async function _listSessionsMeta(): Promise<SessionMeta[]> {
-  console.debug('chatStore', 'listSessionsMeta')
+type InfiniteSessionData = InfiniteData<SessionMetaPage, number>
+
+async function _listSessionsMetaPage(cursor: number): Promise<SessionMetaPage> {
+  console.debug('chatStore', 'listSessionsMetaPage', cursor)
   try {
-    const sessionMetaList = await storage.getItem<SessionMeta[]>(StorageKey.ChatSessionsList, [])
-    // session list showing order: reversed, pinned at top
-    return sessionMetaList
+    const metaStorage = await getMetaStorage()
+    return await metaStorage.getPage(cursor)
   } catch (error) {
-    log.error(`Failed to read session list from storage (key: ${StorageKey.ChatSessionsList}):`, error)
-    // Re-throw to prevent empty data from being written back
+    log.error('Failed to read session list page from DB:', error)
     throw error
   }
 }
 
 const listSessionsMetaQueryOptions = {
   queryKey: QueryKeys.ChatSessionsList,
-  queryFn: () => _listSessionsMeta().then(sortSessions),
+  queryFn: ({ pageParam }: { pageParam: number }) => _listSessionsMetaPage(pageParam),
+  getNextPageParam: (lastPage: SessionMetaPage) => lastPage.nextCursor,
+  initialPageParam: 0,
   staleTime: Infinity,
 }
 
-export async function listSessionsMeta() {
-  return await queryClient.fetchQuery(listSessionsMetaQueryOptions)
+/** Get all currently cached session metas (flattened from loaded pages). */
+export function getCachedSessionsMeta(): SessionMetaRecord[] {
+  const data = queryClient.getQueryData<InfiniteSessionData>(QueryKeys.ChatSessionsList)
+  if (!data) return []
+  return data.pages.flatMap((p) => p.items)
+}
+
+/** Get all session metas. Returns cached data if available, otherwise fetches first page. */
+export async function listSessionsMeta(): Promise<SessionMetaRecord[]> {
+  const cached = getCachedSessionsMeta()
+  if (cached.length > 0) return cached
+  const data = await queryClient.fetchInfiniteQuery(listSessionsMetaQueryOptions)
+  return data.pages.flatMap((p) => p.items)
 }
 
 export function useSessionList() {
-  const { data: sessionMetaList, refetch } = useQuery({ ...listSessionsMetaQueryOptions })
-  return { sessionMetaList, refetch }
+  const result = useInfiniteQuery(listSessionsMetaQueryOptions)
+  const sessionMetaList = useMemo(() => result.data?.pages.flatMap((p) => p.items), [result.data])
+  return {
+    sessionMetaList,
+    refetch: result.refetch,
+    fetchNextPage: result.fetchNextPage,
+    hasNextPage: result.hasNextPage,
+    isFetchingNextPage: result.isFetchingNextPage,
+  }
 }
 
-let sessionListUpdateQueue: UpdateQueue<SessionMeta[]> | null = null
+/**
+ * Update the paginated session list cache.
+ * Flattens all loaded pages, applies the updater, then re-packs into a single page
+ * preserving the nextCursor for further pagination.
+ */
+export function updateSessionListData(updater: (items: SessionMetaRecord[]) => SessionMetaRecord[]) {
+  queryClient.setQueryData<InfiniteSessionData>(QueryKeys.ChatSessionsList, (old) => {
+    if (!old || !old.pages.length) return old
+    const allItems = old.pages.flatMap((p) => p.items)
+    const updated = updater(allItems)
+    const lastPage = old.pages[old.pages.length - 1]
+    const delta = updated.length - allItems.length
+    return {
+      pages: [
+        {
+          items: updated,
+          nextCursor: lastPage.nextCursor !== null ? lastPage.nextCursor + delta : null,
+          total: (lastPage.total || 0) + delta,
+        },
+      ],
+      pageParams: [0],
+    }
+  })
+}
 
-export async function updateSessionList(updater: UpdaterFn<SessionMeta[]>) {
-  if (!sessionListUpdateQueue) {
-    sessionListUpdateQueue = new UpdateQueue<SessionMeta[]>(
-      () => _listSessionsMeta(),
-      async (sessions) => {
-        await storage.setItemNow(StorageKey.ChatSessionsList, sessions)
-      }
-    )
-  }
-  const result = await sessionListUpdateQueue.set(updater)
-  queryClient.setQueryData(QueryKeys.ChatSessionsList, sortSessions(result))
+/** Re-read entire session list from DB and update cache. Use for bulk operations only. */
+export async function refreshSessionListCache() {
+  queryClient.removeQueries({ queryKey: QueryKeys.ChatSessionsList })
+  await queryClient.prefetchInfiniteQuery(listSessionsMetaQueryOptions)
 }
 
 // MARK: session operations
@@ -141,20 +193,29 @@ export async function createSession(newSession: Omit<Session, 'id'>, previousId?
     },
   }
   await storage.setItemNow(StorageKeyGenerator.session(session.id), session)
-  const sMeta = getSessionMeta(session)
-  await updateSessionList((sessions) => {
-    if (!sessions) {
-      throw new Error('Session list not found')
+
+  const metaStorage = await getMetaStorage()
+  let sortOrder = Date.now()
+  if (previousId) {
+    const currentList = getCachedSessionsMeta()
+    const prevIndex = currentList.findIndex((s) => s.id === previousId)
+    if (prevIndex >= 0) {
+      const prevSortOrder = currentList[prevIndex].sortOrder
+      const nextSortOrder =
+        prevIndex + 1 < currentList.length ? currentList[prevIndex + 1].sortOrder : prevSortOrder - 2000
+      sortOrder = (prevSortOrder + nextSortOrder) / 2
     }
-    if (previousId) {
-      let previouseSessionIndex = sessions.findIndex((s) => s.id === previousId)
-      if (previouseSessionIndex < 0) {
-        previouseSessionIndex = sessions.length - 1
-      }
-      return [...sessions.slice(0, previouseSessionIndex + 1), sMeta, ...sessions.slice(previouseSessionIndex + 1)]
-    }
-    return [...sessions, sMeta]
-  })
+  }
+
+  const record: SessionMetaRecord = {
+    ...getSessionMeta(session),
+    sortOrder,
+    createdAt: Date.now(),
+  }
+  await metaStorage.create(record)
+
+  updateSessionListData((items) => sortSessionRecords([...items, record]))
+
   return session
 }
 
@@ -188,12 +249,10 @@ export async function updateSessionWithMessages(sessionId: string, updater: Upda
     }
   })
   if (needUpdateSessionList) {
-    await updateSessionList((sessions) => {
-      if (!sessions) {
-        throw new Error('Session list not found')
-      }
-      return sessions.map((session) => (session.id === sessionId ? getSessionMeta(updated) : session))
-    })
+    const newMeta = getSessionMeta(updated)
+    const metaStorage = await getMetaStorage()
+    await metaStorage.update(sessionId, newMeta)
+    updateSessionListData((items) => items.map((s) => (s.id === sessionId ? { ...s, ...newMeta } : s)))
   }
   _setSessionCache(sessionId, updated)
   return updated
@@ -235,12 +294,9 @@ export async function deleteSession(id: string) {
   console.debug('chatStore', 'deleteSession', id)
   await storage.removeItem(StorageKeyGenerator.session(id))
   _setSessionCache(id, null)
-  await updateSessionList((sessions) => {
-    if (!sessions) {
-      throw new Error('Session list not found')
-    }
-    return sessions.filter((session) => session.id !== id)
-  })
+  const metaStorage = await getMetaStorage()
+  await metaStorage.delete(id)
+  updateSessionListData((items) => items.filter((session) => session.id !== id))
   // Clean up UI state and caches to prevent memory leaks
   uiStore.getState().clearSessionWebBrowsing(id)
   uiStore.getState().removeSessionKnowledgeBase(id)
@@ -609,19 +665,21 @@ export async function recoverSessionList() {
   // Sort by first message timestamp (older first)
   sessionsWithTimestamp.sort((a, b) => a.timestamp - b.timestamp)
 
-  // Extract sorted session metas
-  const recoveredSessionMetas = sessionsWithTimestamp.map((item) => item.meta)
+  // Build SessionMetaRecord entries with sortOrder based on message timestamp
+  const now = Date.now()
+  const records: SessionMetaRecord[] = sessionsWithTimestamp.map((item, i) => ({
+    ...item.meta,
+    sortOrder: item.timestamp || now - (sessionsWithTimestamp.length - i) * 1000,
+    createdAt: item.timestamp || now - (sessionsWithTimestamp.length - i) * 1000,
+  }))
 
-  await storage.setItemNow(StorageKey.ChatSessionsList, recoveredSessionMetas)
+  // Write to new DB (clear first to remove orphaned records)
+  const metaStorage = await getMetaStorage()
+  await metaStorage.clear()
+  await metaStorage.createMany(records)
+  await refreshSessionListCache()
 
-  // Update the query cache, apply additional sorting rules (pinned sessions, etc.)
-  queryClient.setQueryData(QueryKeys.ChatSessionsList, sortSessions(recoveredSessionMetas))
+  console.debug('chatStore', 'recoverSessionList', `Recovered ${records.length} sessions, ${failedKeys.length} failed`)
 
-  console.debug(
-    'chatStore',
-    'recoverSessionList',
-    `Recovered ${recoveredSessionMetas.length} sessions, ${failedKeys.length} failed`
-  )
-
-  return { recovered: recoveredSessionMetas.length, failed: failedKeys.length }
+  return { recovered: records.length, failed: failedKeys.length }
 }

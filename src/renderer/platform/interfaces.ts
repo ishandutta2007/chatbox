@@ -1,6 +1,7 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: <any> */
 import type { Config, Language, Settings, ShortcutSetting } from '@shared/types'
 import type { ImageGenerationStorage } from '@/storage/ImageGenerationStorage'
+import type { SessionMetaStorage } from '@/storage/SessionMetaStorage'
 import type { KnowledgeBaseController } from './knowledge-base/interface'
 
 export type PlatformType = 'web' | 'desktop' | 'mobile'
@@ -97,6 +98,7 @@ export interface Platform extends Storage {
 
   getImageGenerationStorage(): ImageGenerationStorage
 
+  getSessionMetaStorage(): SessionMetaStorage
   // window controls
   minimize(): Promise<void>
 

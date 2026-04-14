@@ -4,6 +4,7 @@ import localforage from 'localforage'
 import { v4 as uuidv4 } from 'uuid'
 import { parseLocale } from '@/i18n/parser'
 import { type ImageGenerationStorage, IndexedDBImageGenerationStorage } from '@/storage/ImageGenerationStorage'
+import { IndexedDBSessionMetaStorage, type SessionMetaStorage } from '@/storage/SessionMetaStorage'
 import { getBrowser, getOS } from '../packages/navigator'
 import type { Platform, PlatformType } from './interfaces'
 import type { KnowledgeBaseController } from './knowledge-base/interface'
@@ -18,6 +19,7 @@ export default class WebPlatform extends IndexedDBStorage implements Platform {
   public exporter = new WebExporter()
 
   private imageGenerationStorage: ImageGenerationStorage | null = null
+  private sessionMetaStorage: SessionMetaStorage | null = null
 
   constructor() {
     super()
@@ -186,6 +188,12 @@ export default class WebPlatform extends IndexedDBStorage implements Platform {
     return this.imageGenerationStorage
   }
 
+  public getSessionMetaStorage(): SessionMetaStorage {
+    if (!this.sessionMetaStorage) {
+      this.sessionMetaStorage = new IndexedDBSessionMetaStorage()
+    }
+    return this.sessionMetaStorage
+  }
   public minimize() {
     return Promise.resolve()
   }

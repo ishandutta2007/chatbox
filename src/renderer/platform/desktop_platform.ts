@@ -7,6 +7,7 @@ import localforage from 'localforage'
 import { v4 as uuidv4 } from 'uuid'
 import { parseLocale } from '@/i18n/parser'
 import { type ImageGenerationStorage, IndexedDBImageGenerationStorage } from '@/storage/ImageGenerationStorage'
+import { IndexedDBSessionMetaStorage, type SessionMetaStorage } from '@/storage/SessionMetaStorage'
 import { getOS } from '../packages/navigator'
 import type { Platform, PlatformType } from './interfaces'
 import DesktopKnowledgeBaseController from './knowledge-base/desktop-controller'
@@ -25,6 +26,7 @@ export default class DesktopPlatform implements Platform {
 
   private _kbController?: DesktopKnowledgeBaseController
   private _imageGenerationStorage: ImageGenerationStorage | null = null
+  private _sessionMetaStorage: SessionMetaStorage | null = null
 
   public ipc: ElectronIPC
   constructor(ipc: ElectronIPC) {
@@ -303,6 +305,12 @@ export default class DesktopPlatform implements Platform {
     return this._imageGenerationStorage
   }
 
+  public getSessionMetaStorage(): SessionMetaStorage {
+    if (!this._sessionMetaStorage) {
+      this._sessionMetaStorage = new IndexedDBSessionMetaStorage()
+    }
+    return this._sessionMetaStorage
+  }
   public minimize() {
     return this.ipc.invoke('window:minimize')
   }

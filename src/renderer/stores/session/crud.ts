@@ -1,9 +1,14 @@
-import { arrayMove } from '@dnd-kit/sortable'
-import { copyMessagesWithMapping, copyThreads, type Session, type SessionMeta } from '@shared/types'
+import {
+  copyMessageForksWithMapping,
+  copyMessagesWithMapping,
+  copyThreadsWithMapping,
+  type Session,
+  type SessionMeta,
+} from '@shared/types'
 import { getDefaultStore } from 'jotai'
 import { omit } from 'lodash'
 import { router } from '@/router'
-import { sortSessions } from '@/utils/session-utils'
+import { sortSessionRecords } from '@/storage/SessionMetaStorage'
 import * as atoms from '../atoms'
 import * as chatStore from '../chatStore'
 import * as scrollActions from '../scrollActions'
@@ -45,6 +50,7 @@ async function copySession(
     messages?: Session['messages']
     threads?: Session['threads']
     threadName?: Session['threadName']
+    messageForksHash?: Session['messageForksHash']
     compactionPoints?: Session['compactionPoints']
   }
 ) {
@@ -80,12 +86,18 @@ async function copySession(
     })
     .filter((cp): cp is NonNullable<typeof cp> => cp !== null)
 
+  const sourceThreads = 'threads' in sourceMeta ? sourceMeta.threads : source.threads
+  const { threads: newThreads, idMapping: combinedIdMapping } = copyThreadsWithMapping(sourceThreads, idMapping)
+  const sourceMessageForksHash =
+    'messageForksHash' in sourceMeta ? sourceMeta.messageForksHash : source.messageForksHash
+  const newMessageForksHash = copyMessageForksWithMapping(sourceMessageForksHash, combinedIdMapping)
+
   const newSession = {
     ...omit(source, 'id', 'messages', 'threads', 'messageForksHash', 'compactionPoints'),
     ...(sourceMeta.name ? { name: sourceMeta.name } : {}),
     messages: newMessages,
-    threads: sourceMeta.threads ? copyThreads(sourceMeta.threads, idMapping) : copyThreads(source.threads, idMapping),
-    messageForksHash: undefined,
+    threads: newThreads,
+    messageForksHash: newMessageForksHash,
     compactionPoints: newCompactionPoints?.length ? newCompactionPoints : undefined,
     ...(sourceMeta.threadName ? { threadName: sourceMeta.threadName } : {}),
   }
@@ -113,18 +125,36 @@ export function switchCurrentSession(sessionId: string) {
 }
 
 /**
- * Reorder sessions in the list
+ * Reorder sessions in the list using fractional indexing.
+ * Computes a new sortOrder for the moved item based on its new neighbors.
  */
 export async function reorderSessions(oldIndex: number, newIndex: number) {
   console.debug('sessionActions', 'reorderSessions', oldIndex, newIndex)
-  await chatStore.updateSessionList((sessions) => {
-    if (!sessions) {
-      throw new Error('Session list not found')
-    }
-    // sortSessions normalizes display order (pinned first, then reversed chronological)
-    // We must apply it both before arrayMove (to match UI indices) and after (to persist correct order)
-    const sortedSessions = sortSessions(sessions)
-    return sortSessions(arrayMove(sortedSessions, oldIndex, newIndex))
+  const sessions = await chatStore.listSessionsMeta()
+  const movedSession = sessions[oldIndex]
+  if (!movedSession || oldIndex === newIndex) return
+
+  // Remove the moved item to get the remaining list
+  const remaining = sessions.filter((_, i) => i !== oldIndex)
+
+  let newSortOrder: number
+  if (remaining.length === 0) {
+    return
+  } else if (newIndex <= 0) {
+    newSortOrder = remaining[0].sortOrder + 1000
+  } else if (newIndex >= remaining.length) {
+    newSortOrder = remaining[remaining.length - 1].sortOrder - 1000
+  } else {
+    const before = remaining[newIndex - 1]
+    const after = remaining[newIndex]
+    newSortOrder = (before.sortOrder + after.sortOrder) / 2
+  }
+
+  const metaStorage = await chatStore.getMetaStorage()
+  await metaStorage.update(movedSession.id, { sortOrder: newSortOrder })
+  chatStore.updateSessionListData((items) => {
+    const updated = items.map((s) => (s.id === movedSession.id ? { ...s, sortOrder: newSortOrder } : s))
+    return sortSessionRecords(updated)
   })
 }
 
@@ -178,13 +208,6 @@ async function clearSessionList(keepNum: number) {
   for (const s of deleted) {
     await chatStore.deleteSession(s.id)
   }
-  await chatStore.updateSessionList((sessions) => {
-    if (!sessions) {
-      throw new Error('Session list not found')
-    }
-    return sessions.filter((s) => !deleted?.some((d) => d.id === s.id))
-  })
-
   // Navigate to home if the current session was deleted
   const store = getDefaultStore()
   const currentSessionId = store.get(atoms.currentSessionIdAtom)

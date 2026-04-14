@@ -281,6 +281,17 @@ export const SessionMetaSchema = SessionSchema.pick({
   type: true,
 })
 
+export const SessionMetaRecordSchema = SessionMetaSchema.extend({
+  sortOrder: z.number(),
+  createdAt: z.number(),
+})
+
+export const SessionMetaPageSchema = z.object({
+  items: z.array(SessionMetaRecordSchema),
+  nextCursor: z.number().nullable(),
+  total: z.number(),
+})
+
 export const SessionThreadBriefSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -314,5 +325,7 @@ export type SessionType = z.infer<typeof SessionTypeSchema>
 export type CompactionPoint = z.infer<typeof CompactionPointSchema>
 export type Session = z.infer<typeof SessionSchema>
 export type SessionMeta = z.infer<typeof SessionMetaSchema>
+export type SessionMetaRecord = z.infer<typeof SessionMetaRecordSchema>
+export type SessionMetaPage = z.infer<typeof SessionMetaPageSchema>
 export type SessionThread = z.infer<typeof SessionThreadSchema>
 export type SessionThreadBrief = z.infer<typeof SessionThreadBriefSchema>

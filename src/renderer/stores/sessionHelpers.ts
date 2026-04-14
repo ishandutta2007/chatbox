@@ -20,6 +20,7 @@ import * as localParser from '@/packages/local-parser'
 import * as remote from '@/packages/remote'
 import { estimateTokens, getTokenizerType } from '@/packages/token'
 import platform from '@/platform'
+import { getMetaStorage } from '@/stores/chatStore'
 import storage from '@/storage'
 import { StorageKey, StorageKeyGenerator } from '@/storage/StoreStorage'
 import { migrateSession, sortSessions } from '@/utils/session-utils'
@@ -644,6 +645,9 @@ function _searchSessions(regexp: RegExp, s: Session) {
   return matchedMessages.map((m) => migrateMessage(m))
 }
 
+const SEARCH_PAGE_SIZE = 30
+const SEARCH_RESULT_LIMIT = 50
+
 export async function searchSessions(searchInput: string, sessionId?: string, onResult?: (result: Session[]) => void) {
   const safeInput = searchInput.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')
   const regexp = new RegExp(safeInput, 'i')
@@ -663,21 +667,39 @@ export async function searchSessions(searchInput: string, sessionId?: string, on
       matchedMessageTotal += matchedMessages.length
       emitBatch([{ ...session, messages: matchedMessages }])
     }
-  } else {
-    const sessionsList = sortSessions(await storage.getItem<SessionMeta[]>(StorageKey.ChatSessionsList, []))
+    return
+  }
 
-    for (const sessionMeta of sessionsList) {
-      const session = await storage.getItem<Session | null>(StorageKeyGenerator.session(sessionMeta.id), null)
-      if (session) {
-        const messages = _searchSessions(regexp, session)
-        if (messages.length > 0) {
-          matchedMessageTotal += messages.length
-          emitBatch([{ ...session, messages }])
-        }
-        if (matchedMessageTotal >= 50) {
-          break
-        }
-      }
+  const metaStorage = await getMetaStorage()
+  let cursor: number | null = 0
+
+  while (cursor !== null) {
+    const page = await metaStorage.getPage(cursor, SEARCH_PAGE_SIZE)
+
+    // Load full sessions for this page in parallel to amortize I/O latency.
+    const sessions = await Promise.all(
+      page.items.map((meta) => storage.getItem<Session | null>(StorageKeyGenerator.session(meta.id), null))
+    )
+
+    const batch: Session[] = []
+    for (const session of sessions) {
+      if (!session) continue
+      const messages = _searchSessions(regexp, session)
+      if (messages.length === 0) continue
+      matchedMessageTotal += messages.length
+      batch.push({ ...session, messages })
+    }
+    emitBatch(batch)
+
+    if (matchedMessageTotal >= SEARCH_RESULT_LIMIT) {
+      break
+    }
+
+    cursor = page.nextCursor
+    if (cursor !== null) {
+      // Yield to the event loop so the UI can render progressive results
+      // before we start scanning the next page.
+      await new Promise((resolve) => setTimeout(resolve, 0))
     }
   }
 }
