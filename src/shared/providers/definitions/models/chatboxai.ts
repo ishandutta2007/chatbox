@@ -4,9 +4,16 @@ import {
   type GoogleGenerativeAIProviderOptions,
 } from '@ai-sdk/google'
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible'
-import { streamText } from 'ai'
-import AbstractAISDKModel from '../../../models/abstract-ai-sdk'
-import type { CallChatCompletionOptions, ModelInterface } from '../../../models/types'
+import { type ModelMessage, streamText, type ToolSet } from 'ai'
+import AbstractAISDKModel, { type CallSettings } from '../../../models/abstract-ai-sdk'
+import { addAnthropicCacheControl } from '../../../models/anthropic-cache'
+import type { StreamTextResult } from '../../../types'
+import type {
+  CallChatCompletionOptions,
+  ChatStreamOptions,
+  ModelInterface,
+  ModelStreamPart,
+} from '../../../models/types'
 import { getChatboxAPIOrigin } from '../../../request/chatboxai_pool'
 import type { ChatboxAILicenseDetail, ProviderModelInfo } from '../../../types'
 import type { ModelDependencies } from '../../../types/adapters'
@@ -236,6 +243,19 @@ export default class ChatboxAI extends AbstractAISDKModel implements ModelInterf
       throw new Error('Invalid response format from image generation API')
     }
     return json['data'][0]['b64_json']
+  }
+
+  public async chat(messages: ModelMessage[], options: CallChatCompletionOptions): Promise<StreamTextResult> {
+    const cached = this.options.model.apiStyle === 'anthropic' ? addAnthropicCacheControl(messages) : messages
+    return super.chat(cached, options)
+  }
+
+  public async *chatStream<T extends ToolSet>(
+    messages: ModelMessage[],
+    options: ChatStreamOptions
+  ): AsyncGenerator<ModelStreamPart<T>> {
+    const cached = this.options.model.apiStyle === 'anthropic' ? addAnthropicCacheControl(messages) : messages
+    yield* super.chatStream<T>(cached, options)
   }
 
   isSupportSystemMessage() {

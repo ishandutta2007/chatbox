@@ -1,8 +1,10 @@
 import { type AnthropicProviderOptions, createAnthropic } from '@ai-sdk/anthropic'
+import type { ModelMessage, ToolSet } from 'ai'
 import AbstractAISDKModel, { type CallSettings } from '../../../models/abstract-ai-sdk'
+import { addAnthropicCacheControl } from '../../../models/anthropic-cache'
 import { ApiError } from '../../../models/errors'
-import type { CallChatCompletionOptions } from '../../../models/types'
-import type { ProviderModelInfo } from '../../../types'
+import type { CallChatCompletionOptions, ChatStreamOptions, ModelStreamPart } from '../../../models/types'
+import type { ProviderModelInfo, StreamTextResult } from '../../../types'
 import type { ModelDependencies } from '../../../types/adapters'
 import { normalizeClaudeHost } from '../../../utils/llm_utils'
 
@@ -81,6 +83,17 @@ export default class Claude extends AbstractAISDKModel {
     }
 
     return callSettings
+  }
+
+  public async chat(messages: ModelMessage[], options: CallChatCompletionOptions): Promise<StreamTextResult> {
+    return super.chat(addAnthropicCacheControl(messages), options)
+  }
+
+  public async *chatStream<T extends ToolSet>(
+    messages: ModelMessage[],
+    options: ChatStreamOptions
+  ): AsyncGenerator<ModelStreamPart<T>> {
+    yield* super.chatStream<T>(addAnthropicCacheControl(messages), options)
   }
 
   // https://docs.anthropic.com/en/docs/api/models
