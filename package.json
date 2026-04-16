@@ -344,7 +344,10 @@
       "@tanstack/router-generator": "1.120.15",
       "@tanstack/router-plugin": "1.120.15",
       "@mastra/libsql": "0.13.2",
-      "@mastra/rag": "1.0.8"
+      "@mastra/rag": "1.0.8",
+      "handlebars": ">=4.7.9",
+      "convict": ">=6.2.5",
+      "fast-xml-parser": ">=5.5.7"
     },
     "patchedDependencies": {
       "libsql@0.5.22": "patches/libsql@0.5.22.patch",
