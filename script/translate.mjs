@@ -1,13 +1,23 @@
 import fs from 'node:fs/promises'
-import { google } from '@ai-sdk/google'
+import { createOpenAI } from '@ai-sdk/openai'
 import { generateText } from 'ai'
 import pMap from 'p-map'
 
+if (!process.env.AIHUBMIX_API_KEY) {
+  console.error('Missing AIHUBMIX_API_KEY environment variable')
+  process.exit(1)
+}
+
+const openai = createOpenAI({
+  baseURL: 'https://aihubmix.com/v1',
+  apiKey: process.env.AIHUBMIX_API_KEY,
+})
+
 async function translateMessage(message, target, keysToTrans, instruction = '') {
-  const baseSystem = `You are a professional translator for the UI of an AI chatbot software named Chatbox. 
-You must only translate the text content, never interpret it. 
-We have a special placeholder format by surrounding words by "{{" and "}}", do not translate it, also for tags like <0>xxx</0>. 
-Do not translate these words: "Chatbox", "AI", "MCP", "Deep Link", "ID". 
+  const baseSystem = `You are a professional translator for the UI of an AI chatbot software named Chatbox.
+You must only translate the text content, never interpret it.
+We have a special placeholder format by surrounding words by "{{" and "}}", do not translate it, also for tags like <0>xxx</0>.
+Do not translate these words: "Chatbox", "AI", "MCP", "Deep Link", "ID".
 
 The following contents are not translated for you to better understand the context: ${keysToTrans.join(', ')}.
 
@@ -16,11 +26,18 @@ You are now translating the following text from English to ${target}.
 
   const system = instruction ? `${baseSystem}\n\nAdditional instruction: ${instruction}` : baseSystem
   const { text } = await generateText({
-    model: google('gemini-3-flash-preview'),
+    model: openai('gemini-3.1-flash-lite-preview'),
     system,
     prompt: message,
   })
   return text
+}
+
+// Per-locale translation rules. These are always appended to the system prompt
+// for the given locale, ensuring consistent terminology across translations.
+const localeRules = {
+  'zh-Hans': ['Translate "Quota" as "点数"'],
+  'zh-Hant': ['Translate "Quota" as "點數"'],
 }
 
 const displayNames = new Intl.DisplayNames(['en'], { type: 'language' })
@@ -28,6 +45,10 @@ const displayNames = new Intl.DisplayNames(['en'], { type: 'language' })
 async function translateFile(locale, instruction) {
   const targetLanguage = displayNames.of(locale) || locale
   const path = `src/renderer/i18n/locales/${locale}/translation.json`
+
+  // Combine CLI instruction with per-locale rules
+  const rules = localeRules[locale] || []
+  const allInstructions = [instruction, ...rules].filter(Boolean).join('\n')
 
   // Read and validate the file first
   const content = await fs.readFile(path, 'utf-8')
@@ -43,7 +64,7 @@ async function translateFile(locale, instruction) {
       if (locale === 'en') {
         json[key] = key
       } else {
-        const translated = await translateMessage(key, targetLanguage, keysToTrans, instruction)
+        const translated = await translateMessage(key, targetLanguage, keysToTrans, allInstructions)
         json[key] = translated
         console.debug(`Translate to ${targetLanguage}: ${key} => ${translated}`)
       }

@@ -1,5 +1,13 @@
-import { Alert, Button, Flex, Menu, Paper, Select, Stack, Text, Title, UnstyledButton } from '@mantine/core'
-import { IconArrowRight, IconDots, IconExclamationCircle, IconExternalLink, IconLogout } from '@tabler/icons-react'
+import { ActionIcon, Alert, Button, Flex, Menu, Paper, Select, Stack, Text, Title, UnstyledButton } from '@mantine/core'
+import {
+  IconArrowRight,
+  IconDots,
+  IconExclamationCircle,
+  IconExternalLink,
+  IconHelp,
+  IconKey,
+  IconLogout,
+} from '@tabler/icons-react'
 import { useQuery } from '@tanstack/react-query'
 import { forwardRef, useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -8,18 +16,32 @@ import { JK_EVENTS, JK_PAGE_NAMES } from '@/analytics/jk-events'
 import { ScalableIcon } from '@/components/common/ScalableIcon'
 import { trackingEvent } from '@/packages/event'
 import { openLinkWithAuth } from '@/packages/openLinkWithAuth'
-import { buildChatboxUrl, getLicenseDetailRealtime, getUserProfile, listLicensesByUser } from '@/packages/remote'
+import {
+  buildChatboxUrl,
+  getLicenseDetailRealtime,
+  getUserProfile,
+  type LicenseDetailError,
+  listLicensesByUser,
+  type UserLicense,
+} from '@/packages/remote'
 import platform from '@/platform'
 import * as premiumActions from '@/stores/premiumActions'
 import { settingsStore, useSettingsStore } from '@/stores/settingsStore'
 import { LicenseDetailCard } from './LicenseDetailCard'
+
+interface LicenseDetailQueryError {
+  data?: {
+    error?: LicenseDetailError
+  }
+  error?: LicenseDetailError
+}
 
 interface LoggedInViewProps {
   onLogout: () => void
   onSwitchToLicenseKey: () => void
   language: string
   onShowLicenseSelectionModal?: (params: {
-    licenses: any[]
+    licenses: UserLicense[]
     onConfirm: (licenseKey: string) => void
     onCancel: () => void
   }) => void
@@ -34,7 +56,7 @@ export const LoggedInView = forwardRef<HTMLDivElement, LoggedInViewProps>(
     const [activationError, setActivationError] = useState<string | null>(null)
     const [switchingLicense, setSwitchingLicense] = useState(false)
     const [pendingExternalAction, setPendingExternalAction] = useState<
-      'manage-license' | 'get-more' | 'claim-free-plan' | 'view-more-plans' | null
+      'manage-license' | 'get-more' | 'claim-free-plan' | 'view-more-plans' | 'view-bonus-details' | null
     >(null)
     const pendingExternalActionRef = useRef(false)
 
@@ -63,7 +85,12 @@ export const LoggedInView = forwardRef<HTMLDivElement, LoggedInViewProps>(
       error: queryError,
     } = useQuery({
       queryKey: ['licenseDetail', selectedLicenseKey],
-      queryFn: () => getLicenseDetailRealtime({ licenseKey: selectedLicenseKey! }),
+      queryFn: () => {
+        if (!selectedLicenseKey) {
+          throw new Error('Missing license key')
+        }
+        return getLicenseDetailRealtime({ licenseKey: selectedLicenseKey })
+      },
       enabled: !!selectedLicenseKey && !activationError,
       staleTime: 0, // 数据立即过期，总是刷新
       gcTime: 24 * 60 * 60 * 1000, // 缓存保留24小时
@@ -72,12 +99,20 @@ export const LoggedInView = forwardRef<HTMLDivElement, LoggedInViewProps>(
     })
 
     const licenseDetail = licenseDetailResponse?.data
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[licenseDetailResponse] ', licenseDetail)
+    }
+    const normalizedQueryError = queryError as LicenseDetailQueryError | null
+    const lastSelectedLicenseKey = userProfile ? settings.lastSelectedLicenseByUser?.[userProfile.email] : undefined
     // 合并两种错误来源：1) API 返回 200 但带有 error 字段  2) API 返回 4xx/5xx 被 ofetch 抛出
     const licenseDetailError =
-      licenseDetailResponse?.error || (queryError as any)?.data?.error || (queryError as any)?.error
+      licenseDetailResponse?.error || normalizedQueryError?.data?.error || normalizedQueryError?.error
 
     const handleOpenAuthLink = useCallback(
-      async (action: 'manage-license' | 'get-more' | 'claim-free-plan' | 'view-more-plans', url: string) => {
+      async (
+        action: 'manage-license' | 'get-more' | 'claim-free-plan' | 'view-more-plans' | 'view-bonus-details',
+        url: string
+      ) => {
         if (pendingExternalActionRef.current) return
 
         pendingExternalActionRef.current = true
@@ -103,7 +138,7 @@ export const LoggedInView = forwardRef<HTMLDivElement, LoggedInViewProps>(
 
       if (needActivation) {
         // 确定要激活的license
-        const lastSelected = settings.lastSelectedLicenseByUser?.[userProfile.email]
+        const lastSelected = lastSelectedLicenseKey
         const isLastSelectedValid = lastSelected && licenses.some((l) => l.key === lastSelected)
 
         if (isLastSelectedValid) {
@@ -127,12 +162,12 @@ export const LoggedInView = forwardRef<HTMLDivElement, LoggedInViewProps>(
         } else if (licenses.length === 1) {
           // 只有1个license，直接激活
           const onlyLicense = licenses[0].key
-          settingsStore.setState({
+          settingsStore.setState((state) => ({
             lastSelectedLicenseByUser: {
-              ...settings.lastSelectedLicenseByUser,
+              ...state.lastSelectedLicenseByUser,
               [userProfile.email]: onlyLicense,
             },
-          })
+          }))
           setDisplayLicenseKey(onlyLicense) // 先设置显示的key
           premiumActions
             .activate(onlyLicense, 'login')
@@ -156,12 +191,12 @@ export const LoggedInView = forwardRef<HTMLDivElement, LoggedInViewProps>(
               licenses,
               onConfirm: (licenseKey: string) => {
                 // 保存用户选择
-                settingsStore.setState({
+                settingsStore.setState((state) => ({
                   lastSelectedLicenseByUser: {
-                    ...settings.lastSelectedLicenseByUser,
+                    ...state.lastSelectedLicenseByUser,
                     [userProfile.email]: licenseKey,
                   },
-                })
+                }))
                 // 激活选中的license
                 setDisplayLicenseKey(licenseKey) // 先设置显示的key
                 premiumActions
@@ -184,12 +219,12 @@ export const LoggedInView = forwardRef<HTMLDivElement, LoggedInViewProps>(
                 // fallback到第一个
                 const firstLicense = licenses[0]?.key
                 if (firstLicense) {
-                  settingsStore.setState({
+                  settingsStore.setState((state) => ({
                     lastSelectedLicenseByUser: {
-                      ...settings.lastSelectedLicenseByUser,
+                      ...state.lastSelectedLicenseByUser,
                       [userProfile.email]: firstLicense,
                     },
-                  })
+                  }))
                   setDisplayLicenseKey(firstLicense) // 先设置显示的key
                   premiumActions
                     .activate(firstLicense, 'login')
@@ -213,12 +248,12 @@ export const LoggedInView = forwardRef<HTMLDivElement, LoggedInViewProps>(
             // fallback：如果没有传入modal回调，直接使用第一个
             const firstLicense = licenses[0]?.key
             if (firstLicense) {
-              settingsStore.setState({
+              settingsStore.setState((state) => ({
                 lastSelectedLicenseByUser: {
-                  ...settings.lastSelectedLicenseByUser,
+                  ...state.lastSelectedLicenseByUser,
                   [userProfile.email]: firstLicense,
                 },
-              })
+              }))
               setDisplayLicenseKey(firstLicense) // 先设置显示的key
               premiumActions
                 .activate(firstLicense, 'login')
@@ -249,6 +284,7 @@ export const LoggedInView = forwardRef<HTMLDivElement, LoggedInViewProps>(
       settings.licenseKey,
       settings.licenseActivationMethod,
       settings.licenseInstances,
+      lastSelectedLicenseKey,
       onShowLicenseSelectionModal,
     ])
 
@@ -337,13 +373,15 @@ export const LoggedInView = forwardRef<HTMLDivElement, LoggedInViewProps>(
 
           <Paper shadow="xs" p="md" withBorder>
             <Stack gap="lg">
-              <Flex align="center" justify="space-between">
-                <Stack gap="xxs" flex={1}>
+              <Flex align="center" justify="space-between" gap="md">
+                <Stack gap="xxs" flex={1} style={{ minWidth: 0 }}>
                   <Text size="xs" c="dimmed">
                     {t('Email')}
                   </Text>
                   {userProfile ? (
-                    <Text fw={600}>{userProfile.email}</Text>
+                    <Text fw={600} className="truncate">
+                      {userProfile.email}
+                    </Text>
                   ) : (
                     <Text fw={600} c="dimmed">
                       {t('Loading...')}
@@ -351,26 +389,19 @@ export const LoggedInView = forwardRef<HTMLDivElement, LoggedInViewProps>(
                   )}
                 </Stack>
 
-                <Menu position="bottom-end" shadow="md">
-                  <Menu.Target>
-                    <Button variant="subtle" c="chatbox-tertiary" px="xs">
-                      <ScalableIcon icon={IconDots} size={20} />
-                    </Button>
-                  </Menu.Target>
-
-                  <Menu.Dropdown>
-                    <Menu.Item
-                      leftSection={<ScalableIcon icon={IconLogout} size={16} />}
-                      onClick={onLogout}
-                      c="chatbox-error"
-                    >
-                      {t('Log out')}
-                    </Menu.Item>
-                  </Menu.Dropdown>
-                </Menu>
+                <Button
+                  variant="subtle"
+                  size="compact-sm"
+                  px="xs"
+                  c="chatbox-tertiary"
+                  leftSection={<ScalableIcon icon={IconLogout} size={14} />}
+                  onClick={onLogout}
+                  className="shrink-0"
+                >
+                  {t('Log out')}
+                </Button>
               </Flex>
 
-              {/* License Selector */}
               {licenses.length > 0 && (
                 <Stack gap="xxs">
                   <Text size="xs" c="dimmed">
@@ -413,10 +444,8 @@ export const LoggedInView = forwardRef<HTMLDivElement, LoggedInViewProps>(
                 </Stack>
               )}
 
-              {/* License Detail Loading */}
               {!activationError && loadingLicenseDetail && <Text c="dimmed">{t('Loading license details...')}</Text>}
 
-              {/* License Detail Error */}
               {!activationError && !loadingLicenseDetail && licenseDetailError && (
                 <Stack gap="sm">
                   <Text fw={600} c="chatbox-error">
@@ -442,7 +471,6 @@ export const LoggedInView = forwardRef<HTMLDivElement, LoggedInViewProps>(
                 </Stack>
               )}
 
-              {/* License Detail Content */}
               {!activationError && !loadingLicenseDetail && !licenseDetailError && licenseDetail && (
                 <LicenseDetailCard
                   licenseDetail={licenseDetail}
@@ -451,7 +479,6 @@ export const LoggedInView = forwardRef<HTMLDivElement, LoggedInViewProps>(
                 />
               )}
 
-              {/* No licenses found */}
               {!loadingLicenseDetail && !licenseDetailError && !licenseDetail && licenses.length === 0 && (
                 <Text c="dimmed">{t('No licenses found. Please purchase a license to continue.')}</Text>
               )}

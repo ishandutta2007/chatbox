@@ -176,6 +176,12 @@ const ChatboxAILicenseDetailSchema = z.object({
   unified_token_usage: z.number(),
   unified_token_limit: z.number(),
   unified_token_usage_details: z.array(UnifiedTokenUsageDetailSchema).default([]),
+  aggregated_reward_details: UnifiedTokenUsageDetailSchema.default({
+    type: 'reward',
+    token_usage: 0,
+    token_limit: 0,
+    expires_at: null,
+  }),
   key: z.string().optional(),
   price_type: z.string().optional(),
   order_type: z.string().optional(),
