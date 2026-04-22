@@ -140,6 +140,8 @@ export default class CustomGemini extends AbstractAISDKModel {
         providerOptions: {
           google: providerOptions,
         },
+        // Image generation is billable; network-error retries could double-charge.
+        maxRetries: 0,
       })
 
       for (const file of result.files) {

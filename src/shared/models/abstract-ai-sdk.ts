@@ -44,20 +44,28 @@ const RETRY_CONFIG = {
   BACKOFF_FACTOR: 2,
 } as const
 
-function is5xxError(error: unknown): boolean {
+/**
+ * Retryable from a billing-safety perspective: upstream rejected or crashed
+ * before running the model, so retrying will not cause duplicate charges.
+ * Covers 5xx (server-side failure) and 429 (rate-limited before processing).
+ */
+function isRetryableStatusCode(code: number): boolean {
+  return code === 429 || (code >= 500 && code < 600)
+}
+
+function isRetryableStatusError(error: unknown): boolean {
   if (APICallError.isInstance(error)) {
     const statusCode = error.statusCode
-    return statusCode !== undefined && statusCode >= 500 && statusCode < 600
+    return statusCode !== undefined && isRetryableStatusCode(statusCode)
   }
   if (error && typeof error === 'object' && 'statusCode' in error) {
     const statusCode = (error as { statusCode: unknown }).statusCode
-    return typeof statusCode === 'number' && statusCode >= 500 && statusCode < 600
+    return typeof statusCode === 'number' && isRetryableStatusCode(statusCode)
   }
   if (error instanceof ApiError && error.message) {
     const match = error.message.match(/Status Code (\d+)/)
     if (match) {
-      const statusCode = parseInt(match[1], 10)
-      return statusCode >= 500 && statusCode < 600
+      return isRetryableStatusCode(parseInt(match[1], 10))
     }
   }
   return false
@@ -178,10 +186,10 @@ export default abstract class AbstractAISDKModel implements ModelInterface {
 
     const statusQueue: ModelStatus[] = []
 
-    const retryable5xx = (context: RetryContext<LanguageModelV3>) => {
+    const retryableStatusAttempt = (context: RetryContext<LanguageModelV3>) => {
       if (isErrorAttempt(context.current)) {
         const { error } = context.current
-        if (is5xxError(error)) {
+        if (isRetryableStatusError(error)) {
           return {
             model: baseModel,
             maxAttempts: RETRY_CONFIG.MAX_ATTEMPTS,
@@ -195,7 +203,7 @@ export default abstract class AbstractAISDKModel implements ModelInterface {
 
     const model = createRetryable({
       model: baseModel,
-      retries: [retryable5xx],
+      retries: [retryableStatusAttempt],
       onError: (context) => {
         if (isErrorAttempt(context.current)) {
           const { error } = context.current
@@ -231,6 +239,12 @@ export default abstract class AbstractAISDKModel implements ModelInterface {
       tools: options.tools as T | undefined,
       abortSignal: options.signal,
       ...callSettings,
+      // Billable POST retries are handled explicitly by the `ai-retry` wrapper above
+      // (covers 5xx and 429, which are safe because upstream hasn't processed the request).
+      // AI SDK's default retry (2x) would also fire on arbitrary network errors, which
+      // could double-charge if the server processed the request before the connection died.
+      // Kept last so provider `callSettings` cannot accidentally re-enable retries.
+      maxRetries: 0,
     })
 
     for await (const chunk of result.fullStream) {
@@ -276,6 +290,8 @@ export default abstract class AbstractAISDKModel implements ModelInterface {
       // images 暂时不支持
       n: params.num,
       abortSignal: signal,
+      // Image generation is billable; network-error retries could double-charge.
+      maxRetries: 0,
     })
     const dataUrls = result.images.map((image) => `data:${image.mediaType};base64,${image.base64}`)
     for (const dataUrl of dataUrls) {
@@ -612,6 +628,13 @@ export default abstract class AbstractAISDKModel implements ModelInterface {
       tools: options.tools,
       abortSignal: options.signal,
       ...callSettings,
+      // Billable POST retries are handled explicitly by the `ai-retry` wrapper in
+      // _callChatCompletion (covers 5xx and 429, which are safe because upstream
+      // hasn't processed the request). AI SDK's default retry (2x) would fire on
+      // arbitrary network errors too, which could double-charge if the server
+      // processed the request before the connection died.
+      // Kept last so provider `callSettings` cannot accidentally re-enable retries.
+      maxRetries: 0,
     })
 
     const contentParts: MessageContentParts = []
@@ -671,10 +694,10 @@ export default abstract class AbstractAISDKModel implements ModelInterface {
       })
     }
 
-    const retryable5xx = (context: RetryContext<LanguageModelV3>) => {
+    const retryableStatusAttempt = (context: RetryContext<LanguageModelV3>) => {
       if (isErrorAttempt(context.current)) {
         const { error } = context.current
-        if (is5xxError(error)) {
+        if (isRetryableStatusError(error)) {
           return {
             model: baseModel,
             maxAttempts: RETRY_CONFIG.MAX_ATTEMPTS,
@@ -688,7 +711,7 @@ export default abstract class AbstractAISDKModel implements ModelInterface {
 
     const model = createRetryable({
       model: baseModel,
-      retries: [retryable5xx],
+      retries: [retryableStatusAttempt],
       onError: (context) => {
         if (isErrorAttempt(context.current)) {
           const { error } = context.current

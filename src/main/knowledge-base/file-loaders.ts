@@ -156,6 +156,8 @@ export async function processFileWithMastra(
     const firstEmbedding = await embedMany({
       model: embeddingInstance,
       values: [`filename: ${fileMeta.filename}\nchunk:\n${remainingChunks[0].text}`],
+      // Embeddings are billable; network-error retries could double-charge.
+      maxRetries: 0,
     })
     await vectorStore.createIndex({ indexName, dimension: firstEmbedding.embeddings[0].length })
 
@@ -179,6 +181,8 @@ export async function processFileWithMastra(
       const embeddingResult = await embedMany({
         model: embeddingInstance,
         values: batchTexts,
+        // Embeddings are billable; network-error retries could double-charge.
+        maxRetries: 0,
       })
 
       if (!embeddingResult.embeddings || embeddingResult.embeddings.length !== batchTexts.length) {
@@ -384,6 +388,8 @@ export async function searchKnowledgeBase(kbId: number, query: string) {
     const embedding = await embedMany({
       model: embeddingInstance,
       values: [query],
+      // Embeddings are billable; network-error retries could double-charge.
+      maxRetries: 0,
     })
     const vectorStore = getVectorStore()
     const indexName = `kb_${kbId}`

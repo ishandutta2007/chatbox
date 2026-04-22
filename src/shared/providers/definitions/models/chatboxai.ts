@@ -159,6 +159,8 @@ export default class ChatboxAI extends AbstractAISDKModel implements ModelInterf
         providerOptions: {
           google: providerOptions,
         },
+        // Image generation is billable; network-error retries could double-charge.
+        maxRetries: 0,
       })
 
       for await (const chunk of result.fullStream) {
