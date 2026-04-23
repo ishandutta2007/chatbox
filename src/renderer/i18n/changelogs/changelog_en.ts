@@ -1,4 +1,7 @@
 const changelog = `
+## v1.20.2 - 2026.04.23
+1. Added GPT Image 2 model support
+
 ## v1.20.1 - 2026.04.09
 1. Added verification code login support
 2. Added AWS Bedrock provider support
