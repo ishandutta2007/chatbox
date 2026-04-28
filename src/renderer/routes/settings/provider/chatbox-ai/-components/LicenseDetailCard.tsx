@@ -219,7 +219,7 @@ function InfoPanel({ title, value, valueColor }: InfoPanelProps) {
 }
 
 export function LicenseDetailCard({ licenseDetail, language, utmContent }: LicenseDetailCardProps) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const isSmallScreen = useIsSmallScreen()
   const [pendingAction, setPendingAction] = useState<string | null>(null)
   const pendingActionRef = useRef(false)
@@ -262,11 +262,11 @@ export function LicenseDetailCard({ licenseDetail, language, utmContent }: Licen
   }, [])
 
   const expiryText = licenseDetail.token_expire_time
-    ? `${new Date(licenseDetail.token_expire_time).toLocaleDateString()}${isExpired ? ` (${t('Expired')})` : ''}`
+    ? `${new Date(licenseDetail.token_expire_time).toLocaleDateString(i18n.language)}${isExpired ? ` (${t('Expired')})` : ''}`
     : '-'
 
   const refreshText = licenseDetail.token_next_refresh_time
-    ? `${t('Quota Reset Time')} ${new Date(licenseDetail.token_next_refresh_time).toLocaleDateString()}`
+    ? `${t('Quota Reset Time')} ${new Date(licenseDetail.token_next_refresh_time).toLocaleDateString(i18n.language)}`
     : undefined
 
   return (
