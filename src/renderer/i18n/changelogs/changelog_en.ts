@@ -1,4 +1,8 @@
 const changelog = `
+## v1.20.3 - 2026.04.29
+1. Redesigned Chatbox AI subscription detail card UI
+2. Fixed follow-up messages failing with "reasoning_content in the thinking mode must be passed back to the API" on DeepSeek V4 thinking mode
+
 ## v1.20.2 - 2026.04.23
 1. Added GPT Image 2 model support
 

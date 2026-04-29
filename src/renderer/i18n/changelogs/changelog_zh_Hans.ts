@@ -1,4 +1,8 @@
 const changelog = `
+## v1.20.3 - 2026.04.29
+1. 全新 Chatbox AI 套餐详情卡片 UI
+2. 修复 DeepSeek V4 思考模式下后续对话报错 "reasoning_content in the thinking mode must be passed back to the API" 的问题
+
 ## v1.20.2 - 2026.04.23
 1. 新增 GPT Image 2 模型支持
 
