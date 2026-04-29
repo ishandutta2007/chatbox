@@ -2,7 +2,7 @@ import { buildContext } from '@shared/context'
 import { getModel } from '@shared/models'
 import { ChatboxAIAPIError } from '@shared/models/errors'
 import type { ChatStreamOptions, ModelStreamPart } from '@shared/models/types'
-import type { Message, MessageContentParts } from '@shared/types'
+import { ModelProviderEnum, type Message, type MessageContentParts } from '@shared/types'
 import { getMessageText, sequenceMessages } from '@shared/utils/message'
 import type { ToolSet } from 'ai'
 import { t } from 'i18next'
@@ -125,6 +125,7 @@ export async function orchestrateGeneration(
 
     const coreMessages = await convertToModelMessages(injectedMessages, {
       modelSupportVision: model.isSupportVision(),
+      preserveReasoning: settings.provider === ModelProviderEnum.DeepSeek,
     })
 
     targetMsg = {
