@@ -66,7 +66,7 @@ export const SettingsModal: FC<SettingsModalProps> = (props) => {
       withCloseButton={false}
       classNames={{
         content: clsx('h-full'),
-        header: 'flex-none border-0 border-b border-chatbox-border-primary border-solid',
+        header: 'hidden',
         body: clsx('!p-0 flex-1  flex flex-col h-full'),
       }}
       transitionProps={{ transition: 'fade-up' }}
