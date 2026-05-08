@@ -185,6 +185,7 @@ function Index() {
       }
 
       switchCurrentSession(newSession.id)
+      localStorage.removeItem('new-chat')
 
       void submitNewUserMessage(newSession.id, {
         newUserMsg: constructedMessage,
