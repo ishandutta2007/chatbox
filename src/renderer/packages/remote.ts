@@ -20,6 +20,7 @@ import {
   type ModelProvider,
   ProviderModelInfoSchema,
   type RemoteConfig,
+  type SessionRagConfig,
   type Settings,
 } from '../../shared/types'
 import { getOS } from './navigator'
@@ -253,6 +254,77 @@ export async function getRemoteConfig(config: keyof RemoteConfig) {
   return res['data']
 }
 
+/**
+ * In-memory cache for session RAG remote config. The config controls toolset
+ * capabilities (rerank availability, rerank model) which the renderer needs every time
+ * a tool set is built — once per generation. Hitting the network on each call is
+ * wasteful and adds latency to message submission. The remote config changes rarely
+ * (capability flag flips, model swaps), so a 10-minute TTL is comfortable.
+ *
+ * Each cache entry stores the in-flight promise so concurrent callers share a single
+ * request. On rejection the entry is evicted so the next caller retries.
+ */
+type SessionRagConfigCacheEntry = {
+  expiresAt: number
+  promise: Promise<SessionRagConfig>
+}
+
+const SESSION_RAG_CONFIG_CACHE_TTL_MS = 10 * 60 * 1000
+const sessionRagConfigCache = new Map<string, SessionRagConfigCacheEntry>()
+
+export async function getSessionRagConfig(params?: { licenseKey?: string }) {
+  type Response = {
+    data: SessionRagConfig
+  }
+  const cacheKey = params?.licenseKey ?? ''
+  const now = Date.now()
+  const cached = sessionRagConfigCache.get(cacheKey)
+  if (cached && cached.expiresAt > now) {
+    return cached.promise
+  }
+
+  const promise = (async () => {
+    const headers = await getChatboxHeaders()
+    const res = await ofetch<Response>(`${getAPIOrigin()}/api/session_rag/config`, {
+      retry: 3,
+      headers: {
+        ...(params?.licenseKey ? { Authorization: `Bearer ${params.licenseKey}` } : {}),
+        ...headers,
+      },
+    })
+    return res.data
+  })()
+
+  const entry: SessionRagConfigCacheEntry = {
+    expiresAt: now + SESSION_RAG_CONFIG_CACHE_TTL_MS,
+    promise,
+  }
+  sessionRagConfigCache.set(cacheKey, entry)
+
+  // Evict on failure so the next caller retries instead of being stuck with a rejected
+  // promise for the entire TTL window.
+  promise.catch(() => {
+    if (sessionRagConfigCache.get(cacheKey) === entry) {
+      sessionRagConfigCache.delete(cacheKey)
+    }
+  })
+
+  return promise
+}
+
+/**
+ * Invalidate cached session RAG config. Call this when the license changes or when the
+ * caller has reason to believe the remote config has been updated (e.g. user just
+ * activated a new license, signed out).
+ */
+export function invalidateSessionRagConfigCache(licenseKey?: string) {
+  if (licenseKey === undefined) {
+    sessionRagConfigCache.clear()
+    return
+  }
+  sessionRagConfigCache.delete(licenseKey)
+}
+
 export interface DialogConfig {
   markdown: string
   buttons: { label: string; url: string }[]
@@ -406,11 +478,7 @@ export async function uploadAndCreateUserFile(licenseKey: string, file: File) {
   return storageKey
 }
 
-export async function parseUserLinkPro(params: {
-  licenseKey: string
-  url: string
-  abortSignal?: AbortSignal
-}) {
+export async function parseUserLinkPro(params: { licenseKey: string; url: string; abortSignal?: AbortSignal }) {
   type Response = {
     data: {
       uuid: string

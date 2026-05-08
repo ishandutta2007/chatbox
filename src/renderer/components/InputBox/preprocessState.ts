@@ -42,6 +42,9 @@ export function onLinkProcessed(
   max: number = 6
 ): PreConstructedMessageState {
   const key = StorageKeyGenerator.linkUniqKey(url)
+  if (prev.preprocessingStatus.links[key] !== 'processing') {
+    return prev
+  }
   const newPromises = new Map(prev.preprocessingPromises.links)
   newPromises.delete(key)
 
@@ -126,6 +129,9 @@ export function onFileProcessed(
   max: number = 20
 ): PreConstructedMessageState {
   const key = StorageKeyGenerator.fileUniqKey(file)
+  if (prev.preprocessingStatus.files[key] !== 'processing') {
+    return prev
+  }
   const newPromises = new Map(prev.preprocessingPromises.files)
   newPromises.delete(key)
 

@@ -3,6 +3,7 @@ import type { Config, Language, Settings, ShortcutSetting } from '@shared/types'
 import type { ImageGenerationStorage } from '@/storage/ImageGenerationStorage'
 import type { SessionMetaStorage } from '@/storage/SessionMetaStorage'
 import type { KnowledgeBaseController } from './knowledge-base/interface'
+import type { SessionAttachmentRagController } from './session-attachment-rag/interface'
 
 export type PlatformType = 'web' | 'desktop' | 'mobile'
 
@@ -78,6 +79,7 @@ export interface Platform extends Storage {
   ensureAutoLaunch(enable: boolean): Promise<void>
 
   parseFileLocally(file: File): Promise<{ key?: string; isSupported: boolean }>
+  readLocalFileContent?(filePath: string): Promise<string | null>
 
   // Parse file using MinerU service (Desktop only)
   parseFileWithMineru?(
@@ -95,6 +97,7 @@ export interface Platform extends Storage {
   installUpdate(): Promise<void>
 
   getKnowledgeBaseController(): KnowledgeBaseController
+  getSessionAttachmentRagController(): SessionAttachmentRagController
 
   getImageGenerationStorage(): ImageGenerationStorage
 

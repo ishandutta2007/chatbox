@@ -292,6 +292,13 @@ export async function updateSessionCache(sessionId: string, updater: Updater<Ses
 
 export async function deleteSession(id: string) {
   console.debug('chatStore', 'deleteSession', id)
+  if (platform.type === 'desktop') {
+    try {
+      await platform.getSessionAttachmentRagController().deleteSessionAttachments(id)
+    } catch (error) {
+      console.warn('Failed to cleanup session attachment RAG entries for session deletion:', error)
+    }
+  }
   await storage.removeItem(StorageKeyGenerator.session(id))
   _setSessionCache(id, null)
   const metaStorage = await getMetaStorage()

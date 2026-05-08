@@ -39,6 +39,7 @@ import './setup/protect'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { initLastUsedModelStore } from './stores/lastUsedModelStore'
 import { initSettingsStore } from './stores/settingsStore'
+import { initSessionAttachmentRagMaintenance } from './setup/session_attachment_rag_maintenance'
 import { initUpdateListeners } from './stores/updateStore'
 
 // 开发环境下引入错误测试工具
@@ -142,6 +143,7 @@ initializeApp()
     // Initialize auto-updater event listeners (desktop only, idempotent)
     if (platform.type === 'desktop') {
       initUpdateListeners()
+      initSessionAttachmentRagMaintenance()
     }
     // Cleanup is intentionally not captured — listeners persist for the app lifetime
 

@@ -385,6 +385,42 @@ describe('buildContext', () => {
       const text = (textContent as { type: 'text'; text: string }).text
       expect(text).not.toContain('TRUNCATED')
     })
+
+    it('should insert retrieval attachment tags without reading large session RAG content', async () => {
+      const resolver = createMockResolver(new Map([['file-key', 'large parsed content should stay out of context']]))
+
+      const messages: Message[] = [
+        createMessage({
+          id: '1',
+          role: 'user',
+          contentParts: [{ type: 'text', text: 'Use the attached manual' }],
+          files: [
+            {
+              id: 'file-1',
+              name: 'manual.md',
+              fileType: 'text/markdown',
+              storageKey: 'file-key',
+              ragMode: 'session-retrieval',
+              sessionAttachmentId: 42,
+              sessionAttachmentIndexStatus: 'ready',
+            },
+          ],
+        }),
+      ]
+
+      const result = await buildContext(messages, { attachmentResolver: resolver })
+
+      expect(resolver.read).not.toHaveBeenCalled()
+      const textContent = result[0].contentParts.find((p) => p.type === 'text')
+      const text = (textContent as { type: 'text'; text: string }).text
+      expect(text).toContain('<ATTACHMENT_FILE>')
+      expect(text).toContain('<FILE_NAME>manual.md</FILE_NAME>')
+      expect(text).toContain('<FILE_KEY>session-attachment:42</FILE_KEY>')
+      expect(text).toContain('<INDEX_STATUS>ready</INDEX_STATUS>')
+      expect(text).toContain('<SYSTEM_REMINDER>')
+      expect(text).toContain('query_session_attachment')
+      expect(text).not.toContain('large parsed content should stay out of context')
+    })
   })
 
   describe('immutability', () => {

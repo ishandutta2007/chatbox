@@ -18,61 +18,83 @@ import { getLogger } from '@/lib/utils'
 import { PREVIEW_LINES } from '@/packages/context-management/attachment-payload'
 import * as localParser from '@/packages/local-parser'
 import * as remote from '@/packages/remote'
-import { estimateTokens, getTokenizerType } from '@/packages/token'
+import { estimateTokens } from '@/packages/token'
 import platform from '@/platform'
 import { getMetaStorage } from '@/stores/chatStore'
 import storage from '@/storage'
 import { StorageKey, StorageKeyGenerator } from '@/storage/StoreStorage'
 import { migrateSession, sortSessions } from '@/utils/session-utils'
 import * as defaults from '../../shared/defaults'
+import { SESSION_ATTACHMENT_RAG_LOG_PREFIX } from '../../shared/session-attachment-rag/logging'
 import { createMessage, type Message, SessionSettingsSchema, TOKEN_CACHE_KEYS } from '../../shared/types'
+import type { AttachmentPreparationResult, PreprocessedFile } from '../types/input-box'
 import { lastUsedModelStore } from './lastUsedModelStore'
 import * as settingActions from './settingActions'
 import { getPlatformDefaultDocumentParser, settingsStore } from './settingsStore'
 
 const log = getLogger('session-helpers')
+const SESSION_ATTACHMENT_RAG_INLINE_THRESHOLD = 7500
+const SESSION_ATTACHMENT_RAG_INLINE_BYTE_THRESHOLD = 32 * 1024
+export const SESSION_ATTACHMENT_RAG_REQUIRES_CHATBOX_AI_ERROR = 'session_attachment_rag_requires_chatbox_ai'
+export const SESSION_ATTACHMENT_RAG_REQUIRES_KNOWLEDGE_BASE_ERROR = 'session_attachment_rag_requires_knowledge_base'
+export const SESSION_ATTACHMENT_RAG_REQUIRES_TOOL_USE_MODEL_ERROR = 'session_attachment_rag_requires_tool_use_model'
+let sessionRagCapabilityCache:
+  | {
+      licenseKey: string
+      value: boolean
+    }
+  | undefined
 
-function getCurrentTokenizerType(): 'default' | 'deepseek' {
-  const currentModel = lastUsedModelStore.getState().chat
-  return getTokenizerType(currentModel)
+type ContentStats = {
+  lineCount: number
+  byteLength: number
+  previewContent: string
+}
+
+function getContentStats(content: string): ContentStats {
+  const lines = content.split('\n')
+  return {
+    lineCount: lines.length,
+    byteLength: new TextEncoder().encode(content).length,
+    previewContent: lines.slice(0, PREVIEW_LINES).join('\n'),
+  }
 }
 
 export function computePreviewMetadata(
   content: string,
-  tokenizerType: 'default' | 'deepseek',
-  existingTokenMap: Record<string, number> = {}
+  existingTokenMap: Record<string, number> = {},
+  options: {
+    includeFullTokenCounts?: boolean
+    stats?: ContentStats
+  } = {}
 ): {
   lineCount: number
   byteLength: number
   tokenCountMap: Record<string, number>
   tokenCalculatedAt: Record<string, number>
 } {
-  const lineCount = content.split('\n').length
-  const byteLength = new TextEncoder().encode(content).length
+  const { includeFullTokenCounts = true, stats = getContentStats(content) } = options
+  const { lineCount, byteLength, previewContent } = stats
   const now = Date.now()
-
-  const previewContent = content.split('\n').slice(0, PREVIEW_LINES).join('\n')
 
   const tokenCountMap: Record<string, number> = { ...existingTokenMap }
   const tokenCalculatedAt: Record<string, number> = {}
 
-  // Only calculate for the specified tokenizer
-  const fullKey = tokenizerType // 'default' or 'deepseek'
-  const previewKey = `${tokenizerType}_preview`
-
-  if (tokenCountMap[fullKey] === undefined) {
-    tokenCountMap[fullKey] = estimateTokens(
-      content,
-      tokenizerType === 'deepseek' ? { provider: '', modelId: 'deepseek' } : undefined
-    )
-    tokenCalculatedAt[fullKey] = now
+  if (includeFullTokenCounts && tokenCountMap[TOKEN_CACHE_KEYS.default] === undefined) {
+    tokenCountMap[TOKEN_CACHE_KEYS.default] = estimateTokens(content)
+    tokenCalculatedAt[TOKEN_CACHE_KEYS.default] = now
   }
 
-  tokenCountMap[previewKey] = estimateTokens(
-    previewContent,
-    tokenizerType === 'deepseek' ? { provider: '', modelId: 'deepseek' } : undefined
-  )
-  tokenCalculatedAt[previewKey] = now
+  if (includeFullTokenCounts && tokenCountMap[TOKEN_CACHE_KEYS.deepseek] === undefined) {
+    tokenCountMap[TOKEN_CACHE_KEYS.deepseek] = estimateTokens(content, { provider: '', modelId: 'deepseek' })
+    tokenCalculatedAt[TOKEN_CACHE_KEYS.deepseek] = now
+  }
+
+  tokenCountMap.default_preview = estimateTokens(previewContent)
+  tokenCalculatedAt.default_preview = now
+
+  tokenCountMap.deepseek_preview = estimateTokens(previewContent, { provider: '', modelId: 'deepseek' })
+  tokenCalculatedAt.deepseek_preview = now
 
   return { lineCount, byteLength, tokenCountMap, tokenCalculatedAt }
 }
@@ -82,13 +104,39 @@ function getEffectiveDocumentParserConfig(): DocumentParserConfig {
   return globalConfig ?? getPlatformDefaultDocumentParser()
 }
 
+function hasParsedText(content: string): boolean {
+  return content.trim().length > 0
+}
+
+function canFallbackToChatboxAI(): boolean {
+  return Boolean(settingActions.getLicenseKey())
+}
+
+async function canUseSessionAttachmentRag(): Promise<boolean> {
+  const licenseKey = settingActions.getLicenseKey() || ''
+  if (sessionRagCapabilityCache?.licenseKey === licenseKey) {
+    log.debug(
+      `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} Capability cache hit: embedding=${sessionRagCapabilityCache.value}, hasLicense=${Boolean(licenseKey)}`
+    )
+    return sessionRagCapabilityCache.value
+  }
+
+  const value = !!(await remote.getSessionRagConfig({ licenseKey: licenseKey || undefined }).catch(() => undefined))
+    ?.capabilities?.session_attachment_embedding
+  log.info(
+    `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} Capability fetched: embedding=${value}, hasLicense=${Boolean(licenseKey)}, platform=${platform.type}`
+  )
+  sessionRagCapabilityCache = { licenseKey, value }
+  return value
+}
+
 /**
- * Parse file using local parser (desktop only)
+ * Parse file using local parser
  */
 async function parseFileWithLocalParser(
   file: File,
   uniqKey: string
-): Promise<{ content: string; storageKey: string; tokenCountMap: Record<string, number> }> {
+): Promise<{ content: string; storageKey: string; tokenCountMap: Record<string, number>; parserType: string }> {
   const result = await platform.parseFileLocally(file)
 
   if (!result.isSupported || !result.key) {
@@ -103,19 +151,43 @@ async function parseFileWithLocalParser(
     await storage.setBlob(uniqKey, content)
   }
 
-  // Calculate token counts
-  const tokenCountMap: Record<string, number> = content
-    ? {
-        [TOKEN_CACHE_KEYS.default]: estimateTokens(content),
-        [TOKEN_CACHE_KEYS.deepseek]: estimateTokens(content, { provider: '', modelId: 'deepseek' }),
-      }
-    : {}
+  return { content, storageKey: uniqKey, tokenCountMap: {}, parserType: 'local' }
+}
 
-  if (content) {
-    await storage.setItem(`${uniqKey}_tokenMap`, tokenCountMap)
+async function fallbackToChatboxAIParser(
+  file: File,
+  uniqKey: string,
+  reason: 'local_parser_failed' | 'empty_content'
+): Promise<{ content: string; storageKey: string; tokenCountMap: Record<string, number>; parserType: string }> {
+  log.warn(`Falling back to Chatbox AI parser for "${file.name}" due to ${reason}`)
+
+  try {
+    return await parseFileWithChatboxAI(file, uniqKey)
+  } catch (error) {
+    log.error(`Chatbox AI fallback parsing failed for "${file.name}":`, error)
+    throw new Error('chatbox_ai_parser_failed')
   }
+}
 
-  return { content, storageKey: uniqKey, tokenCountMap }
+async function parseFileWithLocalFallback(
+  file: File,
+  uniqKey: string
+): Promise<{ content: string; storageKey: string; tokenCountMap: Record<string, number>; parserType: string }> {
+  try {
+    const result = await parseFileWithLocalParser(file, uniqKey)
+    if (!hasParsedText(result.content) && canFallbackToChatboxAI()) {
+      return await fallbackToChatboxAIParser(file, uniqKey, 'empty_content')
+    }
+    return result
+  } catch (error) {
+    log.error(`Local parsing failed for "${file.name}":`, error)
+
+    if (canFallbackToChatboxAI()) {
+      return await fallbackToChatboxAIParser(file, uniqKey, 'local_parser_failed')
+    }
+
+    throw new Error('local_parser_failed')
+  }
 }
 
 /**
@@ -124,7 +196,7 @@ async function parseFileWithLocalParser(
 async function parseFileWithChatboxAI(
   file: File,
   uniqKey: string
-): Promise<{ content: string; storageKey: string; tokenCountMap: Record<string, number> }> {
+): Promise<{ content: string; storageKey: string; tokenCountMap: Record<string, number>; parserType: string }> {
   const licenseKey = settingActions.getLicenseKey()
   const uploadedKey = await remote.uploadAndCreateUserFile(licenseKey || '', file)
 
@@ -148,7 +220,7 @@ async function parseFileWithChatboxAI(
     await storage.setItem(`${uniqKey}_tokenMap`, tokenCountMap)
   }
 
-  return { content, storageKey: uniqKey, tokenCountMap }
+  return { content, storageKey: uniqKey, tokenCountMap, parserType: 'chatbox-ai' }
 }
 
 /**
@@ -158,7 +230,7 @@ async function parseFileWithMineruService(
   file: File,
   uniqKey: string,
   apiToken: string
-): Promise<{ content: string; storageKey: string; tokenCountMap: Record<string, number> }> {
+): Promise<{ content: string; storageKey: string; tokenCountMap: Record<string, number>; parserType: string }> {
   // Check if platform supports MinerU parsing
   if (!platform.parseFileWithMineru) {
     throw new Error('third_party_parser_not_supported_in_chat')
@@ -189,7 +261,7 @@ async function parseFileWithMineruService(
 
   await storage.setItem(`${uniqKey}_tokenMap`, tokenCountMap)
 
-  return { content, storageKey: uniqKey, tokenCountMap }
+  return { content, storageKey: uniqKey, tokenCountMap, parserType: 'mineru' }
 }
 
 /**
@@ -198,18 +270,10 @@ async function parseFileWithMineruService(
  * @param settings 会话设置
  * @returns 预处理后的文件信息
  */
-export async function preprocessFile(
+export async function prepareFileAttachment(
   file: File,
   settings: SessionSettings
-): Promise<{
-  file: File
-  content: string
-  storageKey: string
-  tokenCountMap?: Record<string, number>
-  lineCount?: number
-  byteLength?: number
-  error?: string
-}> {
+): Promise<AttachmentPreparationResult> {
   try {
     const uniqKey = StorageKeyGenerator.fileUniqKey(file)
 
@@ -221,12 +285,23 @@ export async function preprocessFile(
         string,
         number
       >
+      const existingParserType = (await storage.getItem<string | undefined>(`${uniqKey}_parserType`, undefined)) as
+        | string
+        | undefined
 
-      const tokenizerType = getCurrentTokenizerType()
-      const { lineCount, byteLength, tokenCountMap } = computePreviewMetadata(
-        existingContent,
-        tokenizerType,
-        existingTokenMap
+      const stats = getContentStats(existingContent)
+      const useSessionAttachmentRag =
+        platform.type === 'desktop' && stats.byteLength > SESSION_ATTACHMENT_RAG_INLINE_BYTE_THRESHOLD
+      const { lineCount, byteLength, tokenCountMap } = computePreviewMetadata(existingContent, existingTokenMap, {
+        includeFullTokenCounts: !useSessionAttachmentRag,
+        stats,
+      })
+      const shouldUseSessionAttachmentRag =
+        useSessionAttachmentRag ||
+        (tokenCountMap[TOKEN_CACHE_KEYS.default] ?? 0) > SESSION_ATTACHMENT_RAG_INLINE_THRESHOLD
+      const sessionAttachmentRagAllowed = shouldUseSessionAttachmentRag ? await canUseSessionAttachmentRag() : true
+      log.info(
+        `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} Cached preprocess decision: file="${file.name}", bytes=${stats.byteLength}, tokens=${tokenCountMap[TOKEN_CACHE_KEYS.default] ?? 0}, ragMode=${shouldUseSessionAttachmentRag ? 'session-retrieval' : 'inline'}, allowed=${sessionAttachmentRagAllowed}`
       )
 
       await storage.setItem(`${uniqKey}_tokenMap`, tokenCountMap)
@@ -235,51 +310,43 @@ export async function preprocessFile(
         file,
         content: existingContent,
         storageKey: uniqKey,
+        ragMode: shouldUseSessionAttachmentRag ? 'session-retrieval' : 'inline',
+        parserType: existingParserType,
         tokenCountMap,
         lineCount,
         byteLength,
+        sessionAttachmentAvailability:
+          shouldUseSessionAttachmentRag && !sessionAttachmentRagAllowed ? 'blocked' : 'allowed',
+        sessionAttachmentBlockedReason:
+          shouldUseSessionAttachmentRag && !sessionAttachmentRagAllowed
+            ? SESSION_ATTACHMENT_RAG_REQUIRES_KNOWLEDGE_BASE_ERROR
+            : undefined,
+        error:
+          shouldUseSessionAttachmentRag && !sessionAttachmentRagAllowed
+            ? SESSION_ATTACHMENT_RAG_REQUIRES_KNOWLEDGE_BASE_ERROR
+            : undefined,
       }
     }
 
-    // Get document parser configuration from global settings
-    const parserConfig = getEffectiveDocumentParserConfig()
-    log.debug(`Using document parser: ${parserConfig.type} for file: ${file.name}`)
-
-    let result: { content: string; storageKey: string; tokenCountMap: Record<string, number> }
-
-    // Text files always use local parsing for efficiency (same as Knowledge Base behavior)
-    // This applies to all platforms (desktop/web/mobile)
+    let result: { content: string; storageKey: string; tokenCountMap: Record<string, number>; parserType: string }
     if (isTextFilePath(file.name)) {
       log.debug(`Text file detected, using local parser: ${file.name}`)
-      try {
-        result = await parseFileWithLocalParser(file, uniqKey)
-      } catch (error) {
-        log.error(`Local parsing failed for text file "${file.name}":`, error)
-        throw new Error('local_parser_failed')
-      }
+      result = await parseFileWithLocalFallback(file, uniqKey)
     } else {
-      // Non-text files use the configured parser
+      const parserConfig = getEffectiveDocumentParserConfig()
+      log.debug(`Using document parser: ${parserConfig.type} for file: ${file.name}`)
+
       switch (parserConfig.type) {
         case 'none': {
-          // No parser configured - non-text files are not supported
-          // Prompt user to enable a parser in settings
           throw new Error('document_parser_not_configured')
         }
 
         case 'local': {
-          // Local parsing - only available on desktop
-          // On mobile/web, this will fail and throw local_parser_failed
-          try {
-            result = await parseFileWithLocalParser(file, uniqKey)
-          } catch (error) {
-            log.error(`Local parsing failed for "${file.name}":`, error)
-            throw new Error('local_parser_failed')
-          }
+          result = await parseFileWithLocalFallback(file, uniqKey)
           break
         }
 
         case 'chatbox-ai': {
-          // Chatbox AI cloud parsing - available on all platforms
           try {
             result = await parseFileWithChatboxAI(file, uniqKey)
           } catch (error) {
@@ -290,7 +357,6 @@ export async function preprocessFile(
         }
 
         case 'mineru': {
-          // MinerU parsing - available on desktop only
           const apiToken = parserConfig.mineru?.apiToken
           if (!apiToken) {
             throw new Error('mineru_api_token_required')
@@ -299,7 +365,6 @@ export async function preprocessFile(
             result = await parseFileWithMineruService(file, uniqKey, apiToken)
           } catch (error) {
             log.error(`MinerU parsing failed for "${file.name}":`, error)
-            // Re-throw known errors, wrap unknown ones
             if (error instanceof Error && error.message.startsWith('third_party_parser')) {
               throw error
             }
@@ -309,30 +374,46 @@ export async function preprocessFile(
         }
 
         default: {
-          // Unknown parser type, fall back to error
           throw new Error('document_parser_not_configured')
         }
       }
     }
 
-    const tokenizerType = getCurrentTokenizerType()
-    const { lineCount, byteLength, tokenCountMap } = computePreviewMetadata(
-      result.content,
-      tokenizerType,
-      result.tokenCountMap
-    )
+    const stats = getContentStats(result.content)
+    const useSessionAttachmentRag =
+      platform.type === 'desktop' && stats.byteLength > SESSION_ATTACHMENT_RAG_INLINE_BYTE_THRESHOLD
+    const { lineCount, byteLength, tokenCountMap } = computePreviewMetadata(result.content, result.tokenCountMap, {
+      includeFullTokenCounts: !useSessionAttachmentRag,
+      stats,
+    })
     await storage.setItem(`${result.storageKey}_tokenMap`, tokenCountMap)
+    await storage.setItem(`${result.storageKey}_parserType`, result.parserType)
+
+    const shouldUseSessionAttachmentRag =
+      useSessionAttachmentRag ||
+      (tokenCountMap[TOKEN_CACHE_KEYS.default] ?? 0) > SESSION_ATTACHMENT_RAG_INLINE_THRESHOLD
+    const sessionAttachmentRagBlocked = shouldUseSessionAttachmentRag && !(await canUseSessionAttachmentRag())
+    log.info(
+      `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} Preprocess decision: file="${file.name}", parser=${result.parserType}, bytes=${stats.byteLength}, tokens=${tokenCountMap[TOKEN_CACHE_KEYS.default] ?? 0}, ragMode=${shouldUseSessionAttachmentRag ? 'session-retrieval' : 'inline'}, blocked=${sessionAttachmentRagBlocked}`
+    )
 
     return {
       file,
       content: result.content,
       storageKey: result.storageKey,
+      ragMode: shouldUseSessionAttachmentRag ? 'session-retrieval' : 'inline',
+      parserType: result.parserType,
       tokenCountMap,
       lineCount,
       byteLength,
+      sessionAttachmentAvailability: sessionAttachmentRagBlocked ? 'blocked' : 'allowed',
+      sessionAttachmentBlockedReason: sessionAttachmentRagBlocked
+        ? SESSION_ATTACHMENT_RAG_REQUIRES_KNOWLEDGE_BASE_ERROR
+        : undefined,
+      error: sessionAttachmentRagBlocked ? SESSION_ATTACHMENT_RAG_REQUIRES_KNOWLEDGE_BASE_ERROR : undefined,
     }
   } catch (error) {
-    log.error('Failed to preprocess file:', error)
+    log.error(`${SESSION_ATTACHMENT_RAG_LOG_PREFIX} Failed to preprocess file "${file.name}":`, error)
     return {
       file,
       content: '',
@@ -378,12 +459,7 @@ export async function preprocessLink(
         number
       >
 
-      const tokenizerType = getCurrentTokenizerType()
-      const { lineCount, byteLength, tokenCountMap } = computePreviewMetadata(
-        existingContent,
-        tokenizerType,
-        existingTokenMap
-      )
+      const { lineCount, byteLength, tokenCountMap } = computePreviewMetadata(existingContent, existingTokenMap)
 
       await storage.setItem(`${uniqKey}_tokenMap`, tokenCountMap)
 
@@ -412,9 +488,8 @@ export async function preprocessLink(
       }
 
       // Calculate token counts including preview metadata
-      const tokenizerType = getCurrentTokenizerType()
       const { lineCount, byteLength, tokenCountMap } = content
-        ? computePreviewMetadata(content, tokenizerType)
+        ? computePreviewMetadata(content)
         : { lineCount: undefined, byteLength: undefined, tokenCountMap: {} }
 
       // Store token map for future use
@@ -441,9 +516,8 @@ export async function preprocessLink(
         await storage.setBlob(uniqKey, content)
       }
 
-      const tokenizerType = getCurrentTokenizerType()
       const { lineCount, byteLength, tokenCountMap } = content
-        ? computePreviewMetadata(content, tokenizerType)
+        ? computePreviewMetadata(content)
         : { lineCount: undefined, byteLength: undefined, tokenCountMap: {} }
 
       if (content) {
@@ -480,16 +554,10 @@ export async function preprocessLink(
  * @returns 构建好的消息对象
  */
 export function constructUserMessage(
+  messageId: string | undefined,
   text: string,
   pictureKeys: string[] = [],
-  preprocessedFiles: Array<{
-    file: File
-    content: string
-    storageKey: string
-    tokenCountMap?: Record<string, number>
-    lineCount?: number
-    byteLength?: number
-  }> = [],
+  preprocessedFiles: PreprocessedFile[] = [],
   preprocessedLinks: Array<{
     url: string
     title: string
@@ -502,6 +570,9 @@ export function constructUserMessage(
 ): Message {
   // 只使用原始文本，不添加文件和链接内容
   const msg = createMessage('user', text)
+  if (messageId) {
+    msg.id = messageId
+  }
 
   // 添加图片
   if (pictureKeys.length > 0) {
@@ -514,7 +585,15 @@ export function constructUserMessage(
       id: f.storageKey || f.file.name,
       name: f.file.name,
       fileType: f.file.type,
-      storageKey: f.storageKey,
+      parserType: f.parserType,
+      storageKey: f.storageKey || undefined,
+      localPath: f.ragMode === 'session-retrieval' ? undefined : (f.localPath ?? f.file.path ?? undefined),
+      ragMode: f.ragMode ?? 'inline',
+      sessionAttachmentId: f.sessionAttachmentId,
+      sessionAttachmentAvailability: f.sessionAttachmentAvailability ?? 'allowed',
+      sessionAttachmentIndexStatus:
+        f.ragMode === 'session-retrieval' ? (f.sessionAttachmentIndexStatus ?? 'pending') : undefined,
+      sessionAttachmentBlockedReason: f.sessionAttachmentBlockedReason,
       tokenCountMap: f.tokenCountMap,
       lineCount: f.lineCount,
       byteLength: f.byteLength,
@@ -560,7 +639,7 @@ export async function exportChat(session: Session, scope: ExportChatScope, forma
 export function mergeSettings(
   globalSettings: Settings,
   sessionSetting?: SessionSettings,
-  sessionType?: 'picture' | 'chat'
+  sessionType?: 'picture' | 'chat' | 'guide'
 ): SessionSettings {
   if (!sessionSetting) {
     return SessionSettingsSchema.parse(globalSettings)

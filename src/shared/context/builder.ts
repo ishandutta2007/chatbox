@@ -172,6 +172,9 @@ async function injectAttachments(
   for (const msg of messages) {
     if (msg.files) {
       for (const file of msg.files) {
+        if (file.ragMode === 'session-retrieval') {
+          continue
+        }
         if (file.storageKey) {
           allStorageKeys.add(file.storageKey)
         }
@@ -218,6 +221,19 @@ function processMessageAttachments(
 
   if (msg.files) {
     for (const file of msg.files) {
+      if (file.ragMode === 'session-retrieval') {
+        const attachment = buildRetrievalAttachment({
+          index: attachmentIndex++,
+          name: file.name,
+          key: file.sessionAttachmentId
+            ? `session-attachment:${file.sessionAttachmentId}`
+            : (file.storageKey ?? file.id),
+          status: file.sessionAttachmentIndexStatus ?? file.sessionAttachmentStatus ?? 'pending',
+          blockedReason: file.sessionAttachmentBlockedReason,
+        })
+        result = mergeAttachmentContent(result, attachment)
+        continue
+      }
       if (file.storageKey) {
         const content = attachmentContents.get(file.storageKey)
         if (content) {
@@ -230,6 +246,13 @@ function processMessageAttachments(
           })
           result = mergeAttachmentContent(result, attachment)
         }
+      } else if (file.localPath && modelSupportToolUseForFile) {
+        const attachment = buildToolOnlyAttachment({
+          index: attachmentIndex++,
+          name: file.name,
+          key: `local:${file.localPath}`,
+        })
+        result = mergeAttachmentContent(result, attachment)
       }
     }
   }
@@ -288,6 +311,50 @@ function buildAttachment(params: AttachmentParams): string {
   suffix += '</ATTACHMENT_FILE>\n'
 
   return prefix + contentToAdd + '\n' + suffix
+}
+
+function buildRetrievalAttachment(params: {
+  index: number
+  name: string
+  key: string
+  status: string
+  blockedReason?: string
+}): string {
+  const { index, name, key, status, blockedReason } = params
+  let text = '\n\n<ATTACHMENT_FILE>\n'
+  text += `<FILE_INDEX>${index}</FILE_INDEX>\n`
+  text += `<FILE_NAME>${name}</FILE_NAME>\n`
+  text += `<FILE_KEY>${key}</FILE_KEY>\n`
+  text += '<FILE_CONTENT>\n'
+  text += '</FILE_CONTENT>\n'
+  text += '<RETRIEVAL_MODE>session_attachment_rag</RETRIEVAL_MODE>\n'
+  text += `<INDEX_STATUS>${status}</INDEX_STATUS>\n`
+  if (blockedReason) {
+    text += `<BLOCKED_REASON>${blockedReason}</BLOCKED_REASON>\n`
+  }
+  text += [
+    '<SYSTEM_REMINDER>',
+    'This uploaded file is indexed for retrieval, not inlined in the conversation. ',
+    'For document-specific questions about this file, use query_session_attachment and then ',
+    'read_session_attachment_parents before answering. If the user asks something unrelated to the uploaded file, ',
+    'answer normally without retrieval.',
+    '</SYSTEM_REMINDER>\n',
+  ].join('')
+  text += '</ATTACHMENT_FILE>\n'
+  return text
+}
+
+function buildToolOnlyAttachment(params: { index: number; name: string; key: string }): string {
+  const { index, name, key } = params
+  let text = '\n\n<ATTACHMENT_FILE>\n'
+  text += `<FILE_INDEX>${index}</FILE_INDEX>\n`
+  text += `<FILE_NAME>${name}</FILE_NAME>\n`
+  text += `<FILE_KEY>${key}</FILE_KEY>\n`
+  text += '<FILE_CONTENT>\n'
+  text += '</FILE_CONTENT>\n'
+  text += `<TRUNCATED>Content preview unavailable. Use read_file or search_file_content tool with FILE_KEY="${key}" to inspect this file.</TRUNCATED>\n`
+  text += '</ATTACHMENT_FILE>\n'
+  return text
 }
 
 function mergeAttachmentContent(message: Message, attachmentText: string): Message {

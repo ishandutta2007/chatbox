@@ -1,18 +1,20 @@
 import { buildContext } from '@shared/context'
-import { getModel } from '@shared/models'
-import { ChatboxAIAPIError } from '@shared/models/errors'
+import { ChatboxAIAPIError, OCRError } from '@shared/models/errors'
 import type { ChatStreamOptions, ModelStreamPart } from '@shared/models/types'
-import { type Message, type MessageContentParts, ModelProviderEnum } from '@shared/types'
+import { ModelProviderEnum, type Message, type MessageContentParts } from '@shared/types'
 import { getMessageText, sequenceMessages } from '@shared/utils/message'
 import type { ToolSet } from 'ai'
 import { t } from 'i18next'
-import { createModelDependencies } from '@/adapters'
+import { createModel, createModelDependencies } from '@/adapters'
+import { getLogger } from '@/lib/utils'
 import * as appleAppStore from '@/packages/apple_app_store'
 import { convertToModelMessages, injectModelSystemPrompt } from '@/packages/model-calls/message-utils'
 import { estimateTokensFromMessages } from '@/packages/token'
 import platform from '@/platform'
 import storage from '@/storage'
 import { StorageKeyGenerator } from '@/storage/StoreStorage'
+import { featureFlags } from '@/utils/feature-flags'
+import { SESSION_ATTACHMENT_RAG_LOG_PREFIX } from '../../../shared/session-attachment-rag/logging'
 import * as chatStore from '../chatStore'
 import { settingsStore } from '../settingsStore'
 import { uiStore } from '../uiStore'
@@ -29,6 +31,59 @@ import {
   initializeTargetMessage,
   trackGenerateEvent,
 } from './utils'
+
+const log = getLogger('session-orchestration')
+
+async function refreshSessionAttachmentStatuses(messages: Message[]): Promise<Message[]> {
+  if (platform.type !== 'desktop') {
+    return messages
+  }
+
+  const ids = Array.from(
+    new Set(
+      messages.flatMap((message) =>
+        (message.files ?? [])
+          .filter((file) => file.sessionAttachmentId)
+          .map((file) => file.sessionAttachmentId as number)
+      )
+    )
+  )
+
+  if (ids.length === 0) {
+    return messages
+  }
+
+  const controller = platform.getSessionAttachmentRagController()
+  const attachments = await controller.getAttachments(ids)
+  log.info(
+    `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} Refreshed attachment statuses: count=${attachments.length}, statuses=${attachments
+      .map((attachment) => `${attachment.id}:${attachment.indexStatus ?? attachment.status}`)
+      .join(',')}`
+  )
+  const availabilityMap = new Map(attachments.map((attachment) => [attachment.id, attachment.availability]))
+  const indexStatusMap = new Map(attachments.map((attachment) => [attachment.id, attachment.indexStatus]))
+
+  return messages.map((message) => {
+    if (!message.files?.length) {
+      return message
+    }
+
+    const files = message.files.map((file) => {
+      if (!file.sessionAttachmentId) {
+        return file
+      }
+      return {
+        ...file,
+        sessionAttachmentAvailability:
+          availabilityMap.get(file.sessionAttachmentId) ?? file.sessionAttachmentAvailability,
+        sessionAttachmentIndexStatus: indexStatusMap.get(file.sessionAttachmentId) ?? file.sessionAttachmentIndexStatus,
+        sessionAttachmentStatus: indexStatusMap.get(file.sessionAttachmentId) ?? file.sessionAttachmentStatus,
+      }
+    })
+
+    return { ...message, files }
+  })
+}
 
 export async function orchestrateGeneration(
   sessionId: string,
@@ -63,13 +118,14 @@ export async function orchestrateGeneration(
 
   try {
     const dependencies = await createModelDependencies()
-    const model = getModel(settings, globalSettings, configs, dependencies)
+    const model = await createModel(settings, dependencies)
     const sessionKnowledgeBaseMap = uiStore.getState().sessionKnowledgeBaseMap
     const knowledgeBase = sessionKnowledgeBaseMap[sessionId]
     const webBrowsing = getSessionWebBrowsing(sessionId, settings.provider)
 
     const attachmentResolver = createAttachmentResolver()
-    let promptMsgs = await buildContext(messages.slice(0, targetMsgIx), {
+    const messagesForPrompt = await refreshSessionAttachmentStatuses(messages.slice(0, targetMsgIx))
+    let promptMsgs = await buildContext(messagesForPrompt, {
       attachmentResolver,
       compactionPoints: session.compactionPoints,
       modelSupportToolUseForFile: model.isSupportToolUse('read-file'),
@@ -82,11 +138,15 @@ export async function orchestrateGeneration(
       !model.isSupportVision() &&
       promptMsgs.some((m) => m.contentParts.some((c) => c.type === 'image' && !c.ocrResult))
     ) {
-      const ocrModel = getOCRModel(globalSettings, configs, dependencies)
-      if (!ocrModel) {
+      const ocrResult = getOCRModel(globalSettings, configs, dependencies)
+      if (!ocrResult) {
         throw ChatboxAIAPIError.fromCodeName('model_not_support_image_2', 'model_not_support_image_2')
       }
-      await ocrImagesInMessages(promptMsgs, ocrModel)
+      try {
+        await ocrImagesInMessages(promptMsgs, ocrResult.model)
+      } catch (err) {
+        throw new OCRError(ocrResult.providerName, err instanceof Error ? err : new Error(`${err}`))
+      }
       infoParts.push({
         type: 'info',
         text: t('Current model {{modelName}} does not support image input, using OCR to process images', {
@@ -138,7 +198,6 @@ export async function orchestrateGeneration(
       sessionId: session.id,
       signal: controller.signal,
       providerOptions: settings.providerOptions,
-      maxSteps: 10,
     }
 
     if (Object.keys(tools).length > 0) {

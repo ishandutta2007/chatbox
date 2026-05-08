@@ -9,7 +9,7 @@
  * `./src/main.js` using webpack. This gives us some performance wins.
  */
 
-import { app, BrowserWindow, globalShortcut, ipcMain, Menu, nativeTheme, session, shell, Tray } from 'electron'
+import { app, BrowserWindow, dialog, globalShortcut, ipcMain, Menu, nativeTheme, session, shell, Tray } from 'electron'
 import electronDebug from 'electron-debug'
 import log from 'electron-log/main'
 import fs from 'node:fs'
@@ -19,13 +19,17 @@ import path from 'path'
 import * as sourceMapSupport from 'source-map-support'
 import type { ShortcutSetting } from 'src/shared/types'
 import * as analystic from './analystic-node'
+import { AppUpdater } from './app-updater'
 import * as autoLauncher from './autoLauncher'
 import { handleDeepLink } from './deeplinks'
 import { parseFile } from './file-parser'
 import Locale from './locales'
 import * as mcpIpc from './mcp/ipc-stdio-transport'
+import { registerOAuthHandlers } from './oauth'
 import MenuBuilder from './menu'
 import * as proxy from './proxy'
+import { registerSandboxHandlers } from './sandbox'
+import { registerSkillsHandlers } from './skills'
 import {
   delStoreBlob,
   getConfig,
@@ -42,6 +46,74 @@ const knowledgeBaseInitPromise = import('./knowledge-base/index.js')
   .catch((error) => {
     log.error('[KB] Failed to initialize knowledge base during bootstrap:', error)
   })
+
+const TRUTHY_ENV_VALUES = new Set(['1', 'true', 'yes', 'on'])
+
+function initializeSessionAttachmentRagAfterAppReady() {
+  return import('./session-attachment-rag/index.js')
+    .then((mod) => mod.getInitPromise())
+    .catch((error) => {
+      log.error('[SessionAttachmentRAG] Failed to initialize during bootstrap:', error)
+    })
+}
+
+function isTruthyEnv(value: string | undefined): boolean {
+  if (!value) {
+    return false
+  }
+  return TRUTHY_ENV_VALUES.has(value.trim().toLowerCase())
+}
+
+function detectContainerEnvironment(): boolean {
+  if (process.env.CONTAINER === 'docker' || !!process.env.KUBERNETES_SERVICE_HOST) {
+    return true
+  }
+  if (fs.existsSync('/.dockerenv')) {
+    return true
+  }
+  try {
+    const cgroup = fs.readFileSync('/proc/1/cgroup', 'utf8')
+    return /docker|containerd|kubepods|podman|lxc/i.test(cgroup)
+  } catch {
+    return false
+  }
+}
+
+type LinuxRuntimeFlags = {
+  disableGpu: boolean
+  disableDevShmUsage: boolean
+}
+
+function getLinuxRuntimeFlags(): LinuxRuntimeFlags {
+  const forceGpu = isTruthyEnv(process.env.CHATBOX_FORCE_GPU)
+  const forceDisableGpu = isTruthyEnv(process.env.CHATBOX_DISABLE_GPU)
+  const isCI = isTruthyEnv(process.env.CI)
+  const isContainer = detectContainerEnvironment()
+  const hasDisplayServer = !!process.env.DISPLAY || !!process.env.WAYLAND_DISPLAY
+
+  return {
+    disableGpu: forceGpu ? false : forceDisableGpu || isCI || isContainer || !hasDisplayServer,
+    disableDevShmUsage: isCI || isContainer,
+  }
+}
+
+// Linux startup compatibility flags:
+// - Disable GPU only in constrained environments (CI/container/headless) or when explicitly requested.
+// - Keep GPU enabled on normal Linux desktops for better rendering performance.
+// - Use /tmp instead of /dev/shm only in CI/container environments.
+// Must run before app.whenReady().
+if (process.platform === 'linux') {
+  const linuxRuntimeFlags = getLinuxRuntimeFlags()
+  if (linuxRuntimeFlags.disableGpu) {
+    app.disableHardwareAcceleration()
+    app.commandLine.appendSwitch('disable-gpu')
+  }
+  if (linuxRuntimeFlags.disableDevShmUsage) {
+    app.commandLine.appendSwitch('disable-dev-shm-usage')
+  }
+  const { disableGpu, disableDevShmUsage } = linuxRuntimeFlags
+  log.info(`[Linux startup flags] disableGpu=${disableGpu}, disableDevShmUsage=${disableDevShmUsage}`)
+}
 
 // 这行代码是解决 Windows 通知的标题和图标不正确的问题，标题会错误显示成 electron.app.Chatbox
 // 参考：https://stackoverflow.com/questions/65859634/notification-from-electron-shows-electron-app-electron
@@ -68,7 +140,7 @@ if (process.defaultApp) {
   app.setAsDefaultProtocolClient(PROTOCOL_SCHEME)
 }
 
-console.log(`📱 URL Scheme registered: ${PROTOCOL_SCHEME}://`)
+log.info(`📱 URL Scheme registered: ${PROTOCOL_SCHEME}://`)
 
 // --------- 全局变量 ---------
 
@@ -380,7 +452,7 @@ async function showOrHideWindow() {
 
 // --------- 应用管理 ---------
 
-const gotTheLock = app.requestSingleInstanceLock()
+const gotTheLock = app.isPackaged ? app.requestSingleInstanceLock() : true
 
 if (!gotTheLock) {
   app.quit()
@@ -433,6 +505,7 @@ if (!gotTheLock) {
     .then(async () => {
       await knowledgeBaseInitPromise
       await createWindow()
+      await initializeSessionAttachmentRagAfterAppReady()
       ensureTray()
       // Remove this if your app does not use auto updates
       // eslint-disable-next-line
@@ -490,7 +563,7 @@ if (!gotTheLock) {
         destroyTray()
       })
     })
-    .catch(console.log)
+    .catch((err: unknown) => log.error('App initialization failed:', err))
 }
 
 // macos uses this event to handle deep links
@@ -535,6 +608,9 @@ ipcMain.handle('delStoreValue', (event, key) => {
 })
 ipcMain.handle('getAllStoreValues', (event) => {
   return JSON.stringify(store.store)
+})
+ipcMain.handle('getAllStoreKeys', (event) => {
+  return Object.keys(store.store)
 })
 ipcMain.handle('setAllStoreValues', (event, dataJson) => {
   const data = JSON.parse(dataJson)
@@ -584,7 +660,7 @@ ipcMain.handle('getDeviceName', () => {
 ipcMain.handle('getLocale', () => {
   try {
     return app.getLocale()
-  } catch (e: any) {
+  } catch (e: unknown) {
     return ''
   }
 })
@@ -650,12 +726,12 @@ ipcMain.handle('appLog', (event, dataJson) => {
 
 ipcMain.handle('exportLogs', async () => {
   try {
-    const fs = await import('fs/promises')
+    const fsPromises = await import('fs/promises')
     const logPath = log.transports.file.getFile()?.path
     if (!logPath) {
       return ''
     }
-    const content = await fs.readFile(logPath, 'utf-8')
+    const content = await fsPromises.readFile(logPath, 'utf-8')
     return content
   } catch (error) {
     log.error('Failed to export logs:', error)
@@ -665,10 +741,10 @@ ipcMain.handle('exportLogs', async () => {
 
 ipcMain.handle('clearLogs', async () => {
   try {
-    const fs = await import('fs/promises')
+    const fsPromises = await import('fs/promises')
     const logPath = log.transports.file.getFile()?.path
     if (logPath) {
-      await fs.writeFile(logPath, '', 'utf-8')
+      await fsPromises.writeFile(logPath, '', 'utf-8')
     }
   } catch (error) {
     log.error('Failed to clear logs:', error)
@@ -731,6 +807,17 @@ ipcMain.handle('switch-theme', (event, theme: 'dark' | 'light') => {
   })
 })
 
+ipcMain.handle('dialog:openDirectory', async () => {
+  const result = await dialog.showOpenDialog({
+    properties: ['openDirectory', 'createDirectory'],
+    title: 'Select Working Directory',
+  })
+  if (result.canceled || result.filePaths.length === 0) {
+    return { canceled: true }
+  }
+  return { canceled: false, path: result.filePaths[0] }
+})
+
 ipcMain.handle('window:minimize', () => {
   mainWindow?.minimize()
 })
@@ -750,3 +837,7 @@ ipcMain.handle('window:close', () => {
 ipcMain.handle('window:is-maximized', () => {
   return mainWindow?.isMaximized()
 })
+
+registerSandboxHandlers()
+registerSkillsHandlers()
+registerOAuthHandlers()

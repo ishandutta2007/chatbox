@@ -24,7 +24,14 @@ export function getTokenCacheKey(model?: TokenModel): TokenCacheKey {
   return TOKEN_CACHE_KEYS.default
 }
 
-export function getTokenCountForModel(item: { tokenCountMap?: Record<string, number> }, model?: TokenModel): number {
+export function getTokenCountForModel(
+  item: { tokenCountMap?: Record<string, number>; ragMode?: 'inline' | 'session-retrieval' },
+  model?: TokenModel
+): number {
+  if (item.ragMode === 'session-retrieval') {
+    return 0
+  }
+
   const tokenCacheKey = getTokenCacheKey(model)
 
   if (item.tokenCountMap?.[tokenCacheKey]) {
@@ -181,6 +188,14 @@ function computeAttachmentTokens(
   model: TokenModel,
   modelSupportToolUseForFile: boolean
 ): number {
+  if (
+    'ragMode' in attachment &&
+    attachment.ragMode === 'session-retrieval' &&
+    (attachment.sessionAttachmentIndexStatus ?? attachment.sessionAttachmentStatus) !== 'failed'
+  ) {
+    return 0
+  }
+
   const lineCount = attachment.lineCount
   const byteLength = attachment.byteLength
   const tokenCountMap = attachment.tokenCountMap
@@ -191,7 +206,8 @@ function computeAttachmentTokens(
   const hasMetadata = lineCount !== undefined && byteLength !== undefined
 
   const fileName = 'name' in attachment ? attachment.name : attachment.title
-  const fileKey = attachment.storageKey || attachment.id
+  const localPath = 'localPath' in attachment ? attachment.localPath : undefined
+  const fileKey = attachment.storageKey || (localPath ? `local:${localPath}` : attachment.id)
 
   if (!hasMetadata) {
     const placeholderPrefix = buildAttachmentWrapperPrefix({

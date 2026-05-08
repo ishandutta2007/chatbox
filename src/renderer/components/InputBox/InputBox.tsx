@@ -47,6 +47,7 @@ import type React from 'react'
 import { forwardRef, memo, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { useTranslation } from 'react-i18next'
+import { v4 as uuidv4 } from 'uuid'
 import { createModelDependencies } from '@/adapters'
 import useInputBoxHistory from '@/hooks/useInputBoxHistory'
 import { useKnowledgeBase } from '@/hooks/useKnowledgeBase'
@@ -83,11 +84,13 @@ import {
   type KnowledgeBase,
   type Message,
   ModelProviderEnum,
+  type SessionAttachment,
   type SessionType,
   type ShortcutSendValue,
 } from '../../../shared/types'
 import * as dom from '../../hooks/dom'
 import * as sessionHelpers from '../../stores/sessionHelpers'
+import { startPreparedSessionAttachmentIndexing } from '../../stores/sessionAttachmentRagIndexing'
 import * as toastActions from '../../stores/toastActions'
 import { CompactionStatus } from '../chat/CompactionStatus'
 import { CompressionModal } from '../common/CompressionModal'
@@ -109,6 +112,7 @@ import {
   storeFilePromise,
   storeLinkPromise,
 } from './preprocessState'
+import type { PreprocessedFile } from '../../types/input-box'
 import TokenCountMenu from './TokenCountMenu'
 
 export type InputBoxPayload = {
@@ -136,6 +140,45 @@ export type InputBoxProps = {
   onStartNewThread?(): boolean
   onRollbackThread?(): boolean
   onClickSessionSettings?(): boolean | Promise<boolean>
+}
+
+function mergeSessionAttachmentStatesIntoFiles(
+  files: PreprocessedFile[],
+  attachments: SessionAttachment[]
+): { files: PreprocessedFile[]; changed: boolean } {
+  if (files.length === 0 || attachments.length === 0) {
+    return { files, changed: false }
+  }
+
+  const attachmentStateMap = new Map(attachments.map((attachment) => [attachment.id, attachment]))
+  let changed = false
+  const nextFiles = files.map((file) => {
+    if (!file.sessionAttachmentId) {
+      return file
+    }
+    const attachment = attachmentStateMap.get(file.sessionAttachmentId)
+    if (!attachment) {
+      return file
+    }
+    const nextFile = {
+      ...file,
+      sessionAttachmentAvailability: attachment.availability ?? file.sessionAttachmentAvailability,
+      sessionAttachmentIndexStatus: attachment.indexStatus ?? file.sessionAttachmentIndexStatus,
+      sessionAttachmentChunkCount: attachment.chunkCount ?? file.sessionAttachmentChunkCount,
+      error: attachment.error ?? file.error,
+    }
+    const fileChanged =
+      nextFile.sessionAttachmentAvailability !== file.sessionAttachmentAvailability ||
+      nextFile.sessionAttachmentIndexStatus !== file.sessionAttachmentIndexStatus ||
+      nextFile.sessionAttachmentChunkCount !== file.sessionAttachmentChunkCount ||
+      nextFile.error !== file.error
+    if (fileChanged) {
+      changed = true
+    }
+    return fileChanged ? nextFile : file
+  })
+
+  return { files: nextFiles, changed }
 }
 
 const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
@@ -202,6 +245,7 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
     const messageInputFieldRef = useRef<MessageInputFieldRef>(null)
     const latestInputRef = useRef('')
     const [hasTextContent, setHasTextContent] = useState(false)
+    const draftMessageIdRef = useRef<string | undefined>(undefined)
 
     const debouncedUpdateTimerRef = useRef<ReturnType<typeof setTimeout>>()
     const resetHistoryIndexRef = useRef<() => void>(() => {})
@@ -227,6 +271,11 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
     const [preConstructedMessage, setPreConstructedMessage] = useAtom(
       atoms.inputBoxPreConstructedMessageFamily(currentSessionId || 'new')
     )
+    const preConstructedMessageRef = useRef(preConstructedMessage)
+    preConstructedMessageRef.current = preConstructedMessage
+    useEffect(() => {
+      draftMessageIdRef.current = preConstructedMessage.draftMessageId
+    }, [preConstructedMessage.draftMessageId])
     const pictureKeys = preConstructedMessage.pictureKeys || []
     const attachments = preConstructedMessage.attachments || []
 
@@ -253,6 +302,7 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
       clearTimeout(debouncedUpdateTimerRef.current)
       const text = latestInputRef.current
       const constructedMessage = sessionHelpers.constructUserMessage(
+        preConstructedMessage.draftMessageId,
         text,
         pictureKeys,
         preConstructedMessage.preprocessedFiles,
@@ -267,6 +317,7 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
         message: constructedMessage,
       }))
     }, [
+      preConstructedMessage.draftMessageId,
       pictureKeys,
       attachments,
       links,
@@ -308,12 +359,76 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
       return hasErrorFiles || hasErrorLinks
     }, [preConstructedMessage.preprocessingStatus])
 
+    const hasBlockedSessionRagFiles = useMemo(
+      () =>
+        preConstructedMessage.preprocessedFiles.some(
+          (file) => file.ragMode === 'session-retrieval' && file.sessionAttachmentAvailability === 'blocked'
+        ),
+      [preConstructedMessage.preprocessedFiles]
+    )
+    const hasSessionRetrievalFiles = useMemo(
+      () =>
+        preConstructedMessage.preprocessedFiles.some(
+          (file) => file.ragMode === 'session-retrieval' && file.sessionAttachmentAvailability !== 'blocked'
+        ),
+      [preConstructedMessage.preprocessedFiles]
+    )
+
     const disableSubmit = useMemo(
       () => !(hasTextContent || links?.length || attachments?.length || pictureKeys?.length),
       [hasTextContent, links, attachments, pictureKeys]
     )
 
     const { providers } = useProviders()
+    const preprocessedSessionAttachmentIds = useMemo(
+      () =>
+        Array.from(
+          new Set(
+            preConstructedMessage.preprocessedFiles.flatMap((file) =>
+              file.sessionAttachmentId ? [file.sessionAttachmentId] : []
+            )
+          )
+        ),
+      [preConstructedMessage.preprocessedFiles]
+    )
+    const { data: preprocessedAttachmentStates = [] } = useQuery<SessionAttachment[]>({
+      queryKey: [
+        'input-box-session-attachment-rag-attachments',
+        ...preprocessedSessionAttachmentIds.sort((a, b) => a - b),
+      ],
+      queryFn: () => {
+        if (platform.type !== 'desktop' || preprocessedSessionAttachmentIds.length === 0) {
+          return []
+        }
+        return platform.getSessionAttachmentRagController().getAttachments(preprocessedSessionAttachmentIds)
+      },
+      enabled: platform.type === 'desktop' && preprocessedSessionAttachmentIds.length > 0,
+      refetchInterval: (query): number | false => {
+        const attachments = (query.state.data as SessionAttachment[] | undefined) ?? []
+        return attachments.some(
+          (attachment) => attachment.indexStatus === 'pending' || attachment.indexStatus === 'indexing'
+        )
+          ? 1500
+          : false
+      },
+    })
+    const preprocessedAttachmentIndexStatusMap = useMemo(
+      () => new Map(preprocessedAttachmentStates.map((attachment) => [attachment.id, attachment.indexStatus])),
+      [preprocessedAttachmentStates]
+    )
+    const preprocessedAttachmentErrorMap = useMemo(
+      () => new Map(preprocessedAttachmentStates.map((attachment) => [attachment.id, attachment.error])),
+      [preprocessedAttachmentStates]
+    )
+    useEffect(() => {
+      if (preprocessedAttachmentStates.length === 0) {
+        return
+      }
+      setPreConstructedMessage((prev) => {
+        const result = mergeSessionAttachmentStatesIntoFiles(prev.preprocessedFiles, preprocessedAttachmentStates)
+        return result.changed ? { ...prev, preprocessedFiles: result.files } : prev
+      })
+    }, [preprocessedAttachmentStates, setPreConstructedMessage])
     const modelSelectorDisplayText = useMemo(() => {
       if (!model) {
         return t('Select Model')
@@ -334,7 +449,7 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
     }, [providers, model])
 
     // Check if model supports tool use for files
-    const { data: modelSupportToolUseForFile = false } = useQuery({
+    const { data: modelSupportToolUseForFile = false, isFetched: isModelToolCapabilityFetched } = useQuery({
       queryKey: ['model-tool-capability', model?.provider, model?.modelId],
       queryFn: async () => {
         if (!model?.provider || !model?.modelId) {
@@ -363,6 +478,8 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
       staleTime: 5 * 60 * 1000,
       gcTime: 10 * 60 * 1000,
     })
+    const showSessionRetrievalToolWarning =
+      hasSessionRetrievalFiles && isModelToolCapabilityFetched && !modelSupportToolUseForFile
 
     // Calculate token counts using unified cache layer
     const { contextTokens, currentInputTokens, totalTokens, isCalculating, pendingTasks, messageCount } =
@@ -499,13 +616,14 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
 
     const closeSelectModelErrorTipCb = useRef<NodeJS.Timeout>()
     const handleSubmit = async (needGenerating = true) => {
-      if (disableSubmit || generating || isSubmitting || isPreprocessing) {
-        return
-      }
-
-      // 有解析失败的文件或链接时，阻止发送并显示 toast
-      if (hasPreprocessErrors) {
-        toastActions.add(t('Some files failed to parse. Please remove them and try again.'))
+      if (
+        disableSubmit ||
+        generating ||
+        isSubmitting ||
+        isPreprocessing ||
+        hasPreprocessErrors ||
+        hasBlockedSessionRagFiles
+      ) {
         return
       }
 
@@ -526,11 +644,29 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
 
       setIsSubmitting(true)
       try {
+        let preprocessedFilesForSubmit = preConstructedMessage.preprocessedFiles
+        const submitSessionAttachmentIds = Array.from(
+          new Set(
+            preprocessedFilesForSubmit.flatMap((file) => (file.sessionAttachmentId ? [file.sessionAttachmentId] : []))
+          )
+        )
+        if (platform.type === 'desktop' && submitSessionAttachmentIds.length > 0) {
+          const latestAttachmentStates = await platform
+            .getSessionAttachmentRagController()
+            .getAttachments(submitSessionAttachmentIds)
+          const result = mergeSessionAttachmentStatesIntoFiles(preprocessedFilesForSubmit, latestAttachmentStates)
+          preprocessedFilesForSubmit = result.files
+          if (result.changed) {
+            setPreConstructedMessage((prev) => ({ ...prev, preprocessedFiles: result.files }))
+          }
+        }
+
         // Build the message with the latest input text, bypassing debounce delay
         const latestMessage = sessionHelpers.constructUserMessage(
+          preConstructedMessage.draftMessageId,
           latestInputRef.current,
           pictureKeys,
-          preConstructedMessage.preprocessedFiles,
+          preprocessedFilesForSubmit,
           preConstructedMessage.preprocessedLinks
         )
         if (!latestMessage) {
@@ -546,7 +682,9 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
           onUserMessageReady: () => {
             messageInputFieldRef.current?.clearDraft()
             setLinks([])
+            draftMessageIdRef.current = undefined
             setPreConstructedMessage({
+              draftMessageId: undefined,
               text: '',
               pictureKeys: [],
               attachments: [],
@@ -694,11 +832,37 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
     }
 
     const startFilePreprocessing = (file: File) => {
+      const fileKey = StorageKeyGenerator.fileUniqKey(file)
+
       // 异步预处理文件，失败时标记为 error，并吞掉异常避免 Promise.all reject
       return sessionHelpers
-        .preprocessFile(file, { provider: model?.provider || '', modelId: model?.modelId || '' })
-        .then((preprocessedFile) => {
-          setPreConstructedMessage((prev) => onFileProcessed(prev, file, preprocessedFile, 20))
+        .prepareFileAttachment(file, { provider: model?.provider || '', modelId: model?.modelId || '' })
+        .then(async (preprocessedFile) => {
+          if (preConstructedMessageRef.current.preprocessingStatus.files[fileKey] !== 'processing') {
+            return
+          }
+
+          let nextPreprocessedFile: PreprocessedFile = preprocessedFile
+          if (platform.type === 'desktop') {
+            const draftMessageId = draftMessageIdRef.current || uuidv4()
+            const indexedFile = await startPreparedSessionAttachmentIndexing({
+              file,
+              preparedFile: nextPreprocessedFile,
+              sessionId: currentSessionId || 'new',
+              draftMessageId,
+              shouldContinue: () =>
+                preConstructedMessageRef.current.preprocessingStatus.files[fileKey] === 'processing',
+            })
+            if (!indexedFile) {
+              return
+            }
+            nextPreprocessedFile = indexedFile
+            if (indexedFile.draftMessageId) {
+              draftMessageIdRef.current = indexedFile.draftMessageId
+            }
+          }
+
+          setPreConstructedMessage((prev) => onFileProcessed(prev, file, nextPreprocessedFile, 20))
         })
         .catch((error) => {
           setPreConstructedMessage((prev) =>
@@ -767,6 +931,8 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
             continue
           }
           setPreConstructedMessage((prev) => {
+            const draftMessageId = prev.draftMessageId || draftMessageIdRef.current || uuidv4()
+            draftMessageIdRef.current = draftMessageId
             const newAttachments = prev.attachments.find(
               (f) => StorageKeyGenerator.fileUniqKey(f) === StorageKeyGenerator.fileUniqKey(file)
             )
@@ -780,13 +946,14 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
             if (fileIndex < 20) {
               const preprocessPromise = startFilePreprocessing(file)
               return {
-                ...storeFilePromise(markFileProcessing(prev, file), file, preprocessPromise),
+                ...storeFilePromise(markFileProcessing({ ...prev, draftMessageId }, file), file, preprocessPromise),
                 attachments: newAttachments,
               }
             }
 
             return {
               ...prev,
+              draftMessageId,
               attachments: newAttachments,
             }
           })
@@ -984,7 +1151,15 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
 
               {/* Send Button */}
               <ActionIcon
-                disabled={(disableSubmit || isPreprocessing || isSubmitting || isCompactionRunning) && !generating}
+                disabled={
+                  (disableSubmit ||
+                    isPreprocessing ||
+                    isSubmitting ||
+                    isCompactionRunning ||
+                    hasPreprocessErrors ||
+                    hasBlockedSessionRagFiles) &&
+                  !generating
+                }
                 size={32}
                 variant="filled"
                 color={generating ? 'dark' : 'chatbox-brand'}
@@ -993,11 +1168,22 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
                 className={cn(
                   'shrink-0 mb-1',
                   !generating &&
-                    (disableSubmit || isPreprocessing || isSubmitting || isCompactionRunning) &&
+                    (disableSubmit ||
+                      isPreprocessing ||
+                      isSubmitting ||
+                      isCompactionRunning ||
+                      hasPreprocessErrors ||
+                      hasBlockedSessionRagFiles) &&
                     'disabled:!opacity-100 !text-white'
                 )}
                 style={
-                  !generating && (disableSubmit || isPreprocessing || isSubmitting || isCompactionRunning)
+                  !generating &&
+                  (disableSubmit ||
+                    isPreprocessing ||
+                    isSubmitting ||
+                    isCompactionRunning ||
+                    hasPreprocessErrors ||
+                    hasBlockedSessionRagFiles)
                     ? { backgroundColor: 'rgba(222, 226, 230, 1)' }
                     : undefined
                 }
@@ -1012,6 +1198,37 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
 
             {(!!pictureKeys.length || !!attachments.length || !!links.length) && (
               <Flex align="center" wrap="wrap" onClick={() => dom.focusMessageInput()}>
+                {showSessionRetrievalToolWarning && (
+                  <Flex
+                    role="status"
+                    aria-live="polite"
+                    align="center"
+                    gap={8}
+                    className="w-full rounded-md px-2.5 py-2 mb-1"
+                    style={{
+                      border: '1px solid var(--chatbox-border-primary)',
+                      borderLeft: '3px solid var(--chatbox-tint-warning)',
+                      background: 'var(--chatbox-background-primary)',
+                    }}
+                  >
+                    <Box
+                      className="flex items-center justify-center rounded-full shrink-0"
+                      style={{
+                        width: 20,
+                        height: 20,
+                        background: 'var(--chatbox-background-secondary)',
+                        color: 'var(--chatbox-tint-warning)',
+                      }}
+                    >
+                      <ScalableIcon icon={IconAlertCircle} size={14} />
+                    </Box>
+                    <Text size="xs" lh={1.35} c="chatbox-warning" className="min-w-0">
+                      {t(
+                        'This model may not be able to read the uploaded document. Try another model if you want to ask about the file.'
+                      )}
+                    </Text>
+                  </Flex>
+                )}
                 {pictureKeys?.map((picKey) => (
                   <ImageMiniCard key={picKey} storageKey={picKey} onDelete={() => onImageDeleteClick(picKey)} />
                 ))}
@@ -1021,17 +1238,34 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
                   const preprocessedFile = preConstructedMessage.preprocessedFiles.find(
                     (f) => StorageKeyGenerator.fileUniqKey(f.file) === fileKey
                   )
+                  const effectiveIndexStatus = preprocessedFile?.sessionAttachmentId
+                    ? (preprocessedAttachmentIndexStatusMap.get(preprocessedFile.sessionAttachmentId) ??
+                      preprocessedFile.sessionAttachmentIndexStatus)
+                    : preprocessedFile?.sessionAttachmentIndexStatus
+                  const effectiveAttachmentError = preprocessedFile?.sessionAttachmentId
+                    ? (preprocessedAttachmentErrorMap.get(preprocessedFile.sessionAttachmentId) ??
+                      preprocessedFile?.error)
+                    : preprocessedFile?.error
                   return (
                     <FileMiniCard
                       key={fileKey}
                       name={file.name}
                       fileType={file.type}
-                      status={status}
-                      errorMessage={preprocessedFile?.error}
+                      status={
+                        effectiveAttachmentError
+                          ? 'error'
+                          : preprocessedFile?.ragMode === 'session-retrieval'
+                            ? effectiveIndexStatus === 'ready'
+                              ? 'completed'
+                              : 'processing'
+                            : status
+                      }
+                      errorMessage={effectiveAttachmentError}
                       onErrorClick={() => {
-                        if (preprocessedFile?.error) {
+                        const errorCode = preprocessedFile?.error
+                        if (errorCode) {
                           void NiceModal.show('file-parse-error', {
-                            errorCode: preprocessedFile.error,
+                            errorCode,
                             fileName: file.name,
                           })
                         }
@@ -1042,6 +1276,11 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
                           platform.cancelMineruParse(file.path).catch(() => {
                             // Ignore cancellation errors
                           })
+                        }
+                        if (platform.type === 'desktop' && preprocessedFile?.sessionAttachmentId) {
+                          void platform
+                            .getSessionAttachmentRagController()
+                            .deleteAttachment(preprocessedFile.sessionAttachmentId)
                         }
                         setPreConstructedMessage((prev) => ({
                           ...cleanupFile(prev, file),

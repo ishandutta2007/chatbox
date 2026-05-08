@@ -1,5 +1,4 @@
 import * as Sentry from '@sentry/react'
-import { getModel } from '@shared/models'
 import {
   AIProviderNoImplementedPaintError,
   ApiError,
@@ -9,15 +8,61 @@ import {
 } from '@shared/models/errors'
 import { createMessage, type Message } from '@shared/types'
 import { countMessageWords } from '@shared/utils/message'
-import { createModelDependencies } from '@/adapters'
+import { createModel } from '@/adapters'
+import { getLogger } from '@/lib/utils'
 import { runCompactionWithUIState } from '@/packages/context-management'
 import { getModelDisplayName } from '@/packages/model-setting-utils'
 import { estimateTokensFromMessages } from '@/packages/token'
 import platform from '@/platform'
+import { SESSION_ATTACHMENT_RAG_LOG_PREFIX } from '../../../shared/session-attachment-rag/logging'
 import * as chatStore from '../chatStore'
+import { ensureMessageFileSessionAttachment } from '../sessionAttachmentRagIndexing'
 import * as settingActions from '../settingActions'
 import { settingsStore } from '../settingsStore'
 import { getSessionWebBrowsing } from './utils'
+
+const log = getLogger('session-messages')
+
+async function attachLargeFileRagMetadata(sessionId: string, message: Message): Promise<Message> {
+  if (platform.type !== 'desktop' || !message.files?.length) {
+    return message
+  }
+
+  let changed = false
+  const files = await Promise.all(
+    message.files.map(async (file) => {
+      if (file.ragMode !== 'session-retrieval' || !file.storageKey) {
+        return file
+      }
+
+      const nextFile = await ensureMessageFileSessionAttachment({
+        sessionId,
+        messageId: message.id,
+        file,
+      })
+      changed =
+        changed ||
+        nextFile.sessionAttachmentId !== file.sessionAttachmentId ||
+        nextFile.sessionAttachmentAvailability !== file.sessionAttachmentAvailability ||
+        nextFile.sessionAttachmentIndexStatus !== file.sessionAttachmentIndexStatus ||
+        nextFile.sessionAttachmentStatus !== file.sessionAttachmentStatus ||
+        nextFile.sessionAttachmentChunkCount !== file.sessionAttachmentChunkCount ||
+        nextFile.error !== file.error
+      return nextFile
+    })
+  )
+
+  if (!changed) {
+    return message
+  }
+
+  const updatedMessage = { ...message, files }
+  log.info(
+    `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} Attachment metadata attached to message: session=${sessionId}, message=${message.id}`
+  )
+  await chatStore.updateMessage(sessionId, message.id, updatedMessage)
+  return updatedMessage
+}
 
 /**
  * 在当前主题的最后插入一条消息。
@@ -117,6 +162,13 @@ export async function persistStreamingMessage(
  * @param messageId
  */
 export async function removeMessage(sessionId: string, messageId: string) {
+  if (platform.type === 'desktop') {
+    try {
+      await platform.getSessionAttachmentRagController().deleteMessageAttachments(messageId)
+    } catch (error) {
+      console.warn('Failed to cleanup session attachment RAG entries for message deletion:', error)
+    }
+  }
   await chatStore.removeMessage(sessionId, messageId)
 }
 
@@ -151,11 +203,13 @@ export async function submitNewUserMessage(
   // This allows caller to clear draft at the right time
   params.onUserMessageReady?.()
 
-  const { newUserMsg, needGenerating } = params
+  let { newUserMsg } = params
+  const { needGenerating } = params
   const webBrowsing = getSessionWebBrowsing(sessionId, settings.provider)
 
   // 先在聊天列表中插入发送的用户消息
   await insertMessage(sessionId, newUserMsg)
+  newUserMsg = await attachLargeFileRagMetadata(sessionId, newUserMsg)
 
   const globalSettings = settingsStore.getState().getSettings()
   const isPro = settingActions.isPro()
@@ -189,8 +243,7 @@ export async function submitNewUserMessage(
   try {
     // 如果本次消息开启了联网问答，需要检查当前模型是否支持
     // 桌面版&手机端总是支持联网问答，不再需要检查模型是否支持
-    const dependencies = await createModelDependencies()
-    const model = getModel(settings, globalSettings, { uuid: '' }, dependencies)
+    const model = await createModel(settings)
     if (webBrowsing && platform.type === 'web' && !model.isSupportToolUse()) {
       if (remoteConfig.setting_chatboxai_first) {
         throw ChatboxAIAPIError.fromCodeName('model_not_support_web_browsing', 'model_not_support_web_browsing')

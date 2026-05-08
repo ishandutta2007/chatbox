@@ -116,6 +116,51 @@ export interface RemoteConfig {
   }
 }
 
+export interface SessionRagConfig {
+  models: {
+    embedding: string
+    rerank: string
+  }
+  capabilities: {
+    session_attachment_embedding: boolean
+    session_attachment_rerank: boolean
+  }
+}
+
+export interface SessionAttachmentRagDebugSnapshot {
+  dbPath: string
+  dbSizeBytes: number
+  attachmentCount: number
+  parentCount: number
+  chunkCount: number
+  vectorIndexNames: string[]
+  statusCounts: {
+    pending: number
+    indexing: number
+    ready: number
+    failed: number
+  }
+  recentAttachments: Array<{
+    id: number
+    sessionId: string
+    messageId: string
+    filename: string
+    parserType?: string
+    status: 'pending' | 'indexing' | 'ready' | 'failed'
+    chunkCount: number
+    error?: string
+    createdAt?: number
+    processingStartedAt?: number
+    completedAt?: number
+  }>
+}
+
+export interface SessionAttachmentRagMaintenanceResult {
+  interruptedFailedCount: number
+  canceledPurgedCount: number
+  orphanDeletedIds: number[]
+}
+
 export type ChatboxAIModel = 'chatboxai-3.5' | 'chatboxai-4' | string
 
 export function copyMessage(source: Message): Message {
@@ -217,6 +262,63 @@ export interface KnowledgeBaseSearchResult {
   filename: string
   mimeType: string
   chunkIndex: number
+}
+
+export type SessionAttachmentAvailability = 'allowed' | 'blocked'
+export type SessionAttachmentIndexStatus = 'pending' | 'indexing' | 'ready' | 'failed'
+export type SessionAttachmentStatus = SessionAttachmentIndexStatus
+
+export interface SessionAttachmentQueryPlan {
+  recallTopK: number
+  finalTopK: number
+  rerank?: {
+    enabled: boolean
+    model?: string
+  }
+}
+
+export interface SessionAttachment {
+  id: number
+  sessionId: string
+  messageId: string
+  attachmentStorageKey: string
+  filename: string
+  mimeType: string
+  fileSize: number
+  tokenEstimate: number
+  chunkCount?: number
+  parserType?: string
+  availability: SessionAttachmentAvailability
+  indexStatus: SessionAttachmentIndexStatus
+  status: SessionAttachmentStatus
+  error?: string
+  createdAt?: number
+  processingStartedAt?: number
+  completedAt?: number
+}
+
+export interface SessionAttachmentSearchResult {
+  attachmentId: number
+  parentId: number
+  filename: string
+  sectionPath?: string
+  chunkOrder: number
+  text: string
+  score: number
+}
+
+export interface SessionAttachmentParent {
+  id: number
+  attachmentId: number
+  filename: string
+  sectionPath?: string
+  docType?: string
+  pageStart?: number
+  pageEnd?: number
+  parentOrder: number
+  text: string
+  tokenEstimate: number
+  charCount: number
 }
 
 export type FileMeta = {

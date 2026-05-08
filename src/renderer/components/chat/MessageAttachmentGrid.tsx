@@ -1,7 +1,10 @@
 import type { MessageFile, MessageLink } from '@shared/types'
+import { useQuery } from '@tanstack/react-query'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import platform from '@/platform'
+import * as toastActions from '@/stores/toastActions'
 import { MessageAttachment } from '../InputBox/Attachments'
 
 const COLLAPSED_MAX = 4
@@ -14,9 +17,41 @@ interface MessageAttachmentGridProps {
 export function MessageAttachmentGrid({ files, links }: MessageAttachmentGridProps) {
   const { t } = useTranslation()
   const [expanded, setExpanded] = useState(false)
+  const [retryingIds, setRetryingIds] = useState<number[]>([])
 
   const fileItems = files ?? []
   const linkItems = links ?? []
+  const sessionAttachmentIds = Array.from(
+    new Set(fileItems.flatMap((file) => (file.sessionAttachmentId ? [file.sessionAttachmentId] : [])))
+  )
+  const { data: sessionAttachments, refetch: refetchSessionAttachments } = useQuery({
+    queryKey: ['session-attachment-rag-attachments', ...sessionAttachmentIds.sort((a, b) => a - b)],
+    queryFn: async () => {
+      if (platform.type !== 'desktop' || sessionAttachmentIds.length === 0) {
+        return []
+      }
+      return platform.getSessionAttachmentRagController().getAttachments(sessionAttachmentIds)
+    },
+    enabled: platform.type === 'desktop' && sessionAttachmentIds.length > 0,
+    staleTime: 3000,
+    refetchInterval: (query) => {
+      const attachments = query.state.data ?? []
+      return attachments.some((attachment) => attachment.status === 'pending' || attachment.status === 'indexing')
+        ? 3000
+        : false
+    },
+  })
+  const attachmentStatusMap = new Map(sessionAttachments?.map((attachment) => [attachment.id, attachment.status]) ?? [])
+  const attachmentAvailabilityMap = new Map(
+    sessionAttachments?.map((attachment) => [attachment.id, attachment.availability]) ?? []
+  )
+  const attachmentIndexStatusMap = new Map(
+    sessionAttachments?.map((attachment) => [attachment.id, attachment.indexStatus]) ?? []
+  )
+  const attachmentChunkCountMap = new Map(
+    sessionAttachments?.map((attachment) => [attachment.id, attachment.chunkCount ?? 0]) ?? []
+  )
+  const attachmentErrorMap = new Map(sessionAttachments?.map((attachment) => [attachment.id, attachment.error]) ?? [])
   const totalCount = fileItems.length + linkItems.length
 
   if (totalCount === 0) return null
@@ -25,6 +60,26 @@ export function MessageAttachmentGrid({ files, links }: MessageAttachmentGridPro
   const visibleFileCount = shouldCollapse && !expanded ? Math.min(fileItems.length, COLLAPSED_MAX) : fileItems.length
   const remainingSlots = shouldCollapse && !expanded ? COLLAPSED_MAX - visibleFileCount : linkItems.length
   const visibleLinkCount = Math.max(0, Math.min(linkItems.length, remainingSlots))
+
+  const retryAttachment = async (attachmentId: number) => {
+    if (platform.type !== 'desktop') {
+      return
+    }
+    setRetryingIds((prev) => [...prev, attachmentId])
+    try {
+      await platform.getSessionAttachmentRagController().retryAttachment(attachmentId)
+      toastActions.add(t('Retry queued'))
+      await refetchSessionAttachments()
+    } catch (error) {
+      toastActions.add(
+        t('Retry failed: {{error}}', {
+          error: error instanceof Error ? error.message : String(error),
+        })
+      )
+    } finally {
+      setRetryingIds((prev) => prev.filter((id) => id !== attachmentId))
+    }
+  }
 
   return (
     <div className="mt-1 mb-1 max-w-[500px]">
@@ -37,6 +92,38 @@ export function MessageAttachmentGrid({ files, links }: MessageAttachmentGridPro
               fileType={file.fileType}
               byteLength={file.byteLength}
               storageKey={file.storageKey}
+              ragMode={file.ragMode}
+              sessionAttachmentAvailability={
+                file.sessionAttachmentId
+                  ? (attachmentAvailabilityMap.get(file.sessionAttachmentId) ?? file.sessionAttachmentAvailability)
+                  : file.sessionAttachmentAvailability
+              }
+              sessionAttachmentIndexStatus={
+                file.sessionAttachmentId
+                  ? (attachmentIndexStatusMap.get(file.sessionAttachmentId) ??
+                    file.sessionAttachmentIndexStatus ??
+                    file.sessionAttachmentStatus)
+                  : (file.sessionAttachmentIndexStatus ?? file.sessionAttachmentStatus)
+              }
+              sessionAttachmentBlockedReason={file.sessionAttachmentBlockedReason}
+              sessionAttachmentStatus={
+                file.sessionAttachmentId
+                  ? (attachmentStatusMap.get(file.sessionAttachmentId) ?? file.sessionAttachmentStatus)
+                  : file.sessionAttachmentStatus
+              }
+              sessionAttachmentChunkCount={
+                file.sessionAttachmentId ? attachmentChunkCountMap.get(file.sessionAttachmentId) : undefined
+              }
+              sessionAttachmentError={
+                file.sessionAttachmentId ? attachmentErrorMap.get(file.sessionAttachmentId) : undefined
+              }
+              onRetry={
+                file.sessionAttachmentId &&
+                (attachmentStatusMap.get(file.sessionAttachmentId) ?? file.sessionAttachmentStatus) === 'failed'
+                  ? () => retryAttachment(file.sessionAttachmentId as number)
+                  : undefined
+              }
+              retrying={file.sessionAttachmentId ? retryingIds.includes(file.sessionAttachmentId) : false}
             />
           </div>
         ))}

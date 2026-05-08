@@ -14,6 +14,7 @@ import { type ImageGenerationStorage, IndexedDBImageGenerationStorage } from '@/
 import { IndexedDBSessionMetaStorage, type SessionMetaStorage } from '@/storage/SessionMetaStorage'
 import type { Exporter, Platform, PlatformType, Storage } from './interfaces'
 import type { KnowledgeBaseController } from './knowledge-base/interface'
+import type { SessionAttachmentRagController } from './session-attachment-rag/interface'
 
 /**
  * 内存存储类，用于测试环境
@@ -312,6 +313,10 @@ export default class TestPlatform implements Platform {
 
   public getKnowledgeBaseController(): KnowledgeBaseController {
     throw new Error('Knowledge base not implemented in test platform.')
+  }
+
+  public getSessionAttachmentRagController(): SessionAttachmentRagController {
+    throw new Error('Session attachment RAG not implemented in test platform.')
   }
 
   public getImageGenerationStorage(): ImageGenerationStorage {

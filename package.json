@@ -45,6 +45,8 @@
     "test:integration": "vitest run test/integration --testTimeout=300000",
     "test:file-conversation": "vitest run test/integration/file-conversation --testTimeout=120000",
     "test:model-provider": "vitest run test/integration/model-provider --testTimeout=120000",
+    "eval:session-rag": "node scripts/session-rag-eval/run-session-rag-eval.mjs",
+    "eval:session-rag:chatbox": "node scripts/session-rag-eval/run-chatbox-flow-eval.mjs",
     "lint": "biome lint .",
     "lint:fix": "biome lint . --write",
     "check": "npx tsc --noEmit",

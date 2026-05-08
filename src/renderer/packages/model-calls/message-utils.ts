@@ -230,7 +230,7 @@ export function injectModelSystemPrompt(
     'YYYY-MM-DD'
   )}\n Additional info for this conversation: ${additionalInfo}\n\n`
   let hasInjected = false
-  return messages.map((m) => {
+  const injectedMessages = messages.map((m) => {
     if (m.role === role && !hasInjected) {
       m = cloneMessage(m) // 复制，防止原始数据在其他地方被直接渲染使用
       m.contentParts = [{ type: 'text', text: metadataPrompt + getMessageText(m) }]
@@ -238,4 +238,15 @@ export function injectModelSystemPrompt(
     }
     return m
   })
+
+  if (!hasInjected) {
+    injectedMessages.unshift({
+      id: `injected-system-prompt-${dayjs().valueOf()}`,
+      role,
+      timestamp: Date.now(),
+      contentParts: [{ type: 'text', text: metadataPrompt.trimEnd() }],
+    })
+  }
+
+  return injectedMessages
 }

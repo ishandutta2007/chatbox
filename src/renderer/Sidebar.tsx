@@ -17,6 +17,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import Divider from './components/common/Divider'
 import { ScalableIcon } from './components/common/ScalableIcon'
+import SessionAttachmentRagDevPane from './components/dev/SessionAttachmentRagDevPane'
 import ThemeSwitchButton from './components/dev/ThemeSwitchButton'
 import SessionList from './components/session/SessionList'
 import TaskSessionList from './components/session/TaskSessionList'
@@ -53,8 +54,11 @@ export default function Sidebar() {
   const isSmallScreen = useIsSmallScreen()
 
   const [isResizing, setIsResizing] = useState(false)
+  const [showDevPane, setShowDevPane] = useState(false)
   const resizeStartX = useRef<number>(0)
   const resizeStartWidth = useRef<number>(0)
+  const showDebugDevPane =
+    typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('debug') === 'true'
 
   const { needRoomForMacWindowControls } = useNeedRoomForMacWinControls()
 
@@ -349,6 +353,21 @@ export default function Sidebar() {
               language === 'ar' ? '-left-1' : '-right-1'
             )}
           />
+        )}
+        {showDebugDevPane && (
+          <>
+            <Button
+              size="xs"
+              variant="filled"
+              color="dark"
+              leftSection={<ScalableIcon icon={IconCode} size={14} />}
+              className={clsx('absolute z-[2] shadow-md', isSmallScreen ? 'bottom-20 right-3' : 'bottom-3 right-3')}
+              onClick={() => setShowDevPane(true)}
+            >
+              Dev
+            </Button>
+            <SessionAttachmentRagDevPane opened={showDevPane} onClose={() => setShowDevPane(false)} />
+          </>
         )}
       </Stack>
     </SwipeableDrawer>

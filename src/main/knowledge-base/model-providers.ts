@@ -1,16 +1,43 @@
+import type { EmbeddingModel } from 'ai'
 import { CohereClient } from 'cohere-ai'
-import { getModel, getProviderSettings } from '../../shared/models'
+import { getProviderSettings } from '../../shared/models'
+import type { CallChatCompletionOptions, ModelInterface } from '../../shared/models/types'
 import { getChatboxAPIOrigin } from '../../shared/request/chatboxai_pool'
 import { SessionSettingsSchema } from '../../shared/types'
 import { parseKnowledgeBaseModelString } from '../../shared/utils/knowledge-base-model-parser'
-import { createModelDependencies } from '../adapters'
+import { createModel } from '../adapters'
 import { sentry } from '../adapters/sentry'
 import { cache } from '../cache'
-import { getConfig, getSettings, store } from '../store-node'
+import { getSettings, store } from '../store-node'
 import { getLogger } from '../util'
 import { getDatabase } from './db'
 
 const log = getLogger('knowledge-base:model-providers')
+
+interface EmbeddingCapableModel {
+  getTextEmbeddingModel(options: CallChatCompletionOptions): EmbeddingModel
+}
+
+function getTextEmbeddingModel(model: ModelInterface): EmbeddingModel {
+  const maybeGetTextEmbeddingModel = (model as unknown as Partial<EmbeddingCapableModel>).getTextEmbeddingModel
+  if (typeof maybeGetTextEmbeddingModel !== 'function') {
+    throw new Error(`Model ${model.modelId} does not support text embeddings`)
+  }
+
+  return maybeGetTextEmbeddingModel.call(model, {})
+}
+
+export async function createEmbeddingProviderFromModelString(modelString: string): Promise<EmbeddingModel> {
+  const parsed = parseKnowledgeBaseModelString(modelString)
+  if (!parsed) {
+    throw new Error(`Invalid embedding model format: ${modelString}`)
+  }
+
+  const { providerId, modelId } = parsed
+  const modelSettings = getMergedSettings(providerId, modelId)
+  const model = await createModel(modelSettings)
+  return getTextEmbeddingModel(model)
+}
 
 function getMergedSettings(providerId: string, modelId: string) {
   try {
@@ -35,9 +62,18 @@ function getMergedSettings(providerId: string, modelId: string) {
       provider: providerId,
       modelId,
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errMsg =
+      error instanceof Error
+        ? error.message
+        : typeof error === 'object' &&
+            error !== null &&
+            'message' in error &&
+            typeof (error as Record<string, unknown>).message === 'string'
+          ? ((error as Record<string, unknown>).message as string)
+          : String(error)
     log.error(`[MODEL] Failed to get merged settings for ${providerId}:${modelId}`, error)
-    if (!error.message.includes('not set')) {
+    if (!errMsg.includes('not set')) {
       sentry.withScope((scope) => {
         scope.setTag('component', 'knowledge-base-model')
         scope.setTag('operation', 'get_merged_settings')
@@ -97,17 +133,21 @@ export async function getEmbeddingProvider(kbId: number) {
           })
           throw error
         }
-
-        const { providerId, modelId } = parsed
-        const modelSettings = getMergedSettings(providerId, modelId)
-        const model = getModel(modelSettings, getSettings(), getConfig(), await createModelDependencies())
-        // Force cast to AbstractAISDKModel to access getTextEmbeddingModel method
-        return (model as any).getTextEmbeddingModel({})
-      } catch (error: any) {
+        return createEmbeddingProviderFromModelString(embeddingModel)
+      } catch (error: unknown) {
+        const errMsg =
+          error instanceof Error
+            ? error.message
+            : typeof error === 'object' &&
+                error !== null &&
+                'message' in error &&
+                typeof (error as Record<string, unknown>).message === 'string'
+              ? ((error as Record<string, unknown>).message as string)
+              : String(error)
         log.error(`[MODEL] Failed to get embedding provider for kb ${kbId}:`, error)
 
         // Only report unexpected errors to Sentry (not configuration errors)
-        if (!error.message.includes('not set') && !error.message.includes('not found')) {
+        if (!errMsg.includes('not set') && !errMsg.includes('not found')) {
           sentry.withScope((scope) => {
             scope.setTag('component', 'knowledge-base-model')
             scope.setTag('operation', 'get_embedding_provider')
@@ -124,7 +164,7 @@ export async function getEmbeddingProvider(kbId: number) {
   )
 }
 
-// Return vision model and its dependencies, constructed with getModel
+// Return vision model, constructed with createModel
 export async function getVisionProvider(kbId: number) {
   return cache(
     `kb:vision:${kbId}`,
@@ -160,14 +200,22 @@ export async function getVisionProvider(kbId: number) {
 
         const { providerId, modelId } = parsed
         const settingsForModel = getMergedSettings(providerId, modelId)
-        const dependencies = await createModelDependencies()
-        const model = getModel(settingsForModel, getSettings(), getConfig(), dependencies)
+        const model = await createModel(settingsForModel)
 
-        return { model, dependencies }
-      } catch (error: any) {
+        return { model }
+      } catch (error: unknown) {
+        const errMsg =
+          error instanceof Error
+            ? error.message
+            : typeof error === 'object' &&
+                error !== null &&
+                'message' in error &&
+                typeof (error as Record<string, unknown>).message === 'string'
+              ? ((error as Record<string, unknown>).message as string)
+              : String(error)
         log.error(`[MODEL] Failed to get vision provider for kb ${kbId}:`, error)
 
-        if (!error.message.includes('not set') && !error.message.includes('not found')) {
+        if (!errMsg.includes('not set') && !errMsg.includes('not found')) {
           sentry.withScope((scope) => {
             scope.setTag('component', 'knowledge-base-model')
             scope.setTag('operation', 'get_vision_provider')
@@ -231,10 +279,19 @@ export async function getRerankProvider(kbId: number) {
           token,
         })
         return { client, modelId }
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const errMsg =
+          error instanceof Error
+            ? error.message
+            : typeof error === 'object' &&
+                error !== null &&
+                'message' in error &&
+                typeof (error as Record<string, unknown>).message === 'string'
+              ? ((error as Record<string, unknown>).message as string)
+              : String(error)
         log.error(`[MODEL] Failed to get rerank provider for kb ${kbId}:`, error)
 
-        if (!error.message.includes('not set') && !error.message.includes('not found')) {
+        if (!errMsg.includes('not set') && !errMsg.includes('not found')) {
           sentry.withScope((scope) => {
             scope.setTag('component', 'knowledge-base-model')
             scope.setTag('operation', 'get_rerank_provider')

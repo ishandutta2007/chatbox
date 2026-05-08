@@ -26,6 +26,17 @@ const formatLineWithNumber = (line: string, lineNumber: number) => {
 
 const GREP_MAX_RESULTS = 100
 
+async function readFileContentFromKey(fileKey: string): Promise<string | null> {
+  if (fileKey.startsWith('local:')) {
+    const localPath = fileKey.slice('local:'.length)
+    if (!platform.readLocalFileContent) {
+      return null
+    }
+    return platform.readLocalFileContent(localPath)
+  }
+  return platform.getStoreBlob(fileKey)
+}
+
 const toolSetDescription = `
 Use these tools to read and search large user-uploaded files (marked with <ATTACHMENT_FILE></ATTACHMENT_FILE>).
 
@@ -72,7 +83,7 @@ const readFileTool = tool({
     input: { fileKey: string; lineOffset?: number; maxLines?: number },
     _context: { abortSignal?: AbortSignal }
   ) => {
-    const fileContent = await platform.getStoreBlob(input.fileKey)
+    const fileContent = await readFileContentFromKey(input.fileKey)
     if (fileContent === null) {
       return 'File not found or inaccessible. Ensure the fileKey is the correct identifier within <FILE_KEY> tags.'
     }
@@ -128,7 +139,7 @@ const searchFileTool = tool({
     },
     _context: { abortSignal?: AbortSignal }
   ) => {
-    const fileContent = await platform.getStoreBlob(input.fileKey)
+    const fileContent = await readFileContentFromKey(input.fileKey)
     if (fileContent === null) {
       return 'File not found or inaccessible. Ensure the fileKey is the correct identifier within <FILE_KEY> tags.'
     }

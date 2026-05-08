@@ -9,6 +9,7 @@ import type { PreConstructedMessageState } from '../../types/input-box'
 
 // Input box related state
 const defaultPreConstructedMessageState = (): PreConstructedMessageState => ({
+  draftMessageId: undefined,
   text: '',
   pictureKeys: [],
   attachments: [],

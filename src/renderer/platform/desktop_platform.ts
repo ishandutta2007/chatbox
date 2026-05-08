@@ -11,6 +11,7 @@ import { IndexedDBSessionMetaStorage, type SessionMetaStorage } from '@/storage/
 import { getOS } from '../packages/navigator'
 import type { Platform, PlatformType } from './interfaces'
 import DesktopKnowledgeBaseController from './knowledge-base/desktop-controller'
+import DesktopSessionAttachmentRagController from './session-attachment-rag/desktop-controller'
 import WebExporter from './web_exporter'
 import { getLogger } from '@/lib/utils'
 import { parseTextFileLocally } from './web_platform_utils'
@@ -25,6 +26,7 @@ export default class DesktopPlatform implements Platform {
   public exporter = new WebExporter()
 
   private _kbController?: DesktopKnowledgeBaseController
+  private _sessionAttachmentRagController?: DesktopSessionAttachmentRagController
   private _imageGenerationStorage: ImageGenerationStorage | null = null
   private _sessionMetaStorage: SessionMetaStorage | null = null
 
@@ -249,6 +251,15 @@ export default class DesktopPlatform implements Platform {
     return { key, isSupported: true }
   }
 
+  async readLocalFileContent(filePath: string): Promise<string | null> {
+    const resultJSON = await this.ipc.invoke('parseFileLocally', JSON.stringify({ filePath }))
+    const result = JSON.parse(resultJSON)
+    if (!result.isSupported) {
+      return null
+    }
+    return result.text || null
+  }
+
   async parseFileWithMineru(
     file: File,
     apiToken: string
@@ -296,6 +307,13 @@ export default class DesktopPlatform implements Platform {
       this._kbController = new DesktopKnowledgeBaseController(this.ipc)
     }
     return this._kbController
+  }
+
+  public getSessionAttachmentRagController() {
+    if (!this._sessionAttachmentRagController) {
+      this._sessionAttachmentRagController = new DesktopSessionAttachmentRagController(this.ipc)
+    }
+    return this._sessionAttachmentRagController
   }
 
   public getImageGenerationStorage(): ImageGenerationStorage {

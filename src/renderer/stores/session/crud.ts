@@ -8,6 +8,7 @@ import {
 import { getDefaultStore } from 'jotai'
 import { omit } from 'lodash'
 import { router } from '@/router'
+import platform from '@/platform'
 import { sortSessionRecords } from '@/storage/SessionMetaStorage'
 import * as atoms from '../atoms'
 import * as chatStore from '../chatStore'
@@ -230,6 +231,13 @@ export async function clear(sessionId: string) {
   const session = await chatStore.getSession(sessionId)
   if (!session) {
     return
+  }
+  if (platform.type === 'desktop') {
+    try {
+      await platform.getSessionAttachmentRagController().deleteSessionAttachments(sessionId)
+    } catch (error) {
+      console.warn('Failed to cleanup session attachment RAG entries while clearing session:', error)
+    }
   }
   session.messages.forEach((msg) => {
     msg?.cancel?.()
