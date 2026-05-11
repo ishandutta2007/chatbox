@@ -1,15 +1,13 @@
 import fs from 'node:fs'
 import os from 'node:os'
 import { app } from 'electron'
+import { KNOWLEDGE_BASE_MAX_FILE_SIZE } from '../../shared/knowledge-base'
 import { getChatboxAPIOrigin } from '../../shared/request/chatboxai_pool'
 import { createAfetch } from '../../shared/request/request'
-import { getSettings, store } from '../store-node'
+import { store } from '../store-node'
 import { getLogger } from '../util'
 
 const log = getLogger('knowledge-base:remote-file-parser')
-
-// backend limit, error code 20010
-const MAX_FILE_SIZE = 50 * 1024 * 1024
 
 // Platform info for main process
 function getPlatformInfo() {
@@ -148,8 +146,8 @@ export async function parseFileRemotely(filePath: string, filename: string, mime
   }
 
   const stats = await fs.promises.stat(filePath)
-  if (stats.size > MAX_FILE_SIZE) {
-    throw new Error(`File too large: ${stats.size} bytes (max: ${MAX_FILE_SIZE})`)
+  if (stats.size > KNOWLEDGE_BASE_MAX_FILE_SIZE) {
+    throw new Error(`File too large: ${stats.size} bytes (max: ${KNOWLEDGE_BASE_MAX_FILE_SIZE})`)
   }
 
   log.info(`[REMOTE] Starting remote parsing for: ${filename}`)

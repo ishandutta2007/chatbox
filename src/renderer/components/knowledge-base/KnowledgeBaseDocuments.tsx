@@ -16,6 +16,7 @@ import {
   Text,
   Tooltip,
 } from '@mantine/core'
+import { KNOWLEDGE_BASE_MAX_FILE_SIZE, KNOWLEDGE_BASE_MAX_FILE_SIZE_LABEL } from '@shared/knowledge-base'
 import type { FileMeta, KnowledgeBase } from '@shared/types'
 import { formatFileSize } from '@shared/utils'
 import {
@@ -25,7 +26,6 @@ import {
   IconCircleCheck,
   IconExclamationCircle,
   IconFile,
-  IconInfoCircle,
   IconLoader,
   IconPlayerPause,
   IconPlayerPlay,
@@ -38,8 +38,11 @@ import type React from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
+import { trackJkClickEvent } from '@/analytics/jk'
+import { JK_EVENTS, JK_PAGE_NAMES } from '@/analytics/jk-events'
 import { useKnowledgeBaseFiles, useKnowledgeBaseFilesActions, useKnowledgeBaseFilesCount } from '@/hooks/knowledge-base'
 import { useChunksPreview } from '@/hooks/useChunksPreview'
+import { toastError } from '@/packages/toast'
 import platform from '@/platform'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { trackEvent } from '@/utils/track'
@@ -50,6 +53,11 @@ interface KnowledgeBaseDocumentsProps {
   knowledgeBase: KnowledgeBase | null
 }
 
+interface RejectedFile {
+  name: string
+  size: number
+}
+
 const KnowledgeBaseDocuments: React.FC<KnowledgeBaseDocumentsProps> = ({ knowledgeBase }) => {
   const { t } = useTranslation()
   const [isExpanded, setIsExpanded] = useState(false)
@@ -57,6 +65,7 @@ const KnowledgeBaseDocuments: React.FC<KnowledgeBaseDocumentsProps> = ({ knowled
   const [isDragOver, setIsDragOver] = useState(false)
   const [showUploadArea, setShowUploadArea] = useState(false)
   const [showRemoteRetryModal, setShowRemoteRetryModal] = useState(false)
+  const [sizeRejectedFiles, setSizeRejectedFiles] = useState<RejectedFile[]>([])
 
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const globalDocumentParserType = useSettingsStore((state) => state.extension?.documentParser?.type)
@@ -168,7 +177,7 @@ const KnowledgeBaseDocuments: React.FC<KnowledgeBaseDocumentsProps> = ({ knowled
   const maxHeight = 5 * 60 // 5 items * 60px
 
   // Handle scroll position change
-  const handleScrollPositionChange = useCallback((position: { x: number; y: number }) => {
+  const handleScrollPositionChange = useCallback((_position: { x: number; y: number }) => {
     setShowScrollIndicator(true)
   }, [])
 
@@ -236,11 +245,30 @@ const KnowledgeBaseDocuments: React.FC<KnowledgeBaseDocumentsProps> = ({ knowled
 
       try {
         const knowledgeBaseController = platform.getKnowledgeBaseController()
+        const oversizedFiles = Array.from(files)
+          .filter((file) => file.size > KNOWLEDGE_BASE_MAX_FILE_SIZE)
+          .map((file) => ({ name: file.name, size: file.size }))
+        const uploadableFiles = Array.from(files).filter((file) => file.size <= KNOWLEDGE_BASE_MAX_FILE_SIZE)
+
+        if (oversizedFiles.length > 0) {
+          setSizeRejectedFiles(oversizedFiles)
+          toastError(
+            t('{{count}} file(s) exceed the {{limit}} knowledge base upload limit.', {
+              count: oversizedFiles.length,
+              limit: KNOWLEDGE_BASE_MAX_FILE_SIZE_LABEL,
+            })
+          )
+        } else {
+          setSizeRejectedFiles([])
+        }
+
+        if (uploadableFiles.length === 0) {
+          return
+        }
 
         // Process and correct MIME types for all files
         const correctedFiles: FileMeta[] = []
-        for (let i = 0; i < files.length; i++) {
-          const file = files[i]
+        for (const file of uploadableFiles) {
           const correctedFile = correctMimeType(file)
           correctedFiles.push(correctedFile)
 
@@ -261,9 +289,9 @@ const KnowledgeBaseDocuments: React.FC<KnowledgeBaseDocumentsProps> = ({ knowled
         const failedUploads = uploadResults.filter((result) => result.status === 'rejected')
 
         // Log individual failures
-        failedUploads.forEach((result, index) => {
+        uploadResults.forEach((result, index) => {
           if (result.status === 'rejected') {
-            const fileName = correctedFiles[uploadResults.indexOf(result)]?.name || 'Unknown file'
+            const fileName = correctedFiles[index]?.name || 'Unknown file'
             console.error(`[Upload] Failed to upload file ${fileName}:`, result.reason)
             toast.error(
               t('Failed to upload {{filename}}: {{error}}', {
@@ -274,28 +302,32 @@ const KnowledgeBaseDocuments: React.FC<KnowledgeBaseDocumentsProps> = ({ knowled
           }
         })
 
-        // Provide appropriate user feedback
-        if (successfulUploads.length > 0 && failedUploads.length === 0) {
-          console.log(`[Upload] All files uploaded successfully.`)
+        const blockedUploadCount = failedUploads.length + oversizedFiles.length
+
+        if (successfulUploads.length > 0 && blockedUploadCount === 0) {
           toast.success(t('Successfully uploaded {{count}} file(s)', { count: successfulUploads.length }))
-        } else if (successfulUploads.length > 0 && failedUploads.length > 0) {
-          console.log(
-            `[Upload] Partial success: ${successfulUploads.length} succeeded, ${failedUploads.length} failed.`
-          )
+        } else if (successfulUploads.length > 0 && blockedUploadCount > 0) {
           toast.success(
             t('Successfully uploaded {{success}} of {{total}} file(s). {{failed}} file(s) failed.', {
               success: successfulUploads.length,
               total: files.length,
-              failed: failedUploads.length,
+              failed: blockedUploadCount,
             })
           )
-        } else if (failedUploads.length === files.length) {
-          console.log(`[Upload] All files failed to upload.`)
+        } else if (blockedUploadCount === files.length) {
           // Don't show additional error toast here since individual errors were already shown
         }
 
         // Track successful uploads only
         if (successfulUploads.length > 0) {
+          trackEvent('knowledge_base_document_added', {
+            knowledge_base_id: knowledgeBase.id,
+            knowledge_base_name: knowledgeBase.name,
+            file_count: successfulUploads.length,
+            total_attempted: files.length,
+            failed_count: blockedUploadCount,
+            file_types: Array.from(new Set(correctedFiles.map((f) => f.type || 'unknown'))),
+          })
 
           // Immediately refresh the data to show the new files
           await Promise.all([refetch(), refetchCount()])
@@ -573,7 +605,6 @@ const KnowledgeBaseDocuments: React.FC<KnowledgeBaseDocumentsProps> = ({ knowled
               return t('MinerU parse failed')
             case 'chatbox-ai':
               return t('Chatbox AI parse failed')
-            case 'local':
             default:
               return t('Local parse failed')
           }
@@ -608,7 +639,7 @@ const KnowledgeBaseDocuments: React.FC<KnowledgeBaseDocumentsProps> = ({ knowled
   }
 
   // Handle file upload via button
-  const handleAddFile = useCallback(async () => {
+  const handleAddFile = useCallback(() => {
     if (!knowledgeBase?.id) return
 
     // Toggle upload area visibility
@@ -619,7 +650,7 @@ const KnowledgeBaseDocuments: React.FC<KnowledgeBaseDocumentsProps> = ({ knowled
   }, [knowledgeBase?.id, showUploadArea])
 
   // Handle file selection via file dialog
-  const handleFileDialog = useCallback(async () => {
+  const handleFileDialog = useCallback(() => {
     if (!knowledgeBase?.id) return
 
     try {
@@ -758,8 +789,52 @@ const KnowledgeBaseDocuments: React.FC<KnowledgeBaseDocumentsProps> = ({ knowled
                     <Text size="xs" c="dimmed" ta="center" mt={-4}>
                       {t('Supported formats')}: {supportedTypes.display.join(', ')}
                     </Text>
+                    <Text size="xs" c="dimmed" ta="center" mt={-8}>
+                      {t('Maximum file size')}: {KNOWLEDGE_BASE_MAX_FILE_SIZE_LABEL}
+                    </Text>
                   </Stack>
                 </Paper>
+                {sizeRejectedFiles.length > 0 && (
+                  <Alert
+                    mt="sm"
+                    variant="light"
+                    color="red"
+                    icon={<IconExclamationCircle size={18} />}
+                    title={t('Some files were not uploaded')}
+                    styles={{
+                      root: {
+                        border: '1px solid var(--chatbox-border-primary)',
+                        borderLeft: '3px solid var(--chatbox-tint-error)',
+                        background: 'var(--chatbox-background-primary)',
+                      },
+                    }}
+                  >
+                    <Stack gap={6}>
+                      <Text size="sm">
+                        {t('Knowledge Base documents must be {{limit}} or smaller.', {
+                          limit: KNOWLEDGE_BASE_MAX_FILE_SIZE_LABEL,
+                        })}
+                      </Text>
+                      <Stack gap={4}>
+                        {sizeRejectedFiles.slice(0, 3).map((file) => (
+                          <Group key={`${file.name}-${file.size}`} justify="space-between" gap="sm" wrap="nowrap">
+                            <Text size="xs" lineClamp={1} style={{ minWidth: 0 }}>
+                              {file.name}
+                            </Text>
+                            <Text size="xs" c="dimmed" className="shrink-0">
+                              {formatFileSize(file.size)}
+                            </Text>
+                          </Group>
+                        ))}
+                        {sizeRejectedFiles.length > 3 && (
+                          <Text size="xs" c="dimmed">
+                            {t('And {{count}} more file(s).', { count: sizeRejectedFiles.length - 3 })}
+                          </Text>
+                        )}
+                      </Stack>
+                    </Stack>
+                  </Alert>
+                )}
               </Box>
             )}
 

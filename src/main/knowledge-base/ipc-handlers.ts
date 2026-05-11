@@ -1,5 +1,6 @@
 import { ipcMain } from 'electron'
 import type { FileMeta } from 'src/shared/types'
+import { KNOWLEDGE_BASE_MAX_FILE_SIZE } from '../../shared/knowledge-base'
 import { sentry } from '../adapters/sentry'
 import { getLogger } from '../util'
 import { getDatabase, getVectorStore, parseSQLiteTimestamp, withTransaction } from './db'
@@ -421,8 +422,7 @@ export function registerKnowledgeBaseHandlers() {
       if (!file || !file.name || !file.path || !file.type) {
         throw new Error('Invalid file metadata')
       }
-      if (file.size < 0 || file.size > 100 * 1024 * 1024) {
-        // 100MB limit
+      if (file.size < 0 || file.size > KNOWLEDGE_BASE_MAX_FILE_SIZE) {
         throw new Error('Invalid file size')
       }
 
