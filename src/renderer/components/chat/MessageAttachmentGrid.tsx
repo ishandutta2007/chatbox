@@ -51,6 +51,18 @@ export function MessageAttachmentGrid({ files, links }: MessageAttachmentGridPro
   const attachmentChunkCountMap = new Map(
     sessionAttachments?.map((attachment) => [attachment.id, attachment.chunkCount ?? 0]) ?? []
   )
+  const attachmentTotalChunksMap = new Map(
+    sessionAttachments?.map((attachment) => [attachment.id, attachment.totalChunks ?? 0]) ?? []
+  )
+  const attachmentEmbeddedChunksMap = new Map(
+    sessionAttachments?.map((attachment) => [attachment.id, attachment.embeddedChunks ?? 0]) ?? []
+  )
+  const attachmentIndexingStageMap = new Map(
+    sessionAttachments?.map((attachment) => [attachment.id, attachment.indexingStage]) ?? []
+  )
+  const attachmentProcessingStartedAtMap = new Map(
+    sessionAttachments?.map((attachment) => [attachment.id, attachment.processingStartedAt]) ?? []
+  )
   const attachmentErrorMap = new Map(sessionAttachments?.map((attachment) => [attachment.id, attachment.error]) ?? [])
   const totalCount = fileItems.length + linkItems.length
 
@@ -113,6 +125,24 @@ export function MessageAttachmentGrid({ files, links }: MessageAttachmentGridPro
               }
               sessionAttachmentChunkCount={
                 file.sessionAttachmentId ? attachmentChunkCountMap.get(file.sessionAttachmentId) : undefined
+              }
+              sessionAttachmentTotalChunks={
+                file.sessionAttachmentId
+                  ? (attachmentTotalChunksMap.get(file.sessionAttachmentId) ?? file.sessionAttachmentTotalChunks)
+                  : file.sessionAttachmentTotalChunks
+              }
+              sessionAttachmentEmbeddedChunks={
+                file.sessionAttachmentId
+                  ? (attachmentEmbeddedChunksMap.get(file.sessionAttachmentId) ?? file.sessionAttachmentEmbeddedChunks)
+                  : file.sessionAttachmentEmbeddedChunks
+              }
+              sessionAttachmentIndexingStage={
+                file.sessionAttachmentId
+                  ? (attachmentIndexingStageMap.get(file.sessionAttachmentId) ?? file.sessionAttachmentIndexingStage)
+                  : file.sessionAttachmentIndexingStage
+              }
+              sessionAttachmentProcessingStartedAt={
+                file.sessionAttachmentId ? attachmentProcessingStartedAtMap.get(file.sessionAttachmentId) : undefined
               }
               sessionAttachmentError={
                 file.sessionAttachmentId ? attachmentErrorMap.get(file.sessionAttachmentId) : undefined

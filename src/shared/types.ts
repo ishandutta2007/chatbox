@@ -267,6 +267,7 @@ export interface KnowledgeBaseSearchResult {
 export type SessionAttachmentAvailability = 'allowed' | 'blocked'
 export type SessionAttachmentIndexStatus = 'pending' | 'indexing' | 'ready' | 'failed'
 export type SessionAttachmentStatus = SessionAttachmentIndexStatus
+export type SessionAttachmentIndexingStage = 'queued' | 'chunking' | 'embedding' | 'finalizing' | 'ready'
 
 export interface SessionAttachmentQueryPlan {
   recallTopK: number
@@ -287,6 +288,9 @@ export interface SessionAttachment {
   fileSize: number
   tokenEstimate: number
   chunkCount?: number
+  totalChunks?: number
+  embeddedChunks?: number
+  indexingStage?: SessionAttachmentIndexingStage
   parserType?: string
   availability: SessionAttachmentAvailability
   indexStatus: SessionAttachmentIndexStatus

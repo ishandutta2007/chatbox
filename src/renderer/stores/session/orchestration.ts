@@ -1,7 +1,7 @@
 import { buildContext } from '@shared/context'
 import { ChatboxAIAPIError, OCRError } from '@shared/models/errors'
 import type { ChatStreamOptions, ModelStreamPart } from '@shared/models/types'
-import { ModelProviderEnum, type Message, type MessageContentParts } from '@shared/types'
+import { type Message, type MessageContentParts, ModelProviderEnum } from '@shared/types'
 import { getMessageText, sequenceMessages } from '@shared/utils/message'
 import type { ToolSet } from 'ai'
 import { t } from 'i18next'
@@ -62,6 +62,10 @@ async function refreshSessionAttachmentStatuses(messages: Message[]): Promise<Me
   )
   const availabilityMap = new Map(attachments.map((attachment) => [attachment.id, attachment.availability]))
   const indexStatusMap = new Map(attachments.map((attachment) => [attachment.id, attachment.indexStatus]))
+  const chunkCountMap = new Map(attachments.map((attachment) => [attachment.id, attachment.chunkCount]))
+  const totalChunksMap = new Map(attachments.map((attachment) => [attachment.id, attachment.totalChunks]))
+  const embeddedChunksMap = new Map(attachments.map((attachment) => [attachment.id, attachment.embeddedChunks]))
+  const indexingStageMap = new Map(attachments.map((attachment) => [attachment.id, attachment.indexingStage]))
 
   return messages.map((message) => {
     if (!message.files?.length) {
@@ -78,6 +82,12 @@ async function refreshSessionAttachmentStatuses(messages: Message[]): Promise<Me
           availabilityMap.get(file.sessionAttachmentId) ?? file.sessionAttachmentAvailability,
         sessionAttachmentIndexStatus: indexStatusMap.get(file.sessionAttachmentId) ?? file.sessionAttachmentIndexStatus,
         sessionAttachmentStatus: indexStatusMap.get(file.sessionAttachmentId) ?? file.sessionAttachmentStatus,
+        sessionAttachmentChunkCount: chunkCountMap.get(file.sessionAttachmentId) ?? file.sessionAttachmentChunkCount,
+        sessionAttachmentTotalChunks: totalChunksMap.get(file.sessionAttachmentId) ?? file.sessionAttachmentTotalChunks,
+        sessionAttachmentEmbeddedChunks:
+          embeddedChunksMap.get(file.sessionAttachmentId) ?? file.sessionAttachmentEmbeddedChunks,
+        sessionAttachmentIndexingStage:
+          indexingStageMap.get(file.sessionAttachmentId) ?? file.sessionAttachmentIndexingStage,
       }
     })
 

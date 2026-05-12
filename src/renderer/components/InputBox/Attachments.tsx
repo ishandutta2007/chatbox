@@ -1,9 +1,11 @@
 import NiceModal from '@ebay/nice-modal-react'
 import { Tooltip, Typography } from '@mui/material'
 import { ChatboxAIAPIError } from '@shared/models/errors'
+import type { SessionAttachmentIndexingStage } from '@shared/types'
 import { AlertCircle, CheckCircle, Eye, Link, Link2, Loader2, RotateCw, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import {
+  SESSION_ATTACHMENT_RAG_PARSED_CONTENT_TOO_LARGE_ERROR,
   SESSION_ATTACHMENT_RAG_REQUIRES_CHATBOX_AI_ERROR,
   SESSION_ATTACHMENT_RAG_REQUIRES_KNOWLEDGE_BASE_ERROR,
   SESSION_ATTACHMENT_RAG_REQUIRES_TOOL_USE_MODEL_ERROR,
@@ -21,6 +23,11 @@ function getTranslatedErrorMessage(errorCode: string | undefined, t: (key: strin
   if (errorCode === SESSION_ATTACHMENT_RAG_REQUIRES_KNOWLEDGE_BASE_ERROR) {
     return t('This attachment is too large for chat attachments. Please upload it through Knowledge Base instead.')
   }
+  if (errorCode === SESSION_ATTACHMENT_RAG_PARSED_CONTENT_TOO_LARGE_ERROR) {
+    return t(
+      'This document contains too much text for chat attachments. Please upload it through Knowledge Base instead.'
+    )
+  }
   if (errorCode === SESSION_ATTACHMENT_RAG_REQUIRES_TOOL_USE_MODEL_ERROR) {
     return t('Large file Q&A requires a model with tool use support. Switch to a compatible model or remove this file.')
   }
@@ -30,6 +37,22 @@ function getTranslatedErrorMessage(errorCode: string | undefined, t: (key: strin
     const translated = t(errorDetail.i18nKey)
     // 移除 HTML/JSX 标签，只保留纯文本
     return translated.replace(/<[^>]*>/g, '')
+  }
+  return t('Processing failed')
+}
+
+function getErrorStatusLabel(errorCode: string | undefined, t: (key: string) => string): string {
+  if (errorCode === SESSION_ATTACHMENT_RAG_PARSED_CONTENT_TOO_LARGE_ERROR) {
+    return t('Too much text')
+  }
+  if (errorCode === SESSION_ATTACHMENT_RAG_REQUIRES_KNOWLEDGE_BASE_ERROR) {
+    return t('Too large')
+  }
+  if (
+    errorCode === SESSION_ATTACHMENT_RAG_REQUIRES_CHATBOX_AI_ERROR ||
+    errorCode === SESSION_ATTACHMENT_RAG_REQUIRES_TOOL_USE_MODEL_ERROR
+  ) {
+    return t('Unavailable')
   }
   return t('Processing failed')
 }
@@ -66,10 +89,13 @@ export function FileMiniCard(props: {
   fileType: string
   onDelete: () => void
   status?: 'processing' | 'completed' | 'error'
+  statusText?: string
+  progressValue?: number
+  isTakingLong?: boolean
   errorMessage?: string
   onErrorClick?: () => void
 }) {
-  const { name, onDelete, status, errorMessage, onErrorClick } = props
+  const { name, onDelete, status, statusText, progressValue, isTakingLong, errorMessage, onErrorClick } = props
   const { t } = useTranslation()
 
   const handleClick = () => {
@@ -80,30 +106,56 @@ export function FileMiniCard(props: {
 
   // 获取翻译后的错误消息
   const translatedError = getTranslatedErrorMessage(errorMessage, t)
+  const displayedStatusText = status === 'error' ? getErrorStatusLabel(errorMessage, t) : statusText
+  const clampedProgressValue =
+    typeof progressValue === 'number' ? Math.max(0, Math.min(100, Math.round(progressValue))) : undefined
 
   return (
     <div
-      className="w-[100px] h-[100px] p-1 m-1 inline-flex items-center justify-center
+      className="w-[132px] h-[108px] px-2.5 pt-2 pb-3 m-1 inline-flex items-center justify-center
                                 bg-white shadow-sm rounded-md border-solid border-gray-400/20
                                 hover:shadow-lg hover:cursor-pointer hover:scale-105 transition-all duration-200
                                 group/file-mini-card relative"
       onClick={handleClick}
     >
       <Tooltip title={status === 'error' && translatedError ? translatedError : name}>
-        <div className="flex flex-col justify-center items-center">
-          <FileIcon filename={name} className="w-8 h-8 text-black" />
-          <Typography className="w-20 pt-1 text-black text-center" noWrap sx={{ fontSize: '12px' }}>
+        <div className="flex flex-col justify-center items-center min-w-0 w-full">
+          <FileIcon filename={name} className="w-8 h-8 text-black mb-1" />
+          <Typography className="w-full px-1 text-black text-center" noWrap sx={{ fontSize: '12px', lineHeight: 1.25 }}>
             {name}
           </Typography>
+          {displayedStatusText && (
+            <div className="mt-1 flex items-center justify-center gap-1 w-full min-w-0">
+              {status === 'processing' && <Loader2 size="12" className="animate-spin text-blue-500 shrink-0" />}
+              <Typography
+                className={
+                  status === 'error'
+                    ? 'min-w-0 text-red-500 text-center'
+                    : isTakingLong
+                      ? 'min-w-0 text-amber-600 text-center'
+                      : 'min-w-0 text-gray-500 text-center'
+                }
+                noWrap
+                sx={{ fontSize: '11px', lineHeight: 1.2 }}
+              >
+                {displayedStatusText}
+              </Typography>
+            </div>
+          )}
         </div>
       </Tooltip>
 
       {/* Status indicator */}
       {status && (
-        <div className="absolute bottom-1 left-1">
-          {status === 'processing' && <Loader2 size="16" className="animate-spin text-blue-500" />}
+        <div className="absolute top-1.5 left-1.5">
+          {status === 'processing' && !statusText && <Loader2 size="16" className="animate-spin text-blue-500" />}
           {status === 'completed' && <CheckCircle size="16" className="text-green-500" />}
           {status === 'error' && <AlertCircle size="16" className="text-red-500" />}
+        </div>
+      )}
+      {status === 'processing' && clampedProgressValue !== undefined && (
+        <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-blue-100 rounded-b-md overflow-hidden">
+          <div className="h-full bg-blue-500 transition-all" style={{ width: `${clampedProgressValue}%` }} />
         </div>
       )}
 
@@ -137,6 +189,32 @@ function getFileTypeLabel(filename: string, fileType?: string): string {
   return ''
 }
 
+function getIndexingStageLabel(stage: SessionAttachmentIndexingStage | undefined, t: (key: string) => string) {
+  switch (stage) {
+    case 'queued':
+      return t('Queued')
+    case 'chunking':
+      return t('Preparing')
+    case 'embedding':
+      return t('Indexing')
+    case 'finalizing':
+      return t('Finishing')
+    case 'ready':
+      return t('Indexed')
+    default:
+      return t('Indexing')
+  }
+}
+
+function getProgressValue(embeddedChunks?: number, totalChunks?: number): number | undefined {
+  if (!totalChunks || totalChunks <= 0 || embeddedChunks === undefined) return undefined
+  return Math.max(0, Math.min(100, Math.round((embeddedChunks / totalChunks) * 100)))
+}
+
+function isTakingLong(processingStartedAt?: number): boolean {
+  return !!processingStartedAt && Date.now() - processingStartedAt > 30000
+}
+
 export function MessageAttachment(props: {
   label: string
   filename?: string
@@ -150,6 +228,10 @@ export function MessageAttachment(props: {
   sessionAttachmentBlockedReason?: string
   sessionAttachmentStatus?: 'pending' | 'indexing' | 'ready' | 'failed'
   sessionAttachmentChunkCount?: number
+  sessionAttachmentTotalChunks?: number
+  sessionAttachmentEmbeddedChunks?: number
+  sessionAttachmentIndexingStage?: SessionAttachmentIndexingStage
+  sessionAttachmentProcessingStartedAt?: number
   sessionAttachmentError?: string
   onRetry?: () => void
   retrying?: boolean
@@ -167,6 +249,10 @@ export function MessageAttachment(props: {
     sessionAttachmentBlockedReason,
     sessionAttachmentStatus,
     sessionAttachmentChunkCount,
+    sessionAttachmentTotalChunks,
+    sessionAttachmentEmbeddedChunks,
+    sessionAttachmentIndexingStage,
+    sessionAttachmentProcessingStartedAt,
     sessionAttachmentError,
     onRetry,
     retrying,
@@ -193,6 +279,19 @@ export function MessageAttachment(props: {
   const sizeLabel = formatFileSize(byteLength)
   const effectiveAvailability = sessionAttachmentAvailability ?? 'allowed'
   const effectiveIndexStatus = sessionAttachmentIndexStatus ?? sessionAttachmentStatus
+  const progressValue = getProgressValue(sessionAttachmentEmbeddedChunks, sessionAttachmentTotalChunks)
+  const takingLong = effectiveIndexStatus !== 'ready' && isTakingLong(sessionAttachmentProcessingStartedAt)
+  const progressLabel =
+    progressValue !== undefined
+      ? `${getIndexingStageLabel(sessionAttachmentIndexingStage, t)} · ${sessionAttachmentEmbeddedChunks}/${sessionAttachmentTotalChunks} ${t(
+          'chunks'
+        )} (${progressValue}%)`
+      : getIndexingStageLabel(sessionAttachmentIndexingStage, t)
+  const activeProgressLabel = takingLong
+    ? progressValue !== undefined
+      ? `${t('Still indexing')} · ${progressLabel}`
+      : t('Still indexing')
+    : progressLabel
   const ragStatusLabel =
     ragMode === 'session-retrieval'
       ? effectiveAvailability === 'blocked'
@@ -203,7 +302,7 @@ export function MessageAttachment(props: {
             : t('Indexed')
           : effectiveIndexStatus === 'failed'
             ? t('Indexing failed')
-            : t('Indexing')
+            : activeProgressLabel
       : ''
   const subtitle = [typeLabel, sizeLabel, ragStatusLabel].filter(Boolean).join(' · ')
   const showStatus = ragMode === 'session-retrieval'
@@ -220,6 +319,7 @@ export function MessageAttachment(props: {
     <Tooltip title={tooltipTitle}>
       <div
         className={`flex items-center gap-2 px-2 py-1.5 min-w-0 overflow-hidden
+            relative
             rounded-md
             bg-chatbox-background-secondary
             ${isClickable ? 'cursor-pointer hover:bg-chatbox-background-secondary-hover transition-colors' : ''}`}
@@ -239,6 +339,15 @@ export function MessageAttachment(props: {
             </Typography>
           )}
         </div>
+        {showStatus &&
+          effectiveAvailability !== 'blocked' &&
+          effectiveIndexStatus !== 'ready' &&
+          effectiveIndexStatus !== 'failed' &&
+          progressValue !== undefined && (
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-chatbox-background-tertiary overflow-hidden">
+              <div className="h-full bg-blue-500 transition-all" style={{ width: `${progressValue}%` }} />
+            </div>
+          )}
         {showStatus && effectiveAvailability === 'blocked' && (
           <AlertCircle className="flex-none w-3.5 h-3.5 text-amber-500" strokeWidth={1.5} />
         )}

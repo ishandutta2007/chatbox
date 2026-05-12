@@ -19,6 +19,7 @@ import {
   getUnsupportedFileType,
   isSupportedFile,
 } from '@shared/file-extensions'
+import { KNOWLEDGE_BASE_MAX_FILE_SIZE, KNOWLEDGE_BASE_MAX_FILE_SIZE_LABEL } from '@shared/knowledge-base'
 import { getModel } from '@shared/providers'
 import { formatNumber } from '@shared/utils'
 import {
@@ -85,14 +86,17 @@ import {
   type Message,
   ModelProviderEnum,
   type SessionAttachment,
+  type SessionAttachmentIndexingStage,
   type SessionType,
   type ShortcutSendValue,
 } from '../../../shared/types'
 import * as dom from '../../hooks/dom'
-import * as sessionHelpers from '../../stores/sessionHelpers'
 import { startPreparedSessionAttachmentIndexing } from '../../stores/sessionAttachmentRagIndexing'
+import * as sessionHelpers from '../../stores/sessionHelpers'
 import * as toastActions from '../../stores/toastActions'
+import type { PreprocessedFile } from '../../types/input-box'
 import { CompactionStatus } from '../chat/CompactionStatus'
+import { AdaptiveModal } from '../common/AdaptiveModal'
 import { CompressionModal } from '../common/CompressionModal'
 import { ScalableIcon } from '../common/ScalableIcon'
 import Disclaimer from '../Disclaimer'
@@ -112,7 +116,6 @@ import {
   storeFilePromise,
   storeLinkPromise,
 } from './preprocessState'
-import type { PreprocessedFile } from '../../types/input-box'
 import TokenCountMenu from './TokenCountMenu'
 
 export type InputBoxPayload = {
@@ -165,12 +168,18 @@ function mergeSessionAttachmentStatesIntoFiles(
       sessionAttachmentAvailability: attachment.availability ?? file.sessionAttachmentAvailability,
       sessionAttachmentIndexStatus: attachment.indexStatus ?? file.sessionAttachmentIndexStatus,
       sessionAttachmentChunkCount: attachment.chunkCount ?? file.sessionAttachmentChunkCount,
+      sessionAttachmentTotalChunks: attachment.totalChunks ?? file.sessionAttachmentTotalChunks,
+      sessionAttachmentEmbeddedChunks: attachment.embeddedChunks ?? file.sessionAttachmentEmbeddedChunks,
+      sessionAttachmentIndexingStage: attachment.indexingStage ?? file.sessionAttachmentIndexingStage,
       error: attachment.error ?? file.error,
     }
     const fileChanged =
       nextFile.sessionAttachmentAvailability !== file.sessionAttachmentAvailability ||
       nextFile.sessionAttachmentIndexStatus !== file.sessionAttachmentIndexStatus ||
       nextFile.sessionAttachmentChunkCount !== file.sessionAttachmentChunkCount ||
+      nextFile.sessionAttachmentTotalChunks !== file.sessionAttachmentTotalChunks ||
+      nextFile.sessionAttachmentEmbeddedChunks !== file.sessionAttachmentEmbeddedChunks ||
+      nextFile.sessionAttachmentIndexingStage !== file.sessionAttachmentIndexingStage ||
       nextFile.error !== file.error
     if (fileChanged) {
       changed = true
@@ -179,6 +188,31 @@ function mergeSessionAttachmentStatesIntoFiles(
   })
 
   return { files: nextFiles, changed }
+}
+
+function getSessionAttachmentProgressValue(embeddedChunks?: number, totalChunks?: number): number | undefined {
+  if (!totalChunks || totalChunks <= 0 || embeddedChunks === undefined) return undefined
+  return Math.max(0, Math.min(100, Math.round((embeddedChunks / totalChunks) * 100)))
+}
+
+function getSessionAttachmentStageLabel(
+  stage: SessionAttachmentIndexingStage | undefined,
+  t: (key: string) => string
+): string {
+  switch (stage) {
+    case 'queued':
+      return t('Queued')
+    case 'chunking':
+      return t('Preparing')
+    case 'embedding':
+      return t('Indexing')
+    case 'finalizing':
+      return t('Finishing')
+    case 'ready':
+      return t('Indexed')
+    default:
+      return t('Indexing')
+  }
 }
 
 const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
@@ -297,6 +331,10 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
 
     const [links, setLinks] = useAtom(atoms.inputBoxLinksFamily(currentSessionId || 'new'))
     const [isSubmitting, setIsSubmitting] = useState(false)
+    const [unreadyAttachmentSubmitPrompt, setUnreadyAttachmentSubmitPrompt] = useState<{
+      opened: boolean
+      count: number
+    }>({ opened: false, count: 0 })
 
     const flushPreConstructedMessage = useCallback(() => {
       clearTimeout(debouncedUpdateTimerRef.current)
@@ -418,6 +456,21 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
     )
     const preprocessedAttachmentErrorMap = useMemo(
       () => new Map(preprocessedAttachmentStates.map((attachment) => [attachment.id, attachment.error])),
+      [preprocessedAttachmentStates]
+    )
+    const preprocessedAttachmentProgressMap = useMemo(
+      () =>
+        new Map(
+          preprocessedAttachmentStates.map((attachment) => [
+            attachment.id,
+            {
+              totalChunks: attachment.totalChunks ?? 0,
+              embeddedChunks: attachment.embeddedChunks ?? 0,
+              indexingStage: attachment.indexingStage,
+              processingStartedAt: attachment.processingStartedAt,
+            },
+          ])
+        ),
       [preprocessedAttachmentStates]
     )
     useEffect(() => {
@@ -606,7 +659,8 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
     const { addInputBoxHistory, getPreviousHistoryInput, getNextHistoryInput, resetHistoryIndex } = useInputBoxHistory()
     resetHistoryIndexRef.current = resetHistoryIndex
 
-    const handleSubmitRef = useRef<(needGenerating?: boolean) => void>(() => {})
+    type SubmitOptions = { allowUnreadySessionAttachments?: boolean }
+    const handleSubmitRef = useRef<(needGenerating?: boolean, options?: SubmitOptions) => void>(() => {})
     const getPreviousHistoryInputRef = useRef(getPreviousHistoryInput)
     getPreviousHistoryInputRef.current = getPreviousHistoryInput
     const getNextHistoryInputRef = useRef(getNextHistoryInput)
@@ -615,7 +669,7 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
     const insertLinksRef = useRef<(urls: string[]) => void>(() => {})
 
     const closeSelectModelErrorTipCb = useRef<NodeJS.Timeout>()
-    const handleSubmit = async (needGenerating = true) => {
+    const handleSubmit = async (needGenerating = true, options: SubmitOptions = {}) => {
       if (
         disableSubmit ||
         generating ||
@@ -659,6 +713,16 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
           if (result.changed) {
             setPreConstructedMessage((prev) => ({ ...prev, preprocessedFiles: result.files }))
           }
+        }
+        const unreadySessionAttachments = preprocessedFilesForSubmit.filter(
+          (file) =>
+            file.ragMode === 'session-retrieval' &&
+            file.sessionAttachmentAvailability !== 'blocked' &&
+            (file.sessionAttachmentIndexStatus ?? 'pending') !== 'ready'
+        )
+        if (unreadySessionAttachments.length > 0 && !options.allowUnreadySessionAttachments) {
+          setUnreadyAttachmentSubmitPrompt({ opened: true, count: unreadySessionAttachments.length })
+          return
         }
 
         // Build the message with the latest input text, bypassing debounce delay
@@ -910,6 +974,18 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
             pictureKeys: [...(prev.pictureKeys || []), key].slice(-8),
           })) // Maximum 8 images
         } else {
+          if (file.size > KNOWLEDGE_BASE_MAX_FILE_SIZE) {
+            toastActions.add(
+              t(
+                'Chat attachments must be {{limit}} or smaller. Please upload larger documents through Knowledge Base.',
+                {
+                  limit: KNOWLEDGE_BASE_MAX_FILE_SIZE_LABEL,
+                }
+              )
+            )
+            continue
+          }
+
           // Check if file type is supported
           if (!isSupportedFile(file.name)) {
             const unsupportedType = getUnsupportedFileType(file.name)
@@ -1246,6 +1322,30 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
                     ? (preprocessedAttachmentErrorMap.get(preprocessedFile.sessionAttachmentId) ??
                       preprocessedFile?.error)
                     : preprocessedFile?.error
+                  const attachmentProgress = preprocessedFile?.sessionAttachmentId
+                    ? preprocessedAttachmentProgressMap.get(preprocessedFile.sessionAttachmentId)
+                    : undefined
+                  const totalChunks =
+                    attachmentProgress?.totalChunks ?? preprocessedFile?.sessionAttachmentTotalChunks ?? 0
+                  const embeddedChunks =
+                    attachmentProgress?.embeddedChunks ?? preprocessedFile?.sessionAttachmentEmbeddedChunks ?? 0
+                  const indexingStage =
+                    attachmentProgress?.indexingStage ?? preprocessedFile?.sessionAttachmentIndexingStage
+                  const progressValue = getSessionAttachmentProgressValue(embeddedChunks, totalChunks)
+                  const isSessionAttachmentTakingLong =
+                    !!attachmentProgress?.processingStartedAt &&
+                    effectiveIndexStatus !== 'ready' &&
+                    Date.now() - attachmentProgress.processingStartedAt > 30000
+                  const statusText =
+                    preprocessedFile?.ragMode === 'session-retrieval' && effectiveIndexStatus !== 'ready'
+                      ? progressValue !== undefined
+                        ? `${isSessionAttachmentTakingLong ? t('Still indexing') : getSessionAttachmentStageLabel(indexingStage, t)} · ${progressValue}%`
+                        : isSessionAttachmentTakingLong
+                          ? t('Still indexing')
+                          : getSessionAttachmentStageLabel(indexingStage, t)
+                      : status === 'processing'
+                        ? t('Preparing')
+                        : undefined
                   return (
                     <FileMiniCard
                       key={fileKey}
@@ -1260,6 +1360,9 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
                               : 'processing'
                             : status
                       }
+                      statusText={statusText}
+                      progressValue={progressValue}
+                      isTakingLong={isSessionAttachmentTakingLong}
                       errorMessage={effectiveAttachmentError}
                       onErrorClick={() => {
                         const errorCode = preprocessedFile?.error
@@ -1578,6 +1681,38 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
             session={currentSession}
           />
         )}
+        <AdaptiveModal
+          opened={unreadyAttachmentSubmitPrompt.opened}
+          onClose={() => setUnreadyAttachmentSubmitPrompt((prev) => ({ ...prev, opened: false }))}
+          title={t('Document is still indexing')}
+          centered
+          size="sm"
+        >
+          <Stack gap="sm">
+            <Text size="sm" c="dimmed">
+              {t(
+                '{{count}} document(s) are still being prepared. If you send now, the answer may not use the full document.',
+                { count: unreadyAttachmentSubmitPrompt.count }
+              )}
+            </Text>
+            <AdaptiveModal.Actions>
+              <Button
+                variant="default"
+                onClick={() => setUnreadyAttachmentSubmitPrompt((prev) => ({ ...prev, opened: false }))}
+              >
+                {t('Wait')}
+              </Button>
+              <Button
+                onClick={() => {
+                  setUnreadyAttachmentSubmitPrompt((prev) => ({ ...prev, opened: false }))
+                  void handleSubmit(true, { allowUnreadySessionAttachments: true })
+                }}
+              >
+                {t('Send anyway')}
+              </Button>
+            </AdaptiveModal.Actions>
+          </Stack>
+        </AdaptiveModal>
       </Box>
     )
   }

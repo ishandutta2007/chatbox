@@ -20,9 +20,9 @@ import * as localParser from '@/packages/local-parser'
 import * as remote from '@/packages/remote'
 import { estimateTokens } from '@/packages/token'
 import platform from '@/platform'
-import { getMetaStorage } from '@/stores/chatStore'
 import storage from '@/storage'
 import { StorageKey, StorageKeyGenerator } from '@/storage/StoreStorage'
+import { getMetaStorage } from '@/stores/chatStore'
 import { migrateSession, sortSessions } from '@/utils/session-utils'
 import * as defaults from '../../shared/defaults'
 import { SESSION_ATTACHMENT_RAG_LOG_PREFIX } from '../../shared/session-attachment-rag/logging'
@@ -35,9 +35,11 @@ import { getPlatformDefaultDocumentParser, settingsStore } from './settingsStore
 const log = getLogger('session-helpers')
 const SESSION_ATTACHMENT_RAG_INLINE_THRESHOLD = 7500
 const SESSION_ATTACHMENT_RAG_INLINE_BYTE_THRESHOLD = 32 * 1024
+export const SESSION_ATTACHMENT_RAG_MAX_PARSED_BYTE_LENGTH = 3 * 1024 * 1024
 export const SESSION_ATTACHMENT_RAG_REQUIRES_CHATBOX_AI_ERROR = 'session_attachment_rag_requires_chatbox_ai'
 export const SESSION_ATTACHMENT_RAG_REQUIRES_KNOWLEDGE_BASE_ERROR = 'session_attachment_rag_requires_knowledge_base'
 export const SESSION_ATTACHMENT_RAG_REQUIRES_TOOL_USE_MODEL_ERROR = 'session_attachment_rag_requires_tool_use_model'
+export const SESSION_ATTACHMENT_RAG_PARSED_CONTENT_TOO_LARGE_ERROR = 'session_attachment_rag_parsed_content_too_large'
 let sessionRagCapabilityCache:
   | {
       licenseKey: string
@@ -57,6 +59,31 @@ function getContentStats(content: string): ContentStats {
     lineCount: lines.length,
     byteLength: new TextEncoder().encode(content).length,
     previewContent: lines.slice(0, PREVIEW_LINES).join('\n'),
+  }
+}
+
+function isParsedContentTooLarge(stats: ContentStats): boolean {
+  return stats.byteLength > SESSION_ATTACHMENT_RAG_MAX_PARSED_BYTE_LENGTH
+}
+
+function buildParsedContentTooLargeAttachmentResult(
+  file: File,
+  content: string,
+  storageKey: string,
+  parserType: string | undefined,
+  stats: ContentStats
+): AttachmentPreparationResult {
+  return {
+    file,
+    content,
+    storageKey,
+    ragMode: 'session-retrieval',
+    parserType,
+    lineCount: stats.lineCount,
+    byteLength: stats.byteLength,
+    sessionAttachmentAvailability: 'blocked',
+    sessionAttachmentBlockedReason: SESSION_ATTACHMENT_RAG_PARSED_CONTENT_TOO_LARGE_ERROR,
+    error: SESSION_ATTACHMENT_RAG_PARSED_CONTENT_TOO_LARGE_ERROR,
   }
 }
 
@@ -208,19 +235,7 @@ async function parseFileWithChatboxAI(
     await storage.setBlob(uniqKey, content)
   }
 
-  // Calculate token counts
-  const tokenCountMap: Record<string, number> = content
-    ? {
-        [TOKEN_CACHE_KEYS.default]: estimateTokens(content),
-        [TOKEN_CACHE_KEYS.deepseek]: estimateTokens(content, { provider: '', modelId: 'deepseek' }),
-      }
-    : {}
-
-  if (content) {
-    await storage.setItem(`${uniqKey}_tokenMap`, tokenCountMap)
-  }
-
-  return { content, storageKey: uniqKey, tokenCountMap, parserType: 'chatbox-ai' }
+  return { content, storageKey: uniqKey, tokenCountMap: {}, parserType: 'chatbox-ai' }
 }
 
 /**
@@ -253,15 +268,7 @@ async function parseFileWithMineruService(
   // Store content to unique key
   await storage.setBlob(uniqKey, content)
 
-  // Calculate token counts
-  const tokenCountMap: Record<string, number> = {
-    [TOKEN_CACHE_KEYS.default]: estimateTokens(content),
-    [TOKEN_CACHE_KEYS.deepseek]: estimateTokens(content, { provider: '', modelId: 'deepseek' }),
-  }
-
-  await storage.setItem(`${uniqKey}_tokenMap`, tokenCountMap)
-
-  return { content, storageKey: uniqKey, tokenCountMap, parserType: 'mineru' }
+  return { content, storageKey: uniqKey, tokenCountMap: {}, parserType: 'mineru' }
 }
 
 /**
@@ -290,6 +297,13 @@ export async function prepareFileAttachment(
         | undefined
 
       const stats = getContentStats(existingContent)
+      if (isParsedContentTooLarge(stats)) {
+        log.info(
+          `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} Cached parsed content too large: file="${file.name}", bytes=${stats.byteLength}, limit=${SESSION_ATTACHMENT_RAG_MAX_PARSED_BYTE_LENGTH}`
+        )
+        return buildParsedContentTooLargeAttachmentResult(file, existingContent, uniqKey, existingParserType, stats)
+      }
+
       const useSessionAttachmentRag =
         platform.type === 'desktop' && stats.byteLength > SESSION_ATTACHMENT_RAG_INLINE_BYTE_THRESHOLD
       const { lineCount, byteLength, tokenCountMap } = computePreviewMetadata(existingContent, existingTokenMap, {
@@ -380,6 +394,20 @@ export async function prepareFileAttachment(
     }
 
     const stats = getContentStats(result.content)
+    if (isParsedContentTooLarge(stats)) {
+      log.info(
+        `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} Parsed content too large: file="${file.name}", parser=${result.parserType}, bytes=${stats.byteLength}, limit=${SESSION_ATTACHMENT_RAG_MAX_PARSED_BYTE_LENGTH}`
+      )
+      await storage.setItem(`${result.storageKey}_parserType`, result.parserType)
+      return buildParsedContentTooLargeAttachmentResult(
+        file,
+        result.content,
+        result.storageKey,
+        result.parserType,
+        stats
+      )
+    }
+
     const useSessionAttachmentRag =
       platform.type === 'desktop' && stats.byteLength > SESSION_ATTACHMENT_RAG_INLINE_BYTE_THRESHOLD
     const { lineCount, byteLength, tokenCountMap } = computePreviewMetadata(result.content, result.tokenCountMap, {
@@ -594,6 +622,10 @@ export function constructUserMessage(
       sessionAttachmentIndexStatus:
         f.ragMode === 'session-retrieval' ? (f.sessionAttachmentIndexStatus ?? 'pending') : undefined,
       sessionAttachmentBlockedReason: f.sessionAttachmentBlockedReason,
+      sessionAttachmentChunkCount: f.sessionAttachmentChunkCount,
+      sessionAttachmentTotalChunks: f.sessionAttachmentTotalChunks,
+      sessionAttachmentEmbeddedChunks: f.sessionAttachmentEmbeddedChunks,
+      sessionAttachmentIndexingStage: f.sessionAttachmentIndexingStage,
       tokenCountMap: f.tokenCountMap,
       lineCount: f.lineCount,
       byteLength: f.byteLength,

@@ -11,6 +11,7 @@ import { trackingEvent } from '@/packages/event'
 import { buildChatboxUrl } from '@/packages/remote'
 import platform from '@/platform'
 import {
+  SESSION_ATTACHMENT_RAG_PARSED_CONTENT_TOO_LARGE_ERROR,
   SESSION_ATTACHMENT_RAG_REQUIRES_CHATBOX_AI_ERROR,
   SESSION_ATTACHMENT_RAG_REQUIRES_KNOWLEDGE_BASE_ERROR,
   SESSION_ATTACHMENT_RAG_REQUIRES_TOOL_USE_MODEL_ERROR,
@@ -43,6 +44,15 @@ const FileParseError = NiceModal.create(({ errorCode, fileName }: FileParseError
       return (
         <Text>
           {t('This attachment is too large for chat attachments. Please upload it through Knowledge Base instead.')}
+        </Text>
+      )
+    }
+    if (errorCode === SESSION_ATTACHMENT_RAG_PARSED_CONTENT_TOO_LARGE_ERROR) {
+      return (
+        <Text>
+          {t(
+            'This document contains too much text for chat attachments. Please upload it through Knowledge Base instead.'
+          )}
         </Text>
       )
     }

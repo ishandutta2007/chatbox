@@ -1,14 +1,18 @@
 import { setTimeout } from 'node:timers/promises'
 import { MDocument } from '@mastra/rag'
 import { embedMany } from 'ai'
+import {
+  KNOWLEDGE_BASE_MAX_PARSED_CONTENT_SIZE,
+  KNOWLEDGE_BASE_PARSED_CONTENT_TOO_LARGE_ERROR,
+} from '../../shared/knowledge-base'
 import { ChatboxAIAPIError } from '../../shared/models/errors'
-import type { DocumentParserConfig } from '../../shared/types/settings'
 import { rerank } from '../../shared/models/rerank'
+import type { DocumentParserConfig } from '../../shared/types/settings'
 import { sentry } from '../adapters/sentry'
 import { getLogger } from '../util'
 import { checkProcessingTimeouts, getDatabase, getVectorStore } from './db'
 import { getEmbeddingProvider, getRerankProvider } from './model-providers'
-import { getEffectiveParserConfig, parseFileWithRouter, type ParserFileMeta } from './parsers'
+import { getEffectiveParserConfig, type ParserFileMeta, parseFileWithRouter } from './parsers'
 
 const log = getLogger('knowledge-base:file-loaders')
 
@@ -59,6 +63,14 @@ async function parseFileToDocumentWithRouter(
   const result = await parseFileWithRouter(filePath, fileMeta, parserConfig, kbId)
 
   log.info(`[FILE] Parse completed for ${fileMeta.filename}, parser used: ${result.parserUsed}`)
+
+  const parsedContentByteLength = Buffer.byteLength(result.content, 'utf8')
+  if (parsedContentByteLength > KNOWLEDGE_BASE_MAX_PARSED_CONTENT_SIZE) {
+    log.info(
+      `[FILE] Parsed content too large: filename=${fileMeta.filename}, bytes=${parsedContentByteLength}, limit=${KNOWLEDGE_BASE_MAX_PARSED_CONTENT_SIZE}`
+    )
+    throw new Error(KNOWLEDGE_BASE_PARSED_CONTENT_TOO_LARGE_ERROR)
+  }
 
   // Convert content to MDocument based on content type
   const document = MDocument.fromText(result.content)

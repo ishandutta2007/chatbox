@@ -101,7 +101,11 @@ vi.mock('@/stores/chatStore', () => ({
   getMetaStorage: vi.fn(),
 }))
 
-import { prepareFileAttachment } from './sessionHelpers'
+import {
+  prepareFileAttachment,
+  SESSION_ATTACHMENT_RAG_MAX_PARSED_BYTE_LENGTH,
+  SESSION_ATTACHMENT_RAG_PARSED_CONTENT_TOO_LARGE_ERROR,
+} from './sessionHelpers'
 
 function createFile(name: string, content = 'binary-content'): File {
   const file = new File([content], name, { type: 'application/pdf', lastModified: 1700000000000 })
@@ -179,5 +183,20 @@ describe('preprocessFile local parser fallback', () => {
     expect(result.content).toBe('')
     expect(result.storageKey).toBe('')
     expect(result.error).toBe('local_parser_failed')
+  })
+
+  it('blocks documents when parsed text exceeds the session attachment limit', async () => {
+    const file = createFile('dense.pdf')
+    const parsedContent = 'a'.repeat(SESSION_ATTACHMENT_RAG_MAX_PARSED_BYTE_LENGTH + 1)
+    blobStore.set('local-key', parsedContent)
+    mockParseFileLocally.mockResolvedValueOnce({ isSupported: true, key: 'local-key' })
+
+    const result = await prepareFileAttachment(file, { provider: '', modelId: '' })
+
+    expect(result.error).toBe(SESSION_ATTACHMENT_RAG_PARSED_CONTENT_TOO_LARGE_ERROR)
+    expect(result.sessionAttachmentAvailability).toBe('blocked')
+    expect(result.sessionAttachmentBlockedReason).toBe(SESSION_ATTACHMENT_RAG_PARSED_CONTENT_TOO_LARGE_ERROR)
+    expect(result.ragMode).toBe('session-retrieval')
+    expect(result.byteLength).toBe(SESSION_ATTACHMENT_RAG_MAX_PARSED_BYTE_LENGTH + 1)
   })
 })

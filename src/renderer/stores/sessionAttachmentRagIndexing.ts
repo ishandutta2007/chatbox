@@ -1,8 +1,8 @@
-import { type MessageFile, type SessionAttachment } from '../../shared/types'
-import { SESSION_ATTACHMENT_RAG_LOG_PREFIX } from '../../shared/session-attachment-rag/logging'
 import { v4 as uuidv4 } from 'uuid'
 import { getLogger } from '@/lib/utils'
 import platform from '@/platform'
+import { SESSION_ATTACHMENT_RAG_LOG_PREFIX } from '../../shared/session-attachment-rag/logging'
+import type { MessageFile, SessionAttachment } from '../../shared/types'
 import type { AttachmentPreparationResult, PreprocessedFile } from '../types/input-box'
 
 const log = getLogger('session-attachment-rag-indexing')
@@ -42,6 +42,9 @@ function mapPreparedAttachmentState(
     sessionAttachmentAvailability: attachment.availability,
     sessionAttachmentIndexStatus: attachment.indexStatus,
     sessionAttachmentChunkCount: attachment.chunkCount ?? 0,
+    sessionAttachmentTotalChunks: attachment.totalChunks ?? 0,
+    sessionAttachmentEmbeddedChunks: attachment.embeddedChunks ?? 0,
+    sessionAttachmentIndexingStage: attachment.indexingStage,
   }
 }
 
@@ -52,6 +55,10 @@ function mapMessageFileAttachmentState(file: MessageFile, attachment: SessionAtt
     sessionAttachmentAvailability: attachment.availability,
     sessionAttachmentIndexStatus: attachment.indexStatus,
     sessionAttachmentStatus: attachment.status,
+    sessionAttachmentChunkCount: attachment.chunkCount ?? 0,
+    sessionAttachmentTotalChunks: attachment.totalChunks ?? 0,
+    sessionAttachmentEmbeddedChunks: attachment.embeddedChunks ?? 0,
+    sessionAttachmentIndexingStage: attachment.indexingStage,
   }
 }
 

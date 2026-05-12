@@ -1,8 +1,13 @@
-import { Alert, Button, Flex, Group, Pill, ScrollArea, Stack, Text, Tooltip } from '@mantine/core'
+import { Alert, Button, Flex, Group, ScrollArea, Stack, Text, Tooltip } from '@mantine/core'
+import {
+  KNOWLEDGE_BASE_MAX_PARSED_CONTENT_SIZE_LABEL,
+  KNOWLEDGE_BASE_PARSED_CONTENT_TOO_LARGE_ERROR,
+} from '@shared/knowledge-base'
 import { ChatboxAIAPIError } from '@shared/models/errors'
 import type { KnowledgeBaseFile } from '@shared/types'
 import { formatFileSize } from '@shared/utils'
 import { IconAlertTriangle, IconFile, IconInfoCircle, IconRefresh } from '@tabler/icons-react'
+import type { TFunction } from 'i18next'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -13,7 +18,13 @@ import platform from '@/platform'
  * Parse error message to extract user-friendly message
  * Handles JSON error responses and uses i18nKey from ChatboxAIAPIError.codeNameMap
  */
-function parseErrorMessage(errorMessage: string): string {
+function parseErrorMessage(errorMessage: string, t: TFunction): string {
+  if (errorMessage === KNOWLEDGE_BASE_PARSED_CONTENT_TOO_LARGE_ERROR) {
+    return t('Parsed document content must be {{limit}} or smaller.', {
+      limit: KNOWLEDGE_BASE_MAX_PARSED_CONTENT_SIZE_LABEL,
+    })
+  }
+
   try {
     // Find JSON part in the message
     const jsonMatch = errorMessage.match(/\{[\s\S]*\}/)
@@ -24,7 +35,7 @@ function parseErrorMessage(errorMessage: string): string {
 
       // Try to get i18nKey from ChatboxAIAPIError.codeNameMap
       if (errorCode && ChatboxAIAPIError.codeNameMap[errorCode]) {
-        return ChatboxAIAPIError.codeNameMap[errorCode].i18nKey
+        return t(ChatboxAIAPIError.codeNameMap[errorCode].i18nKey)
       }
 
       // Fallback to detail or title
@@ -38,7 +49,7 @@ function parseErrorMessage(errorMessage: string): string {
   } catch {
     // JSON parsing failed, return original message
   }
-  return errorMessage
+  return t(errorMessage)
 }
 
 interface RemoteRetryModalProps {
@@ -54,7 +65,10 @@ export function RemoteRetryModal({ opened, onClose, failedFiles, onSuccess }: Re
   const [retryingAll, setRetryingAll] = useState(false)
 
   // Filter files that failed with local parsing (can be retried with server parsing)
-  const localFailedFiles = useMemo(() => failedFiles.filter((f) => !f.parsed_remotely), [failedFiles])
+  const localFailedFiles = useMemo(
+    () => failedFiles.filter((f) => !f.parsed_remotely && f.error !== KNOWLEDGE_BASE_PARSED_CONTENT_TOO_LARGE_ERROR),
+    [failedFiles]
+  )
 
   const handleRetry = async (fileId: number, filename: string) => {
     setRetryingIds((prev) => [...prev, fileId])
@@ -120,6 +134,7 @@ export function RemoteRetryModal({ opened, onClose, failedFiles, onSuccess }: Re
           <Stack gap="xs">
             {failedFiles.map((file) => {
               const isServerFailed = Boolean(file.parsed_remotely)
+              const isRetryable = !isServerFailed && file.error !== KNOWLEDGE_BASE_PARSED_CONTENT_TOO_LARGE_ERROR
               return (
                 <Flex
                   key={file.id}
@@ -139,7 +154,7 @@ export function RemoteRetryModal({ opened, onClose, failedFiles, onSuccess }: Re
                     </Text>
                     {/* Error info tooltip */}
                     {file.error && (
-                      <Tooltip label={t(parseErrorMessage(file.error))} multiline w={300} withArrow position="top">
+                      <Tooltip label={parseErrorMessage(file.error, t)} multiline w={300} withArrow position="top">
                         <IconInfoCircle
                           size={14}
                           color="var(--mantine-color-red-6)"
@@ -148,7 +163,7 @@ export function RemoteRetryModal({ opened, onClose, failedFiles, onSuccess }: Re
                       </Tooltip>
                     )}
                   </Flex>
-                  {isServerFailed ? (
+                  {!isRetryable ? (
                     <Text size="xs" c="dimmed" ml="sm">
                       {t('No retry available')}
                     </Text>

@@ -1,4 +1,9 @@
-import type { Message, SessionAttachmentAvailability, SessionAttachmentIndexStatus } from '../../shared/types'
+import type {
+  Message,
+  SessionAttachmentAvailability,
+  SessionAttachmentIndexingStage,
+  SessionAttachmentIndexStatus,
+} from '../../shared/types'
 
 export type ProcessingStatus = 'processing' | 'completed' | 'error' | undefined
 
@@ -22,6 +27,9 @@ export type SessionAttachmentIndexingState = {
   sessionAttachmentId?: number
   sessionAttachmentIndexStatus?: SessionAttachmentIndexStatus
   sessionAttachmentChunkCount?: number
+  sessionAttachmentTotalChunks?: number
+  sessionAttachmentEmbeddedChunks?: number
+  sessionAttachmentIndexingStage?: SessionAttachmentIndexingStage
 }
 
 export type PreprocessedFile = AttachmentPreparationResult & SessionAttachmentIndexingState

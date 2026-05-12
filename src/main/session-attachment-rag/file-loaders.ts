@@ -1,10 +1,11 @@
 import { setTimeout } from 'node:timers/promises'
 import { APICallError, type EmbeddingModel, embedMany } from 'ai'
+import { ApiError, NetworkError } from '../../shared/models/errors'
+import { SESSION_ATTACHMENT_RAG_LOG_PREFIX } from '../../shared/session-attachment-rag/logging'
 import { sentry } from '../adapters/sentry'
 import { getStoreBlob } from '../store-node'
 import { getLogger } from '../util'
-import { ApiError, NetworkError } from '../../shared/models/errors'
-import { SESSION_ATTACHMENT_RAG_LOG_PREFIX } from '../../shared/session-attachment-rag/logging'
+import { buildAttachmentChunks, buildEmbeddedText, selectAttachmentChunkingPipeline } from './chunking'
 import {
   deleteAttachmentGraph,
   deleteAttachmentIndex,
@@ -16,8 +17,8 @@ import {
   markSessionAttachmentReady,
   purgeCanceledSessionAttachments,
   replaceAttachmentParentsAndChunks,
+  updateSessionAttachmentIndexingProgress,
 } from './db'
-import { buildAttachmentChunks, buildEmbeddedText, selectAttachmentChunkingPipeline } from './chunking'
 import { getSessionAttachmentEmbeddingProvider } from './model-providers'
 
 const log = getLogger('session-attachment-rag:file-loaders')
@@ -103,6 +104,11 @@ async function processAttachment(attachmentId: number) {
   )
 
   const chunkingPipeline = selectAttachmentChunkingPipeline(attachment.filename)
+  await updateSessionAttachmentIndexingProgress(attachmentId, {
+    indexingStage: 'chunking',
+    totalChunks: 0,
+    embeddedChunks: 0,
+  })
   const { parents, children } = await buildAttachmentChunks(content, attachment.filename)
   if (parents.length === 0 || children.length === 0) {
     throw new Error('Attachment did not produce any retrievable chunks')
@@ -136,6 +142,11 @@ async function processAttachment(attachmentId: number) {
     }))
   )
   await ensureAttachmentNotCanceled(attachmentId)
+  await updateSessionAttachmentIndexingProgress(attachmentId, {
+    indexingStage: 'embedding',
+    totalChunks: children.length,
+    embeddedChunks: 0,
+  })
 
   const vectorStore = getVectorStore()
   const indexName = `sa_${attachment.id}`
@@ -189,6 +200,11 @@ async function processAttachment(attachmentId: number) {
         rawText: child.rawText,
       })),
     })
+    await updateSessionAttachmentIndexingProgress(attachmentId, {
+      indexingStage: 'embedding',
+      totalChunks: children.length,
+      embeddedChunks: Math.min(index + batchChildren.length, children.length),
+    })
     log.info(
       `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} [FILE] Upserted embedding batch: attachmentId=${attachment.id}, batchStart=${index}, batchSize=${batchChildren.length}`
     )
@@ -198,6 +214,11 @@ async function processAttachment(attachmentId: number) {
     }
   }
 
+  await updateSessionAttachmentIndexingProgress(attachmentId, {
+    indexingStage: 'finalizing',
+    totalChunks: children.length,
+    embeddedChunks: children.length,
+  })
   log.info(
     `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} [FILE] Attachment processing completed: id=${attachment.id}, file="${attachment.filename}"`
   )

@@ -47,7 +47,9 @@ async function attachLargeFileRagMetadata(sessionId: string, message: Message): 
         nextFile.sessionAttachmentIndexStatus !== file.sessionAttachmentIndexStatus ||
         nextFile.sessionAttachmentStatus !== file.sessionAttachmentStatus ||
         nextFile.sessionAttachmentChunkCount !== file.sessionAttachmentChunkCount ||
-        nextFile.error !== file.error
+        nextFile.sessionAttachmentTotalChunks !== file.sessionAttachmentTotalChunks ||
+        nextFile.sessionAttachmentEmbeddedChunks !== file.sessionAttachmentEmbeddedChunks ||
+        nextFile.sessionAttachmentIndexingStage !== file.sessionAttachmentIndexingStage
       return nextFile
     })
   )

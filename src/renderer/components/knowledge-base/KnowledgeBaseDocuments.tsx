@@ -16,7 +16,12 @@ import {
   Text,
   Tooltip,
 } from '@mantine/core'
-import { KNOWLEDGE_BASE_MAX_FILE_SIZE, KNOWLEDGE_BASE_MAX_FILE_SIZE_LABEL } from '@shared/knowledge-base'
+import {
+  KNOWLEDGE_BASE_MAX_FILE_SIZE,
+  KNOWLEDGE_BASE_MAX_FILE_SIZE_LABEL,
+  KNOWLEDGE_BASE_MAX_PARSED_CONTENT_SIZE_LABEL,
+  KNOWLEDGE_BASE_PARSED_CONTENT_TOO_LARGE_ERROR,
+} from '@shared/knowledge-base'
 import type { FileMeta, KnowledgeBase } from '@shared/types'
 import { formatFileSize } from '@shared/utils'
 import {
@@ -121,7 +126,11 @@ const KnowledgeBaseDocuments: React.FC<KnowledgeBaseDocumentsProps> = ({ knowled
   const shouldShowChatboxAISuggestion = useMemo(() => {
     if (failedFiles.length === 0) return false
     // Check if any failed file used a parser that should show the suggestion
-    return failedFiles.some((file) => !PARSER_NO_SUGGESTION_LIST.includes(file.parser_type || 'local'))
+    return failedFiles.some(
+      (file) =>
+        file.error !== KNOWLEDGE_BASE_PARSED_CONTENT_TOO_LARGE_ERROR &&
+        !PARSER_NO_SUGGESTION_LIST.includes(file.parser_type || 'local')
+    )
   }, [failedFiles])
 
   // MIME type correction for Windows compatibility
@@ -598,8 +607,12 @@ const KnowledgeBaseDocuments: React.FC<KnowledgeBaseDocumentsProps> = ({ knowled
       case 'paused':
         return <IconPlayerPause size={16} color="var(--chatbox-tint-warning)" />
       case 'failed': {
+        const isParsedContentTooLarge = error === KNOWLEDGE_BASE_PARSED_CONTENT_TOO_LARGE_ERROR
         // Determine label based on actual parser type used
         const getParserLabel = () => {
+          if (isParsedContentTooLarge) {
+            return t('Too much text')
+          }
           switch (parserType) {
             case 'mineru':
               return t('MinerU parse failed')
@@ -609,17 +622,15 @@ const KnowledgeBaseDocuments: React.FC<KnowledgeBaseDocumentsProps> = ({ knowled
               return t('Local parse failed')
           }
         }
+        const errorLabel = isParsedContentTooLarge
+          ? t('Parsed document content must be {{limit}} or smaller.', {
+              limit: KNOWLEDGE_BASE_MAX_PARSED_CONTENT_SIZE_LABEL,
+            })
+          : error || t('Processing failed')
         const isRemoteParser = parserType === 'mineru' || parserType === 'chatbox-ai'
         return (
           <Flex gap={4} align="center">
-            <Tooltip
-              label={error || t('Processing failed')}
-              multiline
-              w={300}
-              withArrow
-              position="top"
-              transitionProps={{ duration: 200 }}
-            >
+            <Tooltip label={errorLabel} multiline w={300} withArrow position="top" transitionProps={{ duration: 200 }}>
               <Pill size="xs" c={isRemoteParser ? 'orange' : 'gray'} className="cursor-help">
                 {getParserLabel()}
               </Pill>
@@ -954,7 +965,7 @@ const KnowledgeBaseDocuments: React.FC<KnowledgeBaseDocumentsProps> = ({ knowled
                                 {getStatusIcon(doc.status, doc.error, doc.parser_type)}
                               </Center>
                             )}
-                            {doc.status === 'failed' && (
+                            {doc.status === 'failed' && doc.error !== KNOWLEDGE_BASE_PARSED_CONTENT_TOO_LARGE_ERROR && (
                               <ActionIcon
                                 variant="subtle"
                                 color="blue"

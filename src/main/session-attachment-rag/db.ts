@@ -3,9 +3,9 @@ import path from 'node:path'
 import type { Client } from '@libsql/client'
 import { LibSQLVector } from '@mastra/libsql'
 import { app } from 'electron'
+import { SESSION_ATTACHMENT_RAG_LOG_PREFIX } from '../../shared/session-attachment-rag/logging'
 import { sentry } from '../adapters/sentry'
 import { getLogger } from '../util'
-import { SESSION_ATTACHMENT_RAG_LOG_PREFIX } from '../../shared/session-attachment-rag/logging'
 
 const log = getLogger('session-attachment-rag:db')
 
@@ -30,6 +30,7 @@ let db: Client
 let vectorStore: LibSQLVector
 
 export type SessionAttachmentStatus = 'pending' | 'indexing' | 'ready' | 'failed' | 'canceled'
+export type SessionAttachmentIndexingStage = 'queued' | 'chunking' | 'embedding' | 'finalizing' | 'ready'
 
 export interface SessionAttachmentRecord {
   id: number
@@ -41,6 +42,9 @@ export interface SessionAttachmentRecord {
   fileSize: number
   tokenEstimate: number
   chunkCount?: number
+  totalChunks?: number
+  embeddedChunks?: number
+  indexingStage?: SessionAttachmentIndexingStage
   parserType?: string
   status: SessionAttachmentStatus
   error?: string
@@ -89,6 +93,9 @@ function mapRowToSessionAttachmentRecord(row: Record<string, unknown>): SessionA
     fileSize: Number(row.file_size ?? 0),
     tokenEstimate: Number(row.token_estimate ?? 0),
     chunkCount: Number(row.chunk_count ?? 0),
+    totalChunks: Number(row.total_chunks ?? 0),
+    embeddedChunks: Number(row.embedded_chunks ?? 0),
+    indexingStage: row.indexing_stage ? (String(row.indexing_stage) as SessionAttachmentIndexingStage) : undefined,
     parserType: row.parser_type ? String(row.parser_type) : undefined,
     status: String(row.status) as SessionAttachmentStatus,
     error: row.error ? String(row.error) : undefined,
@@ -101,10 +108,9 @@ function mapRowToSessionAttachmentRecord(row: Record<string, unknown>): SessionA
 /**
  * Schema version of the session attachment RAG database. Bump this when introducing
  * non-backward-compatible schema changes and add a corresponding migration step in
- * `runSchemaMigrations`. The current schema is treated as version 1 (initial release);
- * any installation found at version 0 is upgraded to 1 by simply stamping user_version.
+ * `runSchemaMigrations`.
  */
-const SCHEMA_VERSION = 1
+const SCHEMA_VERSION = 2
 
 async function getSchemaVersion(client: Client): Promise<number> {
   const rs = await client.execute('PRAGMA user_version')
@@ -125,11 +131,21 @@ async function runSchemaMigrations(client: Client) {
   log.info(
     `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} [DB] Migrating schema: current=${currentVersion}, target=${SCHEMA_VERSION}`
   )
-  // Future migrations look like:
-  //   if (currentVersion < 2) { await client.execute('ALTER TABLE ...'); }
-  //   if (currentVersion < 3) { ... }
-  // The CREATE TABLE IF NOT EXISTS statements above guarantee the v1 baseline already
-  // exists for both fresh installs and pre-versioned installs, so v0 → v1 needs no DDL.
+  if (currentVersion < 2) {
+    const migrations = [
+      'ALTER TABLE session_attachment ADD COLUMN indexing_stage TEXT DEFAULT NULL',
+      'ALTER TABLE session_attachment ADD COLUMN total_chunks INTEGER DEFAULT 0',
+      'ALTER TABLE session_attachment ADD COLUMN embedded_chunks INTEGER DEFAULT 0',
+    ]
+    for (const sql of migrations) {
+      await client.execute(sql).catch((error) => {
+        if (error instanceof Error && error.message.includes('duplicate column name')) {
+          return
+        }
+        throw error
+      })
+    }
+  }
   await setSchemaVersion(client, SCHEMA_VERSION)
 }
 
@@ -147,6 +163,9 @@ async function initDB(client: Client) {
         token_estimate INTEGER DEFAULT 0,
         parser_type TEXT,
         status TEXT NOT NULL DEFAULT 'pending',
+        indexing_stage TEXT DEFAULT NULL,
+        total_chunks INTEGER DEFAULT 0,
+        embedded_chunks INTEGER DEFAULT 0,
         error TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         processing_started_at DATETIME,
@@ -391,8 +410,8 @@ export async function createSessionAttachment(params: CreateSessionAttachmentPar
   )
   const rs = await client.execute({
     sql: `INSERT INTO session_attachment
-      (session_id, message_id, attachment_storage_key, filename, mime_type, file_size, token_estimate, parser_type, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      (session_id, message_id, attachment_storage_key, filename, mime_type, file_size, token_estimate, parser_type, status, indexing_stage)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     args: [
       params.sessionId,
       params.messageId,
@@ -403,6 +422,7 @@ export async function createSessionAttachment(params: CreateSessionAttachmentPar
       params.tokenEstimate,
       params.parserType ?? null,
       'pending',
+      'queued',
     ],
   })
   log.info(
@@ -485,8 +505,8 @@ export async function listSessionAttachmentsByIds(ids: number[]): Promise<Sessio
 export async function markSessionAttachmentIndexing(id: number) {
   const client = getDatabase()
   const result = await client.execute({
-    sql: 'UPDATE session_attachment SET status = ?, error = NULL, processing_started_at = CURRENT_TIMESTAMP, completed_at = NULL WHERE id = ? AND status = ?',
-    args: ['indexing', id, 'pending'],
+    sql: 'UPDATE session_attachment SET status = ?, indexing_stage = ?, error = NULL, processing_started_at = CURRENT_TIMESTAMP, completed_at = NULL WHERE id = ? AND status = ?',
+    args: ['indexing', 'queued', id, 'pending'],
   })
   if ((result.rowsAffected || 0) > 0) {
     log.info(`${SESSION_ATTACHMENT_RAG_LOG_PREFIX} [DB] Marked attachment indexing: attachmentId=${id}`)
@@ -495,11 +515,44 @@ export async function markSessionAttachmentIndexing(id: number) {
   return false
 }
 
+export async function updateSessionAttachmentIndexingProgress(
+  id: number,
+  params: {
+    indexingStage: SessionAttachmentIndexingStage
+    totalChunks?: number
+    embeddedChunks?: number
+  }
+) {
+  const client = getDatabase()
+  const assignments = ['indexing_stage = ?']
+  const args: Array<string | number> = [params.indexingStage]
+  if (params.totalChunks !== undefined) {
+    assignments.push('total_chunks = ?')
+    args.push(params.totalChunks)
+  }
+  if (params.embeddedChunks !== undefined) {
+    assignments.push('embedded_chunks = ?')
+    args.push(params.embeddedChunks)
+  }
+  args.push(id)
+  await client.execute({
+    sql: `UPDATE session_attachment SET ${assignments.join(', ')} WHERE id = ? AND status = ?`,
+    args: [...args, 'indexing'],
+  })
+}
+
 export async function markSessionAttachmentReady(id: number) {
   const client = getDatabase()
   const result = await client.execute({
-    sql: 'UPDATE session_attachment SET status = ?, error = NULL, processing_started_at = NULL, completed_at = CURRENT_TIMESTAMP WHERE id = ? AND status = ?',
-    args: ['ready', id, 'indexing'],
+    sql: `UPDATE session_attachment
+      SET status = ?,
+        indexing_stage = ?,
+        embedded_chunks = CASE WHEN total_chunks > 0 THEN total_chunks ELSE embedded_chunks END,
+        error = NULL,
+        processing_started_at = NULL,
+        completed_at = CURRENT_TIMESTAMP
+      WHERE id = ? AND status = ?`,
+    args: ['ready', 'ready', id, 'indexing'],
   })
   if ((result.rowsAffected || 0) > 0) {
     log.info(`${SESSION_ATTACHMENT_RAG_LOG_PREFIX} [DB] Marked attachment ready: attachmentId=${id}`)
@@ -529,8 +582,8 @@ export async function retrySessionAttachment(id: number) {
     throw new Error('Only failed session attachments can be retried')
   }
   await client.execute({
-    sql: 'UPDATE session_attachment SET status = ?, error = NULL, processing_started_at = NULL, completed_at = NULL WHERE id = ?',
-    args: ['pending', id],
+    sql: 'UPDATE session_attachment SET status = ?, indexing_stage = ?, total_chunks = 0, embedded_chunks = 0, error = NULL, processing_started_at = NULL, completed_at = NULL WHERE id = ?',
+    args: ['pending', 'queued', id],
   })
   log.info(`${SESSION_ATTACHMENT_RAG_LOG_PREFIX} [DB] Reset attachment to pending: attachmentId=${id}`)
 }
