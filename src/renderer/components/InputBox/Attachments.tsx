@@ -3,6 +3,7 @@ import { Tooltip, Typography } from '@mui/material'
 import { ChatboxAIAPIError } from '@shared/models/errors'
 import type { SessionAttachmentIndexingStage } from '@shared/types'
 import { AlertCircle, CheckCircle, Eye, Link, Link2, Loader2, RotateCw, Trash2 } from 'lucide-react'
+import type { MouseEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   SESSION_ATTACHMENT_RAG_PARSED_CONTENT_TOO_LARGE_ERROR,
@@ -94,13 +95,29 @@ export function FileMiniCard(props: {
   isTakingLong?: boolean
   errorMessage?: string
   onErrorClick?: () => void
+  onPreviewClick?: () => void
 }) {
-  const { name, onDelete, status, statusText, progressValue, isTakingLong, errorMessage, onErrorClick } = props
+  const {
+    name,
+    onDelete,
+    status,
+    statusText,
+    progressValue,
+    isTakingLong,
+    errorMessage,
+    onErrorClick,
+    onPreviewClick,
+  } = props
   const { t } = useTranslation()
 
-  const handleClick = () => {
+  const handleClick = (e: MouseEvent<HTMLDivElement>) => {
+    e.stopPropagation()
     if (status === 'error' && onErrorClick) {
       onErrorClick()
+      return
+    }
+    if (onPreviewClick) {
+      onPreviewClick()
     }
   }
 
@@ -118,7 +135,15 @@ export function FileMiniCard(props: {
                                 group/file-mini-card relative"
       onClick={handleClick}
     >
-      <Tooltip title={status === 'error' && translatedError ? translatedError : name}>
+      <Tooltip
+        title={
+          status === 'error' && translatedError
+            ? translatedError
+            : onPreviewClick
+              ? t('Click to view parsed content')
+              : name
+        }
+      >
         <div className="flex flex-col justify-center items-center min-w-0 w-full">
           <FileIcon filename={name} className="w-8 h-8 text-black mb-1" />
           <Typography className="w-full px-1 text-black text-center" noWrap sx={{ fontSize: '12px', lineHeight: 1.25 }}>

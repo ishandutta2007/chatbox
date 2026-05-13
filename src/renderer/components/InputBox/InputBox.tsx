@@ -1373,6 +1373,16 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
                           })
                         }
                       }}
+                      onPreviewClick={
+                        preprocessedFile?.storageKey
+                          ? () => {
+                              void NiceModal.show('content-viewer', {
+                                title: `${t('File Content')}: ${file.name}`,
+                                storageKey: preprocessedFile.storageKey,
+                              })
+                            }
+                          : undefined
+                      }
                       onDelete={() => {
                         // Cancel any ongoing MinerU parsing for this file
                         if (file.path && platform.cancelMineruParse) {
