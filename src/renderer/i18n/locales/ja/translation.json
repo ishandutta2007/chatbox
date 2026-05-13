@@ -916,6 +916,7 @@
   "You can change this setting later in Settings → ": "この設定は後で設定から変更できます → ",
   "You have multiple licenses. Please select one to use:": "複数のライセンスをお持ちです。使用するライセンスを一つ選択してください。",
   "You have no more Chatbox AI quota left this month.": "今月の Chatbox AI の利用可能枠がなくなりました。",
+  "You have no more Chatbox AI quota left today.": "本日のChatbox AIクォータを使い切りました。",
   "You have unsaved changes. Exiting will discard these changes.": "未保存の変更があります。終了すると、これらの変更は破棄されます。",
   "You haven't completed the setup yet. Your progress will be cleared if you leave now.": "設定がまだ完了していません。このまま離れると、これまでの進捗がクリアされます。",
   "You might also want to ask": "こちらも聞いてみませんか？",

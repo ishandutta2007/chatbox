@@ -450,8 +450,12 @@ export const LoggedInView = forwardRef<HTMLDivElement, LoggedInViewProps>(
                           return t('License expired, please check your license key')
                         case 'reached_activation_limit':
                           return t('This license key has reached the activation limit.')
-                        case 'quota_exceeded':
-                          return t('You have no more Chatbox AI quota left this month.')
+                        case 'quota_exceeded': {
+                          const selectedLicense = licenses.find((l) => l.key === selectedLicenseKey)
+                          return selectedLicense?.product_name === 'Chatbox AI Free'
+                            ? t('You have no more Chatbox AI quota left today.')
+                            : t('You have no more Chatbox AI quota left this month.')
+                        }
                         default:
                           return t('Failed to load license details')
                       }
@@ -532,7 +536,11 @@ export const LoggedInView = forwardRef<HTMLDivElement, LoggedInViewProps>(
               <Alert variant="light" color="yellow" p="sm">
                 <Flex gap="xs" align="center" c="chatbox-primary">
                   <ScalableIcon icon={IconExclamationCircle} className="flex-shrink-0" />
-                  <Text>{t('You have no more Chatbox AI quota left this month.')}</Text>
+                  <Text>
+                    {licenseDetail.name === 'Chatbox AI Free'
+                      ? t('You have no more Chatbox AI quota left today.')
+                      : t('You have no more Chatbox AI quota left this month.')}
+                  </Text>
 
                   <UnstyledButton
                     onClick={() =>

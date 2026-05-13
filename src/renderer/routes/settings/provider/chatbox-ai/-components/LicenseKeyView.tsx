@@ -176,7 +176,9 @@ export const LicenseKeyView = forwardRef<HTMLDivElement, LicenseKeyViewProps>(({
                           return t('This license key has reached the activation limit.')
                         case 'quota_exceeded':
                         case 'token_quota_exhausted':
-                          return t('You have no more Chatbox AI quota left this month.')
+                          return licenseDetail?.name === 'Chatbox AI Free'
+                            ? t('You have no more Chatbox AI quota left today.')
+                            : t('You have no more Chatbox AI quota left this month.')
                         default:
                           return t('Failed to activate license, please check your license key and network connection')
                       }
@@ -224,7 +226,11 @@ export const LicenseKeyView = forwardRef<HTMLDivElement, LicenseKeyViewProps>(({
                 <Alert variant="light" color="yellow" p="sm">
                   <Flex gap="xs" align="center" c="chatbox-primary">
                     <ScalableIcon icon={IconExclamationCircle} className="flex-shrink-0" />
-                    <Text>{t('You have no more Chatbox AI quota left this month.')}</Text>
+                    <Text>
+                      {licenseDetail.name === 'Chatbox AI Free'
+                        ? t('You have no more Chatbox AI quota left today.')
+                        : t('You have no more Chatbox AI quota left this month.')}
+                    </Text>
 
                     <a
                       href={buildChatboxUrl(

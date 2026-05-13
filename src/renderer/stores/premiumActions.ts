@@ -24,6 +24,7 @@ export function useAutoValidate(): boolean {
       licenseKey: '',
       licenseInstances: omit(state.licenseInstances, state.licenseKey || ''),
       licenseDetail: undefined,
+      licensePlanName: undefined,
       licenseActivationMethod: undefined,
     }))
   }
@@ -81,6 +82,7 @@ export async function deactivate(clearLoginState = true) {
   settingsStore.setState((settings) => ({
     licenseKey: '',
     licenseDetail: undefined,
+    licensePlanName: undefined,
     licenseActivationMethod: undefined,
     licenseInstances: omit(settings.licenseInstances, settings.licenseKey || ''),
     mcp: {
@@ -152,6 +154,15 @@ export async function activate(
   // 如果获取详情返回错误（如过期、额度用尽），返回错误码
   if (licenseDetailResponse.error) {
     const error = licenseDetailResponse.error.code || 'license_error'
+    // if expired
+    if (error === 'expired' || error === 'expired_license') settingsStore.setState({ hasExpiredLicense: true })
+    // 即使有错误，也保存 license 详情数据（quota_exceeded 等错误仍会返回 data）
+    if (licenseDetailResponse.data) {
+      settingsStore.setState({
+        licenseDetail: licenseDetailResponse.data,
+        licensePlanName: licenseDetailResponse.data.name,
+      })
+    }
     if (shouldTrackKeyVerifyEvent) {
       trackJkClickEvent(JK_EVENTS.KEY_VERIFY_FAILED, {
         pageName,
@@ -174,6 +185,7 @@ export async function activate(
       [licenseKey]: result.instanceId,
     },
     licenseDetail: licenseDetailResponse.data || undefined,
+    licensePlanName: licenseDetailResponse.data?.name,
     // 同步更新手动激活的 license key 显示值（用于设置页面输入框回显）
     ...(method === 'manual' ? { memorizedManualLicenseKey: licenseKey } : {}),
   }))

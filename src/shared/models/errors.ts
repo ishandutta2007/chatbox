@@ -64,6 +64,13 @@ export class ChatboxAIAPIError extends BaseError {
       i18nKey:
         'You have reached your monthly quota for the {{model}} model. Please <OpenSettingButton>go to Settings</OpenSettingButton> to switch to a different model, view your quota usage, or upgrade your plan.',
     },
+    // 超出配额（免费计划）
+    token_quota_exhausted_free: {
+      name: 'token_quota_exhausted_free',
+      code: 10004, // 免费计划的每日配额用同一个 code，前端根据 license 类型区分展示
+      i18nKey:
+        'You have reached your daily quota for the {{model}} model. Please <OpenSettingButton>go to Settings</OpenSettingButton> to switch to a different model, view your quota usage, or upgrade your plan.',
+    },
     // 当前套餐不支持该模型
     license_upgrade_required: {
       name: 'license_upgrade_required',
@@ -302,9 +309,15 @@ export class ChatboxAIAPIError extends BaseError {
     }
     return null
   }
-  static getDetail(code: number) {
+  static getDetail(code: number, preferredCodeName?: string) {
     if (!code) {
       return null
+    }
+    if (preferredCodeName) {
+      const preferred = ChatboxAIAPIError.codeNameMap[preferredCodeName]
+      if (preferred && preferred.code === code) {
+        return preferred
+      }
     }
     for (const name in ChatboxAIAPIError.codeNameMap) {
       if (ChatboxAIAPIError.codeNameMap[name].code === code) {

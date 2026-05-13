@@ -8,6 +8,7 @@ import { trackingEvent } from '@/packages/event'
 import { buildChatboxUrl } from '@/packages/remote'
 import platform from '@/platform'
 import * as settingActions from '@/stores/settingActions'
+import { useSettingsStore } from '@/stores/settingsStore'
 
 interface ChatboxAIErrorMessageProps {
   errorCode: number
@@ -29,7 +30,10 @@ export const ChatboxAIErrorMessage: FC<ChatboxAIErrorMessageProps> = ({
   model,
   trackingSource = 'msg_upgrade_required',
 }) => {
-  const detail = ChatboxAIAPIError.getDetail(errorCode)
+  const licensePlanName = useSettingsStore((s) => s.licensePlanName)
+  const isFreePlan = licensePlanName === 'Chatbox AI Free'
+  const codeName = isFreePlan ? 'token_quota_exhausted_free' : undefined
+  const detail = ChatboxAIAPIError.getDetail(errorCode, codeName)
   if (!detail) return null
 
   return (
