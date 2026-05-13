@@ -26,7 +26,7 @@ You are now translating the following text from English to ${target}.
 
   const system = instruction ? `${baseSystem}\n\nAdditional instruction: ${instruction}` : baseSystem
   const { text } = await generateText({
-    model: openai('gemini-3.1-flash-lite-preview'),
+    model: openai('gemini-3.1-flash-lite'),
     system,
     prompt: message,
   })

@@ -4956,7 +4956,7 @@ export const MODELS_DEV_SNAPSHOT: ModelRegistryData = {
       releaseDate: '2026-02-26',
     },
     'gemini-3.1-flash-lite-preview': {
-      modelId: 'gemini-3.1-flash-lite-preview',
+      modelId: 'gemini-3.1-flash-lite',
       type: 'chat',
       capabilities: ['tool_use', 'reasoning', 'vision'],
       contextWindow: 1048576,
