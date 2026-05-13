@@ -1,6 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import type { Client } from '@libsql/client'
+import { type Client, createClient } from '@libsql/client'
 import { LibSQLVector } from '@mastra/libsql'
 import { app } from 'electron'
 import { SESSION_ATTACHMENT_RAG_LOG_PREFIX } from '../../shared/session-attachment-rag/logging'
@@ -224,14 +224,19 @@ async function initDB(client: Client) {
 export async function initializeDatabase() {
   try {
     ensureDbDir()
-    vectorStore = new LibSQLVector({
-      connectionUrl: `file:${dbPath}`,
-    })
-    // biome-ignore lint/suspicious/noExplicitAny: mastra exposes the libsql client on an internal field
-    db = (vectorStore as any).turso
+    // Keep metadata operations on a dedicated client instead of reusing
+    // LibSQLVector's private client. Vector upsert opens transactions and may
+    // mutate that internal client's connection state, which must not affect
+    // session_attachment status/progress updates.
+    db = createClient({ url: `file:${dbPath}` })
+    await db.execute('PRAGMA journal_mode=WAL')
+    await db.execute('PRAGMA busy_timeout = 5000')
     await db.execute('PRAGMA foreign_keys = ON')
     await initDB(db)
     await cleanupInterruptedIndexingAttachments()
+    vectorStore = new LibSQLVector({
+      connectionUrl: `file:${dbPath}`,
+    })
   } catch (error) {
     log.error(
       `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} [DB] Failed to initialize session attachment rag database system:`,
