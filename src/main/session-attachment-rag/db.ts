@@ -12,15 +12,19 @@ const log = getLogger('session-attachment-rag:db')
 const dbPath =
   process.env.SESSION_ATTACHMENT_RAG_DB_PATH ||
   path.join(app.getPath('userData'), 'databases', 'chatbox_session_rag.db')
+const vectorDbPath =
+  process.env.SESSION_ATTACHMENT_RAG_VECTOR_DB_PATH ||
+  path.join(app.getPath('userData'), 'databases', 'chatbox_session_rag_vectors.db')
 
-function ensureDbDir() {
-  const dbDir = path.dirname(dbPath)
+function ensureDbDir(filePath: string) {
+  const dbDir = path.dirname(filePath)
   if (!fs.existsSync(dbDir)) {
     fs.mkdirSync(dbDir, { recursive: true })
   }
 }
 
-ensureDbDir()
+ensureDbDir(dbPath)
+ensureDbDir(vectorDbPath)
 
 if (typeof global.crypto === 'undefined' || !('subtle' in global.crypto)) {
   global.crypto = require('node:crypto')
@@ -28,6 +32,7 @@ if (typeof global.crypto === 'undefined' || !('subtle' in global.crypto)) {
 
 let db: Client
 let vectorStore: LibSQLVector
+let vectorWriteQueue: Promise<void> = Promise.resolve()
 
 export type SessionAttachmentStatus = 'pending' | 'indexing' | 'ready' | 'failed' | 'canceled'
 export type SessionAttachmentIndexingStage = 'queued' | 'chunking' | 'embedding' | 'finalizing' | 'ready'
@@ -56,6 +61,8 @@ export interface SessionAttachmentRecord {
 export interface SessionAttachmentDebugSnapshot {
   dbPath: string
   dbSizeBytes: number
+  vectorDbPath: string
+  vectorDbSizeBytes: number
   attachmentCount: number
   parentCount: number
   chunkCount: number
@@ -221,9 +228,68 @@ async function initDB(client: Client) {
   }
 }
 
+function getFileSizeBytes(filePath: string): number {
+  try {
+    return fs.statSync(filePath).size
+  } catch {
+    return 0
+  }
+}
+
+function quarantineVectorDbFiles(reason: unknown) {
+  const suffix = `.corrupt-${Date.now()}`
+  const files = [vectorDbPath, `${vectorDbPath}-wal`, `${vectorDbPath}-shm`]
+  for (const filePath of files) {
+    if (!fs.existsSync(filePath)) {
+      continue
+    }
+    const targetPath = `${filePath}${suffix}`
+    try {
+      fs.renameSync(filePath, targetPath)
+      log.warn(
+        `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} [DB] Quarantined session attachment rag vector database file: ${filePath} -> ${targetPath}`
+      )
+    } catch (error) {
+      log.error(
+        `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} [DB] Failed to quarantine session attachment rag vector database file: ${filePath}`,
+        error
+      )
+      throw error
+    }
+  }
+  sentry.withScope((scope) => {
+    scope.setTag('component', 'session-attachment-rag-db')
+    scope.setTag('operation', 'vector_db_quarantine')
+    scope.setExtra('vectorDbPath', vectorDbPath)
+    sentry.captureException(reason)
+  })
+}
+
+async function createVectorStoreWithHealthCheck(): Promise<LibSQLVector> {
+  const store = new LibSQLVector({
+    connectionUrl: `file:${vectorDbPath}`,
+  })
+  await store.listIndexes()
+  return store
+}
+
+async function initializeVectorStore(): Promise<LibSQLVector> {
+  try {
+    return await createVectorStoreWithHealthCheck()
+  } catch (error) {
+    log.error(
+      `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} [DB] Failed to initialize session attachment rag vector database, recreating vector database:`,
+      error
+    )
+    quarantineVectorDbFiles(error)
+    return await createVectorStoreWithHealthCheck()
+  }
+}
+
 export async function initializeDatabase() {
   try {
-    ensureDbDir()
+    ensureDbDir(dbPath)
+    ensureDbDir(vectorDbPath)
     // Keep metadata operations on a dedicated client instead of reusing
     // LibSQLVector's private client. Vector upsert opens transactions and may
     // mutate that internal client's connection state, which must not affect
@@ -234,9 +300,8 @@ export async function initializeDatabase() {
     await db.execute('PRAGMA foreign_keys = ON')
     await initDB(db)
     await cleanupInterruptedIndexingAttachments()
-    vectorStore = new LibSQLVector({
-      connectionUrl: `file:${dbPath}`,
-    })
+    vectorStore = await initializeVectorStore()
+    await cleanupReadyAttachmentsMissingVectorIndexes()
   } catch (error) {
     log.error(
       `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} [DB] Failed to initialize session attachment rag database system:`,
@@ -246,6 +311,7 @@ export async function initializeDatabase() {
       scope.setTag('component', 'session-attachment-rag-db')
       scope.setTag('operation', 'vector_store_initialization')
       scope.setExtra('dbPath', dbPath)
+      scope.setExtra('vectorDbPath', vectorDbPath)
       sentry.captureException(error)
     })
     throw error
@@ -278,8 +344,21 @@ export function getVectorStore(): LibSQLVector {
   return vectorStore
 }
 
+export async function runVectorWrite<T>(operation: () => Promise<T>): Promise<T> {
+  const run = vectorWriteQueue.then(operation, operation)
+  vectorWriteQueue = run.then(
+    () => undefined,
+    () => undefined
+  )
+  return await run
+}
+
 export function getSessionAttachmentRagDbPath(): string {
   return dbPath
+}
+
+export function getSessionAttachmentRagVectorDbPath(): string {
+  return vectorDbPath
 }
 
 export function parseSQLiteTimestamp(sqliteTimestamp: string): number {
@@ -362,9 +441,52 @@ export async function cleanupInterruptedIndexingAttachments() {
   }
 }
 
+export async function cleanupReadyAttachmentsMissingVectorIndexes() {
+  try {
+    const indexNames = new Set(await getVectorStore().listIndexes())
+    const rs = await db.execute({
+      sql: 'SELECT id FROM session_attachment WHERE status = ?',
+      args: ['ready'],
+    })
+    const missingIds = rs.rows
+      .map((row) => Number(row.id))
+      .filter((id) => Number.isFinite(id) && !indexNames.has(`sa_${id}`))
+
+    if (missingIds.length === 0) {
+      return 0
+    }
+
+    const placeholders = missingIds.map(() => '?').join(',')
+    await db.execute({
+      sql: `UPDATE session_attachment
+        SET status = ?,
+          error = ?,
+          processing_started_at = NULL,
+          completed_at = NULL
+        WHERE id IN (${placeholders})`,
+      args: ['failed', 'Vector index is missing. Please retry indexing this attachment.', ...missingIds],
+    })
+    log.warn(
+      `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} [DB] Marked ready attachments with missing vector indexes as failed: attachmentIds=${missingIds.join(',')}`
+    )
+    return missingIds.length
+  } catch (error) {
+    log.error(
+      `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} [DB] Failed to cleanup ready attachments with missing vector indexes:`,
+      error
+    )
+    sentry.withScope((scope) => {
+      scope.setTag('component', 'session-attachment-rag-db')
+      scope.setTag('operation', 'cleanup_missing_vector_indexes')
+      sentry.captureException(error)
+    })
+    return 0
+  }
+}
+
 export async function deleteAttachmentIndex(attachmentId: number) {
   try {
-    await getVectorStore().deleteIndex({ indexName: `sa_${attachmentId}` })
+    await runVectorWrite(() => getVectorStore().deleteIndex({ indexName: `sa_${attachmentId}` }))
   } catch (error) {
     log.warn(
       `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} [DB] Failed to delete vector index for attachment ${attachmentId}:`,
@@ -636,7 +758,7 @@ export async function replaceAttachmentParentsAndChunks(
     tokenEstimate: number
   }>
 ): Promise<Map<number, number>> {
-  return withTransaction(async () => {
+  return await withTransaction(async () => {
     const client = getDatabase()
     await client.execute({
       sql: 'DELETE FROM session_attachment_chunk WHERE attachment_id = ?',
@@ -758,11 +880,14 @@ export async function clearAllSessionAttachments(): Promise<number> {
 
   await deleteAttachmentGraphsBatch(ids)
 
-  const orphanIndexTables = await client.execute({
-    sql: "SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE 'sa_%' ORDER BY name ASC",
-  })
-  for (const row of orphanIndexTables.rows) {
-    const indexName = String(row.name)
+  const orphanIndexNames = await getVectorStore()
+    .listIndexes()
+    .then((indexes) => indexes.filter((indexName) => indexName.startsWith('sa_')).sort())
+    .catch((error) => {
+      log.warn(`${SESSION_ATTACHMENT_RAG_LOG_PREFIX} [DB] Failed to list orphan vector indexes:`, error)
+      return []
+    })
+  for (const indexName of orphanIndexNames) {
     try {
       await getVectorStore().deleteIndex({ indexName })
     } catch (error) {
@@ -804,30 +929,28 @@ export async function cleanupOrphanAttachments(
 export async function getSessionAttachmentDebugSnapshot(): Promise<SessionAttachmentDebugSnapshot> {
   const client = getDatabase()
 
-  const [
-    attachmentCountResult,
-    parentCountResult,
-    chunkCountResult,
-    statusCountResult,
-    vectorIndexResult,
-    recentResult,
-  ] = await Promise.all([
-    client.execute('SELECT COUNT(*) AS count FROM session_attachment'),
-    client.execute('SELECT COUNT(*) AS count FROM session_attachment_parent'),
-    client.execute('SELECT COUNT(*) AS count FROM session_attachment_chunk'),
-    client.execute('SELECT status, COUNT(*) AS count FROM session_attachment GROUP BY status'),
-    client.execute({
-      sql: "SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE 'sa_%' ORDER BY name ASC",
-    }),
-    client.execute({
-      sql: `SELECT a.*,
+  const [attachmentCountResult, parentCountResult, chunkCountResult, statusCountResult, recentResult] =
+    await Promise.all([
+      client.execute('SELECT COUNT(*) AS count FROM session_attachment'),
+      client.execute('SELECT COUNT(*) AS count FROM session_attachment_parent'),
+      client.execute('SELECT COUNT(*) AS count FROM session_attachment_chunk'),
+      client.execute('SELECT status, COUNT(*) AS count FROM session_attachment GROUP BY status'),
+      client.execute({
+        sql: `SELECT a.*,
           (SELECT COUNT(*) FROM session_attachment_chunk c WHERE c.attachment_id = a.id) AS chunk_count
           FROM session_attachment a
           WHERE a.status != 'canceled'
           ORDER BY a.id DESC
           LIMIT 20`,
-    }),
-  ])
+      }),
+    ])
+  const vectorIndexNames = await getVectorStore()
+    .listIndexes()
+    .then((indexes) => indexes.filter((indexName) => indexName.startsWith('sa_')).sort())
+    .catch((error) => {
+      log.warn(`${SESSION_ATTACHMENT_RAG_LOG_PREFIX} [DB] Failed to list vector indexes for debug snapshot:`, error)
+      return []
+    })
 
   const statusCounts = {
     pending: 0,
@@ -843,20 +966,15 @@ export async function getSessionAttachmentDebugSnapshot(): Promise<SessionAttach
     }
   }
 
-  let dbSizeBytes = 0
-  try {
-    dbSizeBytes = fs.statSync(dbPath).size
-  } catch {
-    dbSizeBytes = 0
-  }
-
   return {
     dbPath,
-    dbSizeBytes,
+    dbSizeBytes: getFileSizeBytes(dbPath),
+    vectorDbPath,
+    vectorDbSizeBytes: getFileSizeBytes(vectorDbPath),
     attachmentCount: Number(attachmentCountResult.rows[0]?.count ?? 0),
     parentCount: Number(parentCountResult.rows[0]?.count ?? 0),
     chunkCount: Number(chunkCountResult.rows[0]?.count ?? 0),
-    vectorIndexNames: vectorIndexResult.rows.map((row) => String(row.name)),
+    vectorIndexNames,
     statusCounts,
     recentAttachments: recentResult.rows.map((row) => {
       const attachment = mapRowToSessionAttachmentRecord(row as Record<string, unknown>)

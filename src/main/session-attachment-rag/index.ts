@@ -1,6 +1,6 @@
+import { SESSION_ATTACHMENT_RAG_LOG_PREFIX } from '../../shared/session-attachment-rag/logging'
 import { sentry } from '../adapters/sentry'
 import { getLogger } from '../util'
-import { SESSION_ATTACHMENT_RAG_LOG_PREFIX } from '../../shared/session-attachment-rag/logging'
 import { initializeDatabase } from './db'
 import { startWorkerLoop } from './file-loaders'
 import { registerSessionAttachmentRagHandlers } from './ipc-handlers'
@@ -44,16 +44,19 @@ getInitPromise().catch((error) => {
 })
 
 export {
+  cleanupReadyAttachmentsMissingVectorIndexes,
   createSessionAttachment,
   deleteAttachmentGraph,
   deleteAttachmentIndex,
   deleteMessageAttachments,
   deleteSessionAttachments,
-  getSessionAttachment,
   getDatabase,
+  getSessionAttachment,
+  getSessionAttachmentRagDbPath,
+  getSessionAttachmentRagVectorDbPath,
   getVectorStore,
-  listSessionAttachmentsByIds,
   listPendingSessionAttachments,
+  listSessionAttachmentsByIds,
   markSessionAttachmentFailed,
   markSessionAttachmentIndexing,
   markSessionAttachmentReady,

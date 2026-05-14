@@ -130,6 +130,8 @@ export interface SessionRagConfig {
 export interface SessionAttachmentRagDebugSnapshot {
   dbPath: string
   dbSizeBytes: number
+  vectorDbPath: string
+  vectorDbSizeBytes: number
   attachmentCount: number
   parentCount: number
   chunkCount: number

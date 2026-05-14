@@ -1,6 +1,6 @@
 import { Badge, Button, Code, Group, Loader, Stack, Table, Text, Title } from '@mantine/core'
-import { IconRefresh } from '@tabler/icons-react'
 import type { SessionAttachmentRagDebugSnapshot } from '@shared/types'
+import { IconRefresh } from '@tabler/icons-react'
 import { useEffect, useState } from 'react'
 import { AdaptiveModal } from '@/components/common/AdaptiveModal'
 import platform from '@/platform'
@@ -133,10 +133,18 @@ export function SessionAttachmentRagDevPane({ opened, onClose }: { opened: boole
         {snapshot && (
           <Stack gap="md">
             <div>
-              <Title order={5}>Database</Title>
+              <Title order={5}>Metadata Database</Title>
               <Code block>{snapshot.dbPath}</Code>
               <Text size="sm" mt="xs">
                 Size: {snapshot.dbSizeBytes.toLocaleString()} bytes
+              </Text>
+            </div>
+
+            <div>
+              <Title order={5}>Vector Database</Title>
+              <Code block>{snapshot.vectorDbPath}</Code>
+              <Text size="sm" mt="xs">
+                Size: {snapshot.vectorDbSizeBytes.toLocaleString()} bytes
               </Text>
             </div>
 

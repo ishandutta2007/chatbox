@@ -17,6 +17,7 @@ import {
   markSessionAttachmentReady,
   purgeCanceledSessionAttachments,
   replaceAttachmentParentsAndChunks,
+  runVectorWrite,
   updateSessionAttachmentIndexingProgress,
 } from './db'
 import { getSessionAttachmentEmbeddingProvider } from './model-providers'
@@ -165,10 +166,12 @@ async function processAttachment(attachmentId: number) {
   log.info(
     `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} [FILE] Embedding initialized: attachmentId=${attachment.id}, dimension=${firstEmbedding.embeddings[0].length}, totalChunks=${embeddedTexts.length}`
   )
-  await vectorStore.createIndex({
-    indexName,
-    dimension: firstEmbedding.embeddings[0].length,
-  })
+  await runVectorWrite(() =>
+    vectorStore.createIndex({
+      indexName,
+      dimension: firstEmbedding.embeddings[0].length,
+    })
+  )
 
   for (let index = 0; index < embeddedTexts.length; index += BATCH_SIZE) {
     await ensureAttachmentNotCanceled(attachmentId)
@@ -183,23 +186,25 @@ async function processAttachment(attachmentId: number) {
       embeddings = [firstEmbedding.embeddings[0], ...restEmbeddingResult.embeddings]
     }
 
-    await vectorStore.upsert({
-      indexName,
-      vectors: embeddings,
-      metadata: batchChildren.map((child) => ({
-        attachmentId: attachment.id,
-        parentId: parentIdMap.get(child.parentOrder),
-        filename: attachment.filename,
-        sectionPath: child.sectionPath,
-        chunkOrder: child.chunkOrder,
-        text: buildEmbeddedText({
+    await runVectorWrite(() =>
+      vectorStore.upsert({
+        indexName,
+        vectors: embeddings,
+        metadata: batchChildren.map((child) => ({
+          attachmentId: attachment.id,
+          parentId: parentIdMap.get(child.parentOrder),
           filename: attachment.filename,
           sectionPath: child.sectionPath,
-          text: child.rawText,
-        }),
-        rawText: child.rawText,
-      })),
-    })
+          chunkOrder: child.chunkOrder,
+          text: buildEmbeddedText({
+            filename: attachment.filename,
+            sectionPath: child.sectionPath,
+            text: child.rawText,
+          }),
+          rawText: child.rawText,
+        })),
+      })
+    )
     await updateSessionAttachmentIndexingProgress(attachmentId, {
       indexingStage: 'embedding',
       totalChunks: children.length,
