@@ -34,7 +34,7 @@ import { getPlatformDefaultDocumentParser, settingsStore } from './settingsStore
 
 const log = getLogger('session-helpers')
 const SESSION_ATTACHMENT_RAG_INLINE_THRESHOLD = 7500
-const SESSION_ATTACHMENT_RAG_INLINE_BYTE_THRESHOLD = 32 * 1024
+const SESSION_ATTACHMENT_RAG_INLINE_BYTE_THRESHOLD = 256 * 1024
 export const SESSION_ATTACHMENT_RAG_MAX_PARSED_BYTE_LENGTH = 3 * 1024 * 1024
 export const SESSION_ATTACHMENT_RAG_REQUIRES_CHATBOX_AI_ERROR = 'session_attachment_rag_requires_chatbox_ai'
 export const SESSION_ATTACHMENT_RAG_REQUIRES_KNOWLEDGE_BASE_ERROR = 'session_attachment_rag_requires_knowledge_base'
