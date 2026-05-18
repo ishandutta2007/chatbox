@@ -39,6 +39,31 @@ function isHtmlResponse(text: string): boolean {
   return trimmed.startsWith('<!doctype') || trimmed.startsWith('<html')
 }
 
+function getRecord(value: unknown): Record<string, unknown> | undefined {
+  if (!value || typeof value !== 'object') {
+    return undefined
+  }
+  return value as Record<string, unknown>
+}
+
+function getStringProperty(value: unknown, key: string): string | undefined {
+  const property = getRecord(value)?.[key]
+  return typeof property === 'string' && property.length > 0 ? property : undefined
+}
+
+function getChatboxErrorPayload(response: string): Record<string, unknown> | undefined {
+  const parsed: unknown = parseJsonOrEmpty(response)
+  return getRecord(getRecord(parsed)?.error)
+}
+
+function getChatboxErrorCode(response: string): string | undefined {
+  return getStringProperty(getChatboxErrorPayload(response), 'code')
+}
+
+function getChatboxRequestId(response: string, headers?: Headers): string | undefined {
+  return headers?.get('x-request-id') || getStringProperty(getChatboxErrorPayload(response), 'request_id')
+}
+
 const httpStatusMessages: Record<number, string> = {
   400: 'Bad Request',
   401: 'Unauthorized',
@@ -95,9 +120,10 @@ export function createAfetch(platformInfo: PlatformInfo) {
             console.error('[afetch] Failed to read error response body:', e)
             return ''
           })
+          const requestId = getChatboxRequestId(response, res.headers)
           if (options.parseChatboxRemoteError) {
-            const errorCodeName = parseJsonOrEmpty(response)?.error?.code
-            const chatboxAIError = ChatboxAIAPIError.fromCodeName(response, errorCodeName)
+            const errorCodeName = getChatboxErrorCode(response)
+            const chatboxAIError = ChatboxAIAPIError.fromCodeName(response, errorCodeName || '', requestId)
             if (chatboxAIError) {
               throw chatboxAIError
             }
@@ -105,7 +131,8 @@ export function createAfetch(platformInfo: PlatformInfo) {
           throw new ApiError(
             `Status Code ${res.status}, ${sanitizeResponseBody(res.status, response)}`,
             response || undefined,
-            res.status
+            res.status,
+            requestId
           )
         }
         return res
@@ -266,9 +293,10 @@ export function createAuthenticatedAfetch(config: AuthenticatedAfetchConfig) {
               console.error('[authenticatedAfetch] Failed to read retry error response body:', e)
               return ''
             })
+            const requestId = getChatboxRequestId(response, retryRes.headers)
             if (options.parseChatboxRemoteError) {
-              const errorCodeName = parseJsonOrEmpty(response)?.error?.code
-              const chatboxAIError = ChatboxAIAPIError.fromCodeName(response, errorCodeName)
+              const errorCodeName = getChatboxErrorCode(response)
+              const chatboxAIError = ChatboxAIAPIError.fromCodeName(response, errorCodeName || '', requestId)
               if (chatboxAIError) {
                 throw chatboxAIError
               }
@@ -276,7 +304,8 @@ export function createAuthenticatedAfetch(config: AuthenticatedAfetchConfig) {
             throw new ApiError(
               `Status Code ${retryRes.status}, ${sanitizeResponseBody(retryRes.status, response)}`,
               response || undefined,
-              retryRes.status
+              retryRes.status,
+              requestId
             )
           }
 
@@ -289,9 +318,10 @@ export function createAuthenticatedAfetch(config: AuthenticatedAfetchConfig) {
             console.error('[authenticatedAfetch] Failed to read error response body:', e)
             return ''
           })
+          const requestId = getChatboxRequestId(response, res.headers)
           if (options.parseChatboxRemoteError) {
-            const errorCodeName = parseJsonOrEmpty(response)?.error?.code
-            const chatboxAIError = ChatboxAIAPIError.fromCodeName(response, errorCodeName)
+            const errorCodeName = getChatboxErrorCode(response)
+            const chatboxAIError = ChatboxAIAPIError.fromCodeName(response, errorCodeName || '', requestId)
             if (chatboxAIError) {
               throw chatboxAIError
             }
@@ -299,7 +329,8 @@ export function createAuthenticatedAfetch(config: AuthenticatedAfetchConfig) {
           throw new ApiError(
             `Status Code ${res.status}, ${sanitizeResponseBody(res.status, response)}`,
             response || undefined,
-            res.status
+            res.status,
+            requestId
           )
         }
 

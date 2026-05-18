@@ -135,9 +135,27 @@ export function handleGenerationError(err: unknown, targetMsg: Message, settings
     error: `${error.message}`,
     errorExtra: pickBy(
       {
-        aiProvider: settings.provider,
-        host: error instanceof NetworkError ? error.host : undefined,
-        responseBody: error instanceof ApiError ? error.responseBody : undefined,
+        aiProvider: ocrError ? ocrError.ocrProvider : settings.provider,
+        host:
+          error instanceof NetworkError ? error.host : causeError instanceof NetworkError ? causeError.host : undefined,
+        responseBody:
+          error instanceof ApiError
+            ? error.responseBody
+            : causeError instanceof ApiError
+              ? causeError.responseBody
+              : undefined,
+        httpStatusCode:
+          error instanceof ApiError
+            ? error.statusCode
+            : causeError instanceof ApiError
+              ? causeError.statusCode
+              : undefined,
+        requestId:
+          error instanceof BaseError
+            ? error.requestId
+            : causeError instanceof BaseError
+              ? causeError.requestId
+              : undefined,
       },
       identity
     ),

@@ -1,7 +1,9 @@
 export class BaseError extends Error {
   public code = 1
-  constructor(message: string) {
+  public requestId: string | undefined
+  constructor(message: string, options?: { requestId?: string }) {
     super(message)
+    this.requestId = options?.requestId
   }
 }
 
@@ -10,9 +12,11 @@ export class BaseError extends Error {
 export class ApiError extends BaseError {
   public code = 10001
   public responseBody: string | undefined
-  constructor(message: string, responseBody?: string) {
-    super('API Error: ' + message)
+  public statusCode: number | undefined
+  constructor(message: string, responseBody?: string, statusCode?: number, requestId?: string) {
+    super('API Error: ' + message, { requestId })
     this.responseBody = responseBody
+    this.statusCode = statusCode
   }
 }
 
@@ -300,12 +304,12 @@ export class ChatboxAIAPIError extends BaseError {
         'The current search provider does not support reading webpages. Please <OpenExtensionSettingButton>choose a different search provider</OpenExtensionSettingButton> that supports this capability.',
     },
   }
-  static fromCodeName(response: string, codeName: string) {
+  static fromCodeName(response: string, codeName: string, requestId?: string) {
     if (!codeName) {
       return null
     }
     if (ChatboxAIAPIError.codeNameMap[codeName]) {
-      return new ChatboxAIAPIError(response, ChatboxAIAPIError.codeNameMap[codeName])
+      return new ChatboxAIAPIError(response, ChatboxAIAPIError.codeNameMap[codeName], requestId)
     }
     return null
   }
@@ -328,8 +332,8 @@ export class ChatboxAIAPIError extends BaseError {
   }
 
   public detail: ChatboxAIAPIErrorDetail
-  constructor(message: string, detail: ChatboxAIAPIErrorDetail) {
-    super(message)
+  constructor(message: string, detail: ChatboxAIAPIErrorDetail, requestId?: string) {
+    super(message, { requestId })
     this.detail = detail
     this.code = detail.code
   }
