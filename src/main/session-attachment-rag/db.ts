@@ -9,12 +9,14 @@ import { getLogger } from '../util'
 
 const log = getLogger('session-attachment-rag:db')
 
-const dbPath =
-  process.env.SESSION_ATTACHMENT_RAG_DB_PATH ||
-  path.join(app.getPath('userData'), 'databases', 'chatbox_session_rag.db')
-const vectorDbPath =
-  process.env.SESSION_ATTACHMENT_RAG_VECTOR_DB_PATH ||
-  path.join(app.getPath('userData'), 'databases', 'chatbox_session_rag_vectors.db')
+// Do not use `${userData}/databases`: Chromium/Electron profile storage may
+// unlink files in that directory. Keep app-owned sqlite files in our own folder.
+const userDataPath = app.getPath('userData')
+const appDatabaseDir = path.join(userDataPath, 'chatbox-databases')
+const defaultDbPath = path.join(appDatabaseDir, 'chatbox_session_rag.db')
+const defaultVectorDbPath = path.join(appDatabaseDir, 'chatbox_session_rag_vectors.db')
+const dbPath = process.env.SESSION_ATTACHMENT_RAG_DB_PATH || defaultDbPath
+const vectorDbPath = process.env.SESSION_ATTACHMENT_RAG_VECTOR_DB_PATH || defaultVectorDbPath
 
 function ensureDbDir(filePath: string) {
   const dbDir = path.dirname(filePath)
@@ -236,35 +238,6 @@ function getFileSizeBytes(filePath: string): number {
   }
 }
 
-function quarantineVectorDbFiles(reason: unknown) {
-  const suffix = `.corrupt-${Date.now()}`
-  const files = [vectorDbPath, `${vectorDbPath}-wal`, `${vectorDbPath}-shm`]
-  for (const filePath of files) {
-    if (!fs.existsSync(filePath)) {
-      continue
-    }
-    const targetPath = `${filePath}${suffix}`
-    try {
-      fs.renameSync(filePath, targetPath)
-      log.warn(
-        `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} [DB] Quarantined session attachment rag vector database file: ${filePath} -> ${targetPath}`
-      )
-    } catch (error) {
-      log.error(
-        `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} [DB] Failed to quarantine session attachment rag vector database file: ${filePath}`,
-        error
-      )
-      throw error
-    }
-  }
-  sentry.withScope((scope) => {
-    scope.setTag('component', 'session-attachment-rag-db')
-    scope.setTag('operation', 'vector_db_quarantine')
-    scope.setExtra('vectorDbPath', vectorDbPath)
-    sentry.captureException(reason)
-  })
-}
-
 async function createVectorStoreWithHealthCheck(): Promise<LibSQLVector> {
   const store = new LibSQLVector({
     connectionUrl: `file:${vectorDbPath}`,
@@ -274,26 +247,15 @@ async function createVectorStoreWithHealthCheck(): Promise<LibSQLVector> {
 }
 
 async function initializeVectorStore(): Promise<LibSQLVector> {
-  try {
-    return await createVectorStoreWithHealthCheck()
-  } catch (error) {
-    log.error(
-      `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} [DB] Failed to initialize session attachment rag vector database, recreating vector database:`,
-      error
-    )
-    quarantineVectorDbFiles(error)
-    return await createVectorStoreWithHealthCheck()
-  }
+  return await createVectorStoreWithHealthCheck()
 }
 
 export async function initializeDatabase() {
   try {
     ensureDbDir(dbPath)
     ensureDbDir(vectorDbPath)
-    // Keep metadata operations on a dedicated client instead of reusing
-    // LibSQLVector's private client. Vector upsert opens transactions and may
-    // mutate that internal client's connection state, which must not affect
-    // session_attachment status/progress updates.
+    // Keep metadata operations on a dedicated client. The vector store owns
+    // its separate database file and client.
     db = createClient({ url: `file:${dbPath}` })
     await db.execute('PRAGMA journal_mode=WAL')
     await db.execute('PRAGMA busy_timeout = 5000')

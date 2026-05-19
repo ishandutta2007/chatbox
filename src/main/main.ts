@@ -1,3 +1,7 @@
+// solve electron breaking changes, see https://www.electronjs.org/docs/latest/breaking-changes#behavior-changed-directory-databases-in-userdata-will-be-deleted
+// since 1.21.0, and this NEEDS to be imported before any other module, specifically before `app` inited.
+import './legacy-database-migration'
+
 /* eslint global-require: off, no-console: off, promise/always-return: off */
 
 /**
@@ -9,10 +13,10 @@
  * `./src/main.js` using webpack. This gives us some performance wins.
  */
 
+import fs from 'node:fs'
 import { app, BrowserWindow, dialog, globalShortcut, ipcMain, Menu, nativeTheme, session, shell, Tray } from 'electron'
 import electronDebug from 'electron-debug'
 import log from 'electron-log/main'
-import fs from 'node:fs'
 import os from 'os'
 import path from 'path'
 // @ts-expect-error - source-map-support doesn't have type definitions
@@ -25,8 +29,8 @@ import { handleDeepLink } from './deeplinks'
 import { parseFile } from './file-parser'
 import Locale from './locales'
 import * as mcpIpc from './mcp/ipc-stdio-transport'
-import { registerOAuthHandlers } from './oauth'
 import MenuBuilder from './menu'
+import { registerOAuthHandlers } from './oauth'
 import * as proxy from './proxy'
 import { registerSandboxHandlers } from './sandbox'
 import { registerSkillsHandlers } from './skills'

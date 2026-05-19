@@ -22,6 +22,7 @@ import { estimateTokens } from '@/packages/token'
 import platform from '@/platform'
 import storage from '@/storage'
 import { StorageKey, StorageKeyGenerator } from '@/storage/StoreStorage'
+import { authInfoStore } from '@/stores/authInfoStore'
 import { getMetaStorage } from '@/stores/chatStore'
 import { migrateSession, sortSessions } from '@/utils/session-utils'
 import * as defaults from '../../shared/defaults'
@@ -39,9 +40,19 @@ export const SESSION_ATTACHMENT_RAG_REQUIRES_CHATBOX_AI_ERROR = 'session_attachm
 export const SESSION_ATTACHMENT_RAG_REQUIRES_KNOWLEDGE_BASE_ERROR = 'session_attachment_rag_requires_knowledge_base'
 export const SESSION_ATTACHMENT_RAG_REQUIRES_TOOL_USE_MODEL_ERROR = 'session_attachment_rag_requires_tool_use_model'
 export const SESSION_ATTACHMENT_RAG_PARSED_CONTENT_TOO_LARGE_ERROR = 'session_attachment_rag_parsed_content_too_large'
+const SESSION_ATTACHMENT_RAG_AUTH_ERROR_PATTERNS = [
+  'provider chatbox-ai not set',
+  'chatbox-ai not set',
+  'missing token for rerank provider: chatbox-ai',
+]
+const SESSION_ATTACHMENT_RAG_INDEXING_ERROR_PATTERNS = [
+  'chatbox_session_rag_vectors.db',
+  'connectionfailed("unable to open connection to local database',
+  'session attachment rag vector store not initialized',
+]
 let sessionRagCapabilityCache:
   | {
-      licenseKey: string
+      key: string
       value: boolean
     }
   | undefined
@@ -138,13 +149,53 @@ function canFallbackToChatboxAI(): boolean {
   return Boolean(settingActions.getLicenseKey())
 }
 
+export function isSessionAttachmentRagAuthError(errorCode: string | undefined): boolean {
+  if (!errorCode) {
+    return false
+  }
+  if (errorCode === SESSION_ATTACHMENT_RAG_REQUIRES_CHATBOX_AI_ERROR) {
+    return true
+  }
+  const normalized = errorCode.toLowerCase()
+  return SESSION_ATTACHMENT_RAG_AUTH_ERROR_PATTERNS.some((pattern) => normalized.includes(pattern))
+}
+
+export function isSessionAttachmentRagIndexingError(errorCode: string | undefined): boolean {
+  if (!errorCode) {
+    return false
+  }
+  const normalized = errorCode.toLowerCase()
+  return SESSION_ATTACHMENT_RAG_INDEXING_ERROR_PATTERNS.some((pattern) => normalized.includes(pattern))
+}
+
+function hasUsableSessionAttachmentRagLicense(): boolean {
+  const settings = settingsStore.getState()
+  if (!settings.licenseKey) {
+    return false
+  }
+  if (settings.licenseActivationMethod === 'login') {
+    return !!authInfoStore.getState().getTokens()
+  }
+  return true
+}
+
 async function canUseSessionAttachmentRag(): Promise<boolean> {
   const licenseKey = settingActions.getLicenseKey() || ''
-  if (sessionRagCapabilityCache?.licenseKey === licenseKey) {
+  const hasUsableLicense = hasUsableSessionAttachmentRagLicense()
+  const capabilityCacheKey = `${licenseKey}:${hasUsableLicense ? 'active' : 'inactive'}`
+  if (sessionRagCapabilityCache?.key === capabilityCacheKey) {
     log.debug(
       `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} Capability cache hit: embedding=${sessionRagCapabilityCache.value}, hasLicense=${Boolean(licenseKey)}`
     )
     return sessionRagCapabilityCache.value
+  }
+
+  if (!hasUsableLicense) {
+    log.info(
+      `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} Capability skipped: missing active Chatbox license, hasLicense=${Boolean(licenseKey)}, method=${settingsStore.getState().licenseActivationMethod ?? 'none'}, platform=${platform.type}`
+    )
+    sessionRagCapabilityCache = { key: capabilityCacheKey, value: false }
+    return false
   }
 
   const value = !!(await remote.getSessionRagConfig({ licenseKey: licenseKey || undefined }).catch(() => undefined))
@@ -152,7 +203,7 @@ async function canUseSessionAttachmentRag(): Promise<boolean> {
   log.info(
     `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} Capability fetched: embedding=${value}, hasLicense=${Boolean(licenseKey)}, platform=${platform.type}`
   )
-  sessionRagCapabilityCache = { licenseKey, value }
+  sessionRagCapabilityCache = { key: capabilityCacheKey, value }
   return value
 }
 

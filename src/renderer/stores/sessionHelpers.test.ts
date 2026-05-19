@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const {
   blobStore,
   licenseState,
+  licenseActivationState,
+  authTokensState,
   sessionRagCapabilityState,
   parserState,
   mockParseFileLocally,
@@ -15,12 +17,16 @@ const {
 } = vi.hoisted(() => {
   const blobs = new Map<string, string>()
   const license = { key: 'licensed-key' as string | undefined }
+  const licenseActivation = { method: 'manual' as 'login' | 'manual' | undefined }
+  const authTokens = { hasTokens: true }
   const sessionRagCapability = { enabled: true }
   const parser = { type: 'local' as 'local' | 'chatbox-ai' | 'none' | 'mineru' }
 
   return {
     blobStore: blobs,
     licenseState: license,
+    licenseActivationState: licenseActivation,
+    authTokensState: authTokens,
     sessionRagCapabilityState: sessionRagCapability,
     parserState: parser,
     mockParseFileLocally: vi.fn(),
@@ -67,9 +73,20 @@ vi.mock('./settingActions', () => ({
   isPro: () => Boolean(licenseState.key),
 }))
 
+vi.mock('@/stores/authInfoStore', () => ({
+  authInfoStore: {
+    getState: () => ({
+      getTokens: () =>
+        authTokensState.hasTokens ? { accessToken: 'access-token', refreshToken: 'refresh-token' } : null,
+    }),
+  },
+}))
+
 vi.mock('./settingsStore', () => ({
   settingsStore: {
     getState: () => ({
+      licenseKey: licenseState.key,
+      licenseActivationMethod: licenseActivationState.method,
       extension: {
         documentParser: { type: parserState.type },
       },
@@ -115,9 +132,12 @@ vi.mock('@/stores/chatStore', () => ({
 }))
 
 import {
+  isSessionAttachmentRagAuthError,
+  isSessionAttachmentRagIndexingError,
   prepareFileAttachment,
   SESSION_ATTACHMENT_RAG_MAX_PARSED_BYTE_LENGTH,
   SESSION_ATTACHMENT_RAG_PARSED_CONTENT_TOO_LARGE_ERROR,
+  SESSION_ATTACHMENT_RAG_REQUIRES_CHATBOX_AI_ERROR,
 } from './sessionHelpers'
 
 function createFile(name: string, content = 'binary-content'): File {
@@ -133,6 +153,8 @@ describe('preprocessFile local parser fallback', () => {
   beforeEach(() => {
     blobStore.clear()
     licenseState.key = 'licensed-key'
+    licenseActivationState.method = 'manual'
+    authTokensState.hasTokens = true
     sessionRagCapabilityState.enabled = true
     parserState.type = 'local'
     mockParseFileLocally.mockReset()
@@ -241,12 +263,46 @@ describe('preprocessFile local parser fallback', () => {
 
     const result = await prepareFileAttachment(file, { provider: '', modelId: '' })
 
-    expect(mockGetSessionRagConfig).toHaveBeenCalledWith({ licenseKey: undefined })
+    expect(mockGetSessionRagConfig).not.toHaveBeenCalled()
     expect(result.error).toBeUndefined()
     expect(result.ragMode).toBe('inline')
     expect(result.sessionAttachmentAvailability).toBe('allowed')
     expect(result.sessionAttachmentBlockedReason).toBeUndefined()
     expect(result.tokenCountMap?.default).toBe(parsedContent.length)
+  })
+
+  it('keeps over-threshold attachments inline for stale login licenses without auth tokens', async () => {
+    const file = createFile('stale-login-large.pdf')
+    const parsedContent = 'a'.repeat(256 * 1024 + 1)
+    licenseState.key = 'stale-login-license'
+    licenseActivationState.method = 'login'
+    authTokensState.hasTokens = false
+    blobStore.set('local-key', parsedContent)
+    mockParseFileLocally.mockResolvedValueOnce({ isSupported: true, key: 'local-key' })
+
+    const result = await prepareFileAttachment(file, { provider: '', modelId: '' })
+
+    expect(mockGetSessionRagConfig).not.toHaveBeenCalled()
+    expect(result.error).toBeUndefined()
+    expect(result.ragMode).toBe('inline')
+    expect(result.sessionAttachmentAvailability).toBe('allowed')
+    expect(result.tokenCountMap?.default).toBe(parsedContent.length)
+  })
+
+  it('recognizes raw session RAG auth failures from existing failed attachments', () => {
+    expect(isSessionAttachmentRagAuthError(SESSION_ATTACHMENT_RAG_REQUIRES_CHATBOX_AI_ERROR)).toBe(true)
+    expect(isSessionAttachmentRagAuthError('provider chatbox-ai not set')).toBe(true)
+    expect(isSessionAttachmentRagAuthError('Missing token for rerank provider: chatbox-ai')).toBe(true)
+    expect(isSessionAttachmentRagAuthError('local_parser_failed')).toBe(false)
+  })
+
+  it('recognizes raw session RAG indexing failures from existing failed attachments', () => {
+    expect(
+      isSessionAttachmentRagIndexingError(
+        'ConnectionFailed("Unable to open connection to local database /Users/me/databases/chatbox_session_rag_vectors.db: 14")'
+      )
+    ).toBe(true)
+    expect(isSessionAttachmentRagIndexingError('local_parser_failed')).toBe(false)
   })
 
   it('blocks documents when parsed text exceeds the session attachment limit', async () => {

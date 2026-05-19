@@ -6,8 +6,9 @@ import { AlertCircle, CheckCircle, Eye, Link, Link2, Loader2, RotateCw, Trash2 }
 import type { MouseEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
+  isSessionAttachmentRagAuthError,
+  isSessionAttachmentRagIndexingError,
   SESSION_ATTACHMENT_RAG_PARSED_CONTENT_TOO_LARGE_ERROR,
-  SESSION_ATTACHMENT_RAG_REQUIRES_CHATBOX_AI_ERROR,
   SESSION_ATTACHMENT_RAG_REQUIRES_KNOWLEDGE_BASE_ERROR,
   SESSION_ATTACHMENT_RAG_REQUIRES_TOOL_USE_MODEL_ERROR,
 } from '@/stores/sessionHelpers'
@@ -18,8 +19,13 @@ import { ImageInStorage } from '../Image'
 // 根据错误码获取翻译后的错误消息
 function getTranslatedErrorMessage(errorCode: string | undefined, t: (key: string) => string): string | undefined {
   if (!errorCode) return undefined
-  if (errorCode === SESSION_ATTACHMENT_RAG_REQUIRES_CHATBOX_AI_ERROR) {
-    return t('Large file Q&A requires Chatbox AI Embedding. Enable Chatbox AI or remove this file.')
+  if (isSessionAttachmentRagAuthError(errorCode)) {
+    return t('This large file needs Chatbox AI to finish indexing. Sign in to Chatbox AI, then retry this file.')
+  }
+  if (isSessionAttachmentRagIndexingError(errorCode)) {
+    return t(
+      'Large file indexing failed. Remove this file and try uploading it again. If the problem continues, use a smaller file or Knowledge Base.'
+    )
   }
   if (errorCode === SESSION_ATTACHMENT_RAG_REQUIRES_KNOWLEDGE_BASE_ERROR) {
     return t('This attachment is too large for chat attachments. Please upload it through Knowledge Base instead.')
@@ -49,11 +55,14 @@ function getErrorStatusLabel(errorCode: string | undefined, t: (key: string) => 
   if (errorCode === SESSION_ATTACHMENT_RAG_REQUIRES_KNOWLEDGE_BASE_ERROR) {
     return t('Too large')
   }
-  if (
-    errorCode === SESSION_ATTACHMENT_RAG_REQUIRES_CHATBOX_AI_ERROR ||
-    errorCode === SESSION_ATTACHMENT_RAG_REQUIRES_TOOL_USE_MODEL_ERROR
-  ) {
-    return t('Unavailable')
+  if (isSessionAttachmentRagAuthError(errorCode)) {
+    return t('Sign in needed')
+  }
+  if (errorCode === SESSION_ATTACHMENT_RAG_REQUIRES_TOOL_USE_MODEL_ERROR) {
+    return t('Switch model')
+  }
+  if (isSessionAttachmentRagIndexingError(errorCode)) {
+    return t('Indexing failed')
   }
   return t('Processing failed')
 }

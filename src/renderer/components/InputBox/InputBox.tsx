@@ -1365,7 +1365,7 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
                       isTakingLong={isSessionAttachmentTakingLong}
                       errorMessage={effectiveAttachmentError}
                       onErrorClick={() => {
-                        const errorCode = preprocessedFile?.error
+                        const errorCode = effectiveAttachmentError
                         if (errorCode) {
                           void NiceModal.show('file-parse-error', {
                             errorCode,

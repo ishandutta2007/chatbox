@@ -10,6 +10,7 @@ import { getLogger } from './util'
 const logger = getLogger('store-node')
 
 const configPath = path.resolve(app.getPath('userData'), 'config.json')
+const configBackupFilenamePattern = /^config-backup-\d{4}-\d{2}-\d{2}T\d{2}_\d{2}_\d{2}\.\d{3}Z\.json$/
 
 // 1) 检查配置文件是否合法
 // 如果配置文件不合法，则使用最新的备份文件
@@ -113,16 +114,24 @@ export function getBackups() {
   if (backupFilenames.length === 0) {
     return []
   }
-  let backupFileInfos = backupFilenames.map((filename) => {
-    let dateStr = filename.replace('config-backup-', '').replace('.json', '')
-    dateStr = dateStr.replace(/_/g, ':')
-    const date = new Date(dateStr)
-    return {
-      filename,
-      filepath: path.resolve(app.getPath('userData'), filename),
-      dateMs: date.getTime() || 0,
-    }
-  })
+  let backupFileInfos = backupFilenames
+    .filter((filename) => {
+      if (!configBackupFilenamePattern.test(filename)) {
+        logger.warn('Ignoring invalid config backup filename:', filename)
+        return false
+      }
+      return true
+    })
+    .map((filename) => {
+      let dateStr = filename.replace('config-backup-', '').replace('.json', '')
+      dateStr = dateStr.replace(/_/g, ':')
+      const date = new Date(dateStr)
+      return {
+        filename,
+        filepath: path.resolve(app.getPath('userData'), filename),
+        dateMs: date.getTime() || 0,
+      }
+    })
   backupFileInfos = backupFileInfos.sort((a, b) => a.dateMs - b.dateMs)
   return backupFileInfos
 }
@@ -194,7 +203,21 @@ export async function clearBackups() {
     try {
       await Promise.all(
         backupsToDelete.map(async (backup) => {
-          await fs.remove(backup.filepath)
+          if (!configBackupFilenamePattern.test(backup.filename)) {
+            logger.warn('Skip deleting invalid config backup filename:', backup.filename)
+            return
+          }
+          const expectedPath = path.resolve(app.getPath('userData'), backup.filename)
+          if (backup.filepath !== expectedPath) {
+            logger.warn('Skip deleting config backup with unexpected path:', backup.filepath)
+            return
+          }
+          const stat = await fs.stat(backup.filepath).catch(() => null)
+          if (!stat?.isFile()) {
+            logger.warn('Skip deleting config backup because it is not a file:', backup.filepath)
+            return
+          }
+          await fs.unlink(backup.filepath)
           // logger.info('clear backup:', backup.filename) // Log per file might be too verbose
         })
       )

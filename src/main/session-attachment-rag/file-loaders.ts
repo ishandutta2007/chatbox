@@ -149,7 +149,6 @@ async function processAttachment(attachmentId: number) {
     embeddedChunks: 0,
   })
 
-  const vectorStore = getVectorStore()
   const indexName = `sa_${attachment.id}`
   const embeddingModel = await getSessionAttachmentEmbeddingProvider()
 
@@ -167,7 +166,7 @@ async function processAttachment(attachmentId: number) {
     `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} [FILE] Embedding initialized: attachmentId=${attachment.id}, dimension=${firstEmbedding.embeddings[0].length}, totalChunks=${embeddedTexts.length}`
   )
   await runVectorWrite(() =>
-    vectorStore.createIndex({
+    getVectorStore().createIndex({
       indexName,
       dimension: firstEmbedding.embeddings[0].length,
     })
@@ -187,8 +186,9 @@ async function processAttachment(attachmentId: number) {
     }
 
     await runVectorWrite(() =>
-      vectorStore.upsert({
+      getVectorStore().upsert({
         indexName,
+        ids: batchChildren.map((child) => `${indexName}_${child.chunkOrder}`),
         vectors: embeddings,
         metadata: batchChildren.map((child) => ({
           attachmentId: attachment.id,
