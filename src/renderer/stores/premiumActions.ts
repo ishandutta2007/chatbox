@@ -8,9 +8,52 @@ import { getLogger } from '@/lib/utils'
 import { mcpController } from '@/packages/mcp/controller'
 import * as remote from '../packages/remote'
 import platform from '../platform'
+import { authInfoStore } from './authInfoStore'
 import { settingsStore, useSettingsStore } from './settingsStore'
 
 const log = getLogger('premium-actions')
+
+export function reconcileLoginLicenseState() {
+  const settings = settingsStore.getState()
+  if (settings.licenseActivationMethod !== 'login' || !settings.licenseKey) {
+    return false
+  }
+  if (authInfoStore.getState().getTokens()) {
+    return false
+  }
+
+  const licenseKey = settings.licenseKey
+  settingsStore.setState((state) => ({
+    licenseKey: '',
+    licenseDetail: undefined,
+    licensePlanName: undefined,
+    licenseActivationMethod: undefined,
+    licenseInstances: omit(state.licenseInstances, licenseKey),
+    hasExpiredLicense: false,
+    mcp: {
+      ...state.mcp,
+      enabledBuiltinServers: [],
+    },
+  }))
+  settings.mcp.enabledBuiltinServers.forEach((serverId) => {
+    mcpController.stopServer(serverId).catch(console.error)
+  })
+  remote.invalidateSessionRagConfigCache()
+  log.info('Cleared stale login license state because auth tokens are missing')
+  return true
+}
+
+export function initLoginLicenseStateReconciliation() {
+  reconcileLoginLicenseState()
+  return authInfoStore.subscribe(
+    (state) => (state.accessToken && state.refreshToken ? 'signed-in' : 'signed-out'),
+    (authState) => {
+      if (authState === 'signed-out') {
+        reconcileLoginLicenseState()
+      }
+    }
+  )
+}
 
 /**
  * 自动验证当前的 license 是否有效，如果无效则清除相关数据
