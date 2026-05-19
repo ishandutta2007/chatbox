@@ -3,8 +3,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const {
   blobStore,
   licenseState,
+  sessionRagCapabilityState,
   parserState,
   mockParseFileLocally,
+  mockGetSessionRagConfig,
   mockUploadAndCreateUserFile,
   mockSetBlob,
   mockGetBlob,
@@ -13,13 +15,22 @@ const {
 } = vi.hoisted(() => {
   const blobs = new Map<string, string>()
   const license = { key: 'licensed-key' as string | undefined }
+  const sessionRagCapability = { enabled: true }
   const parser = { type: 'local' as 'local' | 'chatbox-ai' | 'none' | 'mineru' }
 
   return {
     blobStore: blobs,
     licenseState: license,
+    sessionRagCapabilityState: sessionRagCapability,
     parserState: parser,
     mockParseFileLocally: vi.fn(),
+    mockGetSessionRagConfig: vi.fn(async () => ({
+      models: { embedding: 'chatbox-ai:text-embedding-3-small', rerank: 'chatbox-ai:rerank' },
+      capabilities: {
+        session_attachment_embedding: sessionRagCapability.enabled,
+        session_attachment_rerank: false,
+      },
+    })),
     mockUploadAndCreateUserFile: vi.fn(),
     mockSetBlob: vi.fn(async (key: string, value: string) => {
       blobs.set(key, value)
@@ -32,6 +43,7 @@ const {
 
 vi.mock('@/platform', () => ({
   default: {
+    type: 'desktop',
     parseFileLocally: mockParseFileLocally,
   },
 }))
@@ -46,6 +58,7 @@ vi.mock('@/storage', () => ({
 }))
 
 vi.mock('@/packages/remote', () => ({
+  getSessionRagConfig: mockGetSessionRagConfig,
   uploadAndCreateUserFile: mockUploadAndCreateUserFile,
 }))
 
@@ -120,8 +133,10 @@ describe('preprocessFile local parser fallback', () => {
   beforeEach(() => {
     blobStore.clear()
     licenseState.key = 'licensed-key'
+    sessionRagCapabilityState.enabled = true
     parserState.type = 'local'
     mockParseFileLocally.mockReset()
+    mockGetSessionRagConfig.mockClear()
     mockUploadAndCreateUserFile.mockReset()
     mockSetBlob.mockClear()
     mockGetBlob.mockClear()
@@ -183,6 +198,55 @@ describe('preprocessFile local parser fallback', () => {
     expect(result.content).toBe('')
     expect(result.storageKey).toBe('')
     expect(result.error).toBe('local_parser_failed')
+  })
+
+  it('keeps high-token attachments inline when parsed content stays below byte threshold', async () => {
+    const file = createFile('token-heavy.pdf')
+    const parsedContent = 'a'.repeat(8000)
+    blobStore.set('local-key', parsedContent)
+    mockParseFileLocally.mockResolvedValueOnce({ isSupported: true, key: 'local-key' })
+
+    const result = await prepareFileAttachment(file, { provider: '', modelId: '' })
+
+    expect(mockGetSessionRagConfig).not.toHaveBeenCalled()
+    expect(result.error).toBeUndefined()
+    expect(result.ragMode).toBe('inline')
+    expect(result.sessionAttachmentAvailability).toBe('allowed')
+    expect(result.tokenCountMap?.default).toBe(parsedContent.length)
+  })
+
+  it('uses session retrieval for over-threshold attachments when session RAG embedding is available', async () => {
+    const file = createFile('licensed-large.pdf')
+    const parsedContent = 'a'.repeat(256 * 1024 + 1)
+    blobStore.set('local-key', parsedContent)
+    mockParseFileLocally.mockResolvedValueOnce({ isSupported: true, key: 'local-key' })
+
+    const result = await prepareFileAttachment(file, { provider: '', modelId: '' })
+
+    expect(mockGetSessionRagConfig).toHaveBeenCalledWith({ licenseKey: 'licensed-key' })
+    expect(result.error).toBeUndefined()
+    expect(result.ragMode).toBe('session-retrieval')
+    expect(result.sessionAttachmentAvailability).toBe('allowed')
+    expect(result.tokenCountMap?.default).toBeUndefined()
+    expect(result.tokenCountMap?.default_preview).toBeDefined()
+  })
+
+  it('keeps over-threshold attachments inline without a Chatbox license', async () => {
+    const file = createFile('byok-large.pdf')
+    const parsedContent = 'a'.repeat(256 * 1024 + 1)
+    licenseState.key = undefined
+    sessionRagCapabilityState.enabled = false
+    blobStore.set('local-key', parsedContent)
+    mockParseFileLocally.mockResolvedValueOnce({ isSupported: true, key: 'local-key' })
+
+    const result = await prepareFileAttachment(file, { provider: '', modelId: '' })
+
+    expect(mockGetSessionRagConfig).toHaveBeenCalledWith({ licenseKey: undefined })
+    expect(result.error).toBeUndefined()
+    expect(result.ragMode).toBe('inline')
+    expect(result.sessionAttachmentAvailability).toBe('allowed')
+    expect(result.sessionAttachmentBlockedReason).toBeUndefined()
+    expect(result.tokenCountMap?.default).toBe(parsedContent.length)
   })
 
   it('blocks documents when parsed text exceeds the session attachment limit', async () => {

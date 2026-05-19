@@ -33,7 +33,6 @@ import * as settingActions from './settingActions'
 import { getPlatformDefaultDocumentParser, settingsStore } from './settingsStore'
 
 const log = getLogger('session-helpers')
-const SESSION_ATTACHMENT_RAG_INLINE_THRESHOLD = 7500
 const SESSION_ATTACHMENT_RAG_INLINE_BYTE_THRESHOLD = 256 * 1024
 export const SESSION_ATTACHMENT_RAG_MAX_PARSED_BYTE_LENGTH = 3 * 1024 * 1024
 export const SESSION_ATTACHMENT_RAG_REQUIRES_CHATBOX_AI_ERROR = 'session_attachment_rag_requires_chatbox_ai'
@@ -304,18 +303,18 @@ export async function prepareFileAttachment(
         return buildParsedContentTooLargeAttachmentResult(file, existingContent, uniqKey, existingParserType, stats)
       }
 
-      const useSessionAttachmentRag =
+      const exceedsSessionAttachmentRagThreshold =
         platform.type === 'desktop' && stats.byteLength > SESSION_ATTACHMENT_RAG_INLINE_BYTE_THRESHOLD
+      const sessionAttachmentRagAllowed = exceedsSessionAttachmentRagThreshold
+        ? await canUseSessionAttachmentRag()
+        : false
+      const shouldUseSessionAttachmentRag = exceedsSessionAttachmentRagThreshold && sessionAttachmentRagAllowed
       const { lineCount, byteLength, tokenCountMap } = computePreviewMetadata(existingContent, existingTokenMap, {
-        includeFullTokenCounts: !useSessionAttachmentRag,
+        includeFullTokenCounts: !shouldUseSessionAttachmentRag,
         stats,
       })
-      const shouldUseSessionAttachmentRag =
-        useSessionAttachmentRag ||
-        (tokenCountMap[TOKEN_CACHE_KEYS.default] ?? 0) > SESSION_ATTACHMENT_RAG_INLINE_THRESHOLD
-      const sessionAttachmentRagAllowed = shouldUseSessionAttachmentRag ? await canUseSessionAttachmentRag() : true
       log.info(
-        `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} Cached preprocess decision: file="${file.name}", bytes=${stats.byteLength}, tokens=${tokenCountMap[TOKEN_CACHE_KEYS.default] ?? 0}, ragMode=${shouldUseSessionAttachmentRag ? 'session-retrieval' : 'inline'}, allowed=${sessionAttachmentRagAllowed}`
+        `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} Cached preprocess decision: file="${file.name}", bytes=${stats.byteLength}, tokens=${tokenCountMap[TOKEN_CACHE_KEYS.default] ?? 0}, exceedsThreshold=${exceedsSessionAttachmentRagThreshold}, ragMode=${shouldUseSessionAttachmentRag ? 'session-retrieval' : 'inline'}, allowed=${sessionAttachmentRagAllowed}`
       )
 
       await storage.setItem(`${uniqKey}_tokenMap`, tokenCountMap)
@@ -329,16 +328,7 @@ export async function prepareFileAttachment(
         tokenCountMap,
         lineCount,
         byteLength,
-        sessionAttachmentAvailability:
-          shouldUseSessionAttachmentRag && !sessionAttachmentRagAllowed ? 'blocked' : 'allowed',
-        sessionAttachmentBlockedReason:
-          shouldUseSessionAttachmentRag && !sessionAttachmentRagAllowed
-            ? SESSION_ATTACHMENT_RAG_REQUIRES_KNOWLEDGE_BASE_ERROR
-            : undefined,
-        error:
-          shouldUseSessionAttachmentRag && !sessionAttachmentRagAllowed
-            ? SESSION_ATTACHMENT_RAG_REQUIRES_KNOWLEDGE_BASE_ERROR
-            : undefined,
+        sessionAttachmentAvailability: 'allowed',
       }
     }
 
@@ -408,21 +398,21 @@ export async function prepareFileAttachment(
       )
     }
 
-    const useSessionAttachmentRag =
+    const exceedsSessionAttachmentRagThreshold =
       platform.type === 'desktop' && stats.byteLength > SESSION_ATTACHMENT_RAG_INLINE_BYTE_THRESHOLD
+    const sessionAttachmentRagAllowed = exceedsSessionAttachmentRagThreshold
+      ? await canUseSessionAttachmentRag()
+      : false
+    const shouldUseSessionAttachmentRag = exceedsSessionAttachmentRagThreshold && sessionAttachmentRagAllowed
     const { lineCount, byteLength, tokenCountMap } = computePreviewMetadata(result.content, result.tokenCountMap, {
-      includeFullTokenCounts: !useSessionAttachmentRag,
+      includeFullTokenCounts: !shouldUseSessionAttachmentRag,
       stats,
     })
     await storage.setItem(`${result.storageKey}_tokenMap`, tokenCountMap)
     await storage.setItem(`${result.storageKey}_parserType`, result.parserType)
 
-    const shouldUseSessionAttachmentRag =
-      useSessionAttachmentRag ||
-      (tokenCountMap[TOKEN_CACHE_KEYS.default] ?? 0) > SESSION_ATTACHMENT_RAG_INLINE_THRESHOLD
-    const sessionAttachmentRagBlocked = shouldUseSessionAttachmentRag && !(await canUseSessionAttachmentRag())
     log.info(
-      `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} Preprocess decision: file="${file.name}", parser=${result.parserType}, bytes=${stats.byteLength}, tokens=${tokenCountMap[TOKEN_CACHE_KEYS.default] ?? 0}, ragMode=${shouldUseSessionAttachmentRag ? 'session-retrieval' : 'inline'}, blocked=${sessionAttachmentRagBlocked}`
+      `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} Preprocess decision: file="${file.name}", parser=${result.parserType}, bytes=${stats.byteLength}, tokens=${tokenCountMap[TOKEN_CACHE_KEYS.default] ?? 0}, exceedsThreshold=${exceedsSessionAttachmentRagThreshold}, ragMode=${shouldUseSessionAttachmentRag ? 'session-retrieval' : 'inline'}, allowed=${sessionAttachmentRagAllowed}`
     )
 
     return {
@@ -434,11 +424,7 @@ export async function prepareFileAttachment(
       tokenCountMap,
       lineCount,
       byteLength,
-      sessionAttachmentAvailability: sessionAttachmentRagBlocked ? 'blocked' : 'allowed',
-      sessionAttachmentBlockedReason: sessionAttachmentRagBlocked
-        ? SESSION_ATTACHMENT_RAG_REQUIRES_KNOWLEDGE_BASE_ERROR
-        : undefined,
-      error: sessionAttachmentRagBlocked ? SESSION_ATTACHMENT_RAG_REQUIRES_KNOWLEDGE_BASE_ERROR : undefined,
+      sessionAttachmentAvailability: 'allowed',
     }
   } catch (error) {
     log.error(`${SESSION_ATTACHMENT_RAG_LOG_PREFIX} Failed to preprocess file "${file.name}":`, error)
