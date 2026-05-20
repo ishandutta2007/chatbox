@@ -59,7 +59,7 @@ async function attachLargeFileRagMetadata(sessionId: string, message: Message): 
   }
 
   const updatedMessage = { ...message, files }
-  log.info(
+  log.debug(
     `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} Attachment metadata attached to message: session=${sessionId}, message=${message.id}`
   )
   await chatStore.updateMessage(sessionId, message.id, updatedMessage)

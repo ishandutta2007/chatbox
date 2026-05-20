@@ -16,6 +16,7 @@ export type AttachmentPreparationResult = {
   parserType?: string
   sessionAttachmentAvailability?: SessionAttachmentAvailability
   sessionAttachmentBlockedReason?: string
+  sessionAttachmentWarningReason?: string
   tokenCountMap?: Record<string, number>
   lineCount?: number
   byteLength?: number

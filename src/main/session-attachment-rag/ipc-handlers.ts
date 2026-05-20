@@ -65,12 +65,12 @@ function normalizeQueryPlan(plan?: SessionAttachmentQueryPlan) {
 
 export function registerSessionAttachmentRagHandlers() {
   ipcMain.handle('session-attachment-rag:create', async (_event, params) => {
-    log.info(
+    log.debug(
       `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} [IPC] Create attachment task: session=${params.sessionId}, message=${params.messageId}, file="${params.filename}", parser=${params.parserType ?? 'unknown'}`
     )
     const id = await createSessionAttachment(params)
     const attachment = (await listSessionAttachmentsByIds([id]))[0]
-    log.info(
+    log.debug(
       `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} [IPC] Attachment task created: attachmentId=${id}, status=${attachment?.status}`
     )
     return {
@@ -119,7 +119,7 @@ export function registerSessionAttachmentRagHandlers() {
   ipcMain.handle(
     'session-attachment-rag:cleanup-orphans',
     async (_event, params: { sessionIds: string[]; messageIds: string[] }) => {
-      log.info(
+      log.debug(
         `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} [IPC] Cleanup orphan attachments: sessions=${params.sessionIds.length}, messages=${params.messageIds.length}`
       )
       return cleanupOrphanAttachments(params.sessionIds ?? [], params.messageIds ?? [])
@@ -134,7 +134,7 @@ export function registerSessionAttachmentRagHandlers() {
   ipcMain.handle(
     'session-attachment-rag:rebind',
     async (_event, params: { attachmentId: number; sessionId: string; messageId: string }) => {
-      log.info(
+      log.debug(
         `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} [IPC] Rebind attachment: attachmentId=${params.attachmentId}, session=${params.sessionId}, message=${params.messageId}`
       )
       await rebindSessionAttachment(params.attachmentId, params.sessionId, params.messageId)
@@ -147,7 +147,7 @@ export function registerSessionAttachmentRagHandlers() {
   })
 
   ipcMain.handle('session-attachment-rag:get-debug-snapshot', async () => {
-    log.info(`${SESSION_ATTACHMENT_RAG_LOG_PREFIX} [IPC] Get debug snapshot`)
+    log.debug(`${SESSION_ATTACHMENT_RAG_LOG_PREFIX} [IPC] Get debug snapshot`)
     const snapshot = await getSessionAttachmentDebugSnapshot()
     return {
       ...snapshot,
@@ -168,7 +168,7 @@ export function registerSessionAttachmentRagHandlers() {
   ipcMain.handle(
     'session-attachment-rag:run-maintenance',
     async (_event, params: { sessionIds: string[]; messageIds: string[] }) => {
-      log.info(
+      log.debug(
         `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} [IPC] Run maintenance: sessions=${params.sessionIds.length}, messages=${params.messageIds.length}`
       )
       const canceledPurgedCount = await purgeCanceledSessionAttachments(50)
@@ -188,7 +188,7 @@ export function registerSessionAttachmentRagHandlers() {
       if (!params.query?.trim() || attachmentIds.length === 0) {
         return []
       }
-      log.info(
+      log.debug(
         `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} [IPC] Query attachments: attachmentIds=${attachmentIds.join(',')}, query=${summarizeQuery(params.query)}, plan=${JSON.stringify(
           params.plan ?? {}
         )}`
@@ -210,7 +210,7 @@ export function registerSessionAttachmentRagHandlers() {
       const vectorStore = getVectorStore()
       const queryVector = embedding.embeddings[0]
       const plan = normalizeQueryPlan(params.plan)
-      log.info(
+      log.debug(
         `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} [IPC] Query normalized plan: recallTopK=${plan.recallTopK}, finalTopK=${plan.finalTopK}, rerank=${plan.rerank.enabled ? plan.rerank.model || 'enabled' : 'disabled'}`
       )
       const results = await Promise.all(
@@ -236,7 +236,7 @@ export function registerSessionAttachmentRagHandlers() {
         try {
           const rerankProvider = await getSessionAttachmentRerankProvider(plan.rerank.model)
           if (rerankProvider) {
-            log.info(
+            log.debug(
               `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} [IPC] Reranking query results with model=${plan.rerank.model}, candidates=${flatResults.length}`
             )
             const rerankedResults = await rerank(flatResults, params.query, rerankProvider, {
@@ -271,7 +271,7 @@ export function registerSessionAttachmentRagHandlers() {
         }))
       ).slice(0, plan.finalTopK)
 
-      log.info(
+      log.debug(
         `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} [IPC] Query completed: readyAttachments=${readyAttachments.length}, rawHits=${flatResults.length}, finalResults=${finalResults.length}`
       )
 
@@ -289,7 +289,7 @@ export function registerSessionAttachmentRagHandlers() {
       const rawAttachmentIds = Array.isArray(params) ? [] : (params?.attachmentIds ?? [])
       const ids = [...new Set(rawParentIds.filter((id) => Number.isFinite(id)))]
       const allowedAttachmentIds = [...new Set(rawAttachmentIds.filter((id) => Number.isFinite(id)))]
-      log.info(
+      log.debug(
         `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} [IPC] Read parent blocks: parentIds=${ids.join(',')}, allowedAttachmentIds=${allowedAttachmentIds.join(',')}`
       )
       if (allowedAttachmentIds.length === 0) {

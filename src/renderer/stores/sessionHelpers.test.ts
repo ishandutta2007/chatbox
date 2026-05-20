@@ -135,8 +135,8 @@ import {
   isSessionAttachmentRagAuthError,
   isSessionAttachmentRagIndexingError,
   prepareFileAttachment,
+  SESSION_ATTACHMENT_RAG_LARGE_ATTACHMENT_WARNING,
   SESSION_ATTACHMENT_RAG_MAX_PARSED_BYTE_LENGTH,
-  SESSION_ATTACHMENT_RAG_PARSED_CONTENT_TOO_LARGE_ERROR,
   SESSION_ATTACHMENT_RAG_REQUIRES_CHATBOX_AI_ERROR,
 } from './sessionHelpers'
 
@@ -271,6 +271,24 @@ describe('preprocessFile local parser fallback', () => {
     expect(result.tokenCountMap?.default).toBe(parsedContent.length)
   })
 
+  it('keeps very large BYOK attachments inline with a warning', async () => {
+    const file = createFile('byok-very-large.pdf')
+    const parsedContent = 'a'.repeat(SESSION_ATTACHMENT_RAG_MAX_PARSED_BYTE_LENGTH + 1)
+    licenseState.key = undefined
+    sessionRagCapabilityState.enabled = false
+    blobStore.set('local-key', parsedContent)
+    mockParseFileLocally.mockResolvedValueOnce({ isSupported: true, key: 'local-key' })
+
+    const result = await prepareFileAttachment(file, { provider: '', modelId: '' })
+
+    expect(mockGetSessionRagConfig).not.toHaveBeenCalled()
+    expect(result.error).toBeUndefined()
+    expect(result.ragMode).toBe('inline')
+    expect(result.sessionAttachmentAvailability).toBe('allowed')
+    expect(result.sessionAttachmentWarningReason).toBe(SESSION_ATTACHMENT_RAG_LARGE_ATTACHMENT_WARNING)
+    expect(result.tokenCountMap?.default).toBe(parsedContent.length)
+  })
+
   it('keeps over-threshold attachments inline for stale login licenses without auth tokens', async () => {
     const file = createFile('stale-login-large.pdf')
     const parsedContent = 'a'.repeat(256 * 1024 + 1)
@@ -305,7 +323,7 @@ describe('preprocessFile local parser fallback', () => {
     expect(isSessionAttachmentRagIndexingError('local_parser_failed')).toBe(false)
   })
 
-  it('blocks documents when parsed text exceeds the session attachment limit', async () => {
+  it('keeps documents inline with a warning when parsed text exceeds the session attachment limit', async () => {
     const file = createFile('dense.pdf')
     const parsedContent = 'a'.repeat(SESSION_ATTACHMENT_RAG_MAX_PARSED_BYTE_LENGTH + 1)
     blobStore.set('local-key', parsedContent)
@@ -313,10 +331,12 @@ describe('preprocessFile local parser fallback', () => {
 
     const result = await prepareFileAttachment(file, { provider: '', modelId: '' })
 
-    expect(result.error).toBe(SESSION_ATTACHMENT_RAG_PARSED_CONTENT_TOO_LARGE_ERROR)
-    expect(result.sessionAttachmentAvailability).toBe('blocked')
-    expect(result.sessionAttachmentBlockedReason).toBe(SESSION_ATTACHMENT_RAG_PARSED_CONTENT_TOO_LARGE_ERROR)
-    expect(result.ragMode).toBe('session-retrieval')
+    expect(result.error).toBeUndefined()
+    expect(result.sessionAttachmentAvailability).toBe('allowed')
+    expect(result.sessionAttachmentBlockedReason).toBeUndefined()
+    expect(result.sessionAttachmentWarningReason).toBe(SESSION_ATTACHMENT_RAG_LARGE_ATTACHMENT_WARNING)
+    expect(result.ragMode).toBe('inline')
     expect(result.byteLength).toBe(SESSION_ATTACHMENT_RAG_MAX_PARSED_BYTE_LENGTH + 1)
+    expect(result.tokenCountMap?.default).toBe(parsedContent.length)
   })
 })

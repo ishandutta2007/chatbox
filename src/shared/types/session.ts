@@ -57,6 +57,7 @@ export const MessageFileSchema = z.object({
   sessionAttachmentAvailability: z.enum(['allowed', 'blocked']).optional(),
   sessionAttachmentIndexStatus: z.enum(['pending', 'indexing', 'ready', 'failed']).optional(),
   sessionAttachmentBlockedReason: z.string().optional(),
+  sessionAttachmentWarningReason: z.string().optional(),
   sessionAttachmentStatus: z.enum(['pending', 'indexing', 'ready', 'failed']).optional(),
   sessionAttachmentChunkCount: z.number().optional(),
   sessionAttachmentIndexingStage: z.enum(['queued', 'chunking', 'embedding', 'finalizing', 'ready']).optional(),

@@ -411,6 +411,14 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
         ),
       [preConstructedMessage.preprocessedFiles]
     )
+    const hasLargeAttachmentWarning = useMemo(
+      () =>
+        preConstructedMessage.preprocessedFiles.some(
+          (file) =>
+            file.sessionAttachmentWarningReason === sessionHelpers.SESSION_ATTACHMENT_RAG_LARGE_ATTACHMENT_WARNING
+        ),
+      [preConstructedMessage.preprocessedFiles]
+    )
 
     const disableSubmit = useMemo(
       () => !(hasTextContent || links?.length || attachments?.length || pictureKeys?.length),
@@ -1301,6 +1309,37 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
                     <Text size="xs" lh={1.35} c="chatbox-warning" className="min-w-0">
                       {t(
                         'This model may not be able to read the uploaded document. Try another model if you want to ask about the file.'
+                      )}
+                    </Text>
+                  </Flex>
+                )}
+                {hasLargeAttachmentWarning && (
+                  <Flex
+                    role="status"
+                    aria-live="polite"
+                    align="center"
+                    gap={8}
+                    className="w-full rounded-md px-2.5 py-2 mb-1"
+                    style={{
+                      border: '1px solid var(--chatbox-border-primary)',
+                      borderLeft: '3px solid var(--chatbox-tint-warning)',
+                      background: 'var(--chatbox-background-primary)',
+                    }}
+                  >
+                    <Box
+                      className="flex items-center justify-center rounded-full shrink-0"
+                      style={{
+                        width: 20,
+                        height: 20,
+                        background: 'var(--chatbox-background-secondary)',
+                        color: 'var(--chatbox-tint-warning)',
+                      }}
+                    >
+                      <ScalableIcon icon={IconAlertCircle} size={14} />
+                    </Box>
+                    <Text size="xs" lh={1.35} c="chatbox-warning" className="min-w-0">
+                      {t(
+                        'This attachment is very large and may consume more points. You can send it anyway, or remove it and use a smaller file.'
                       )}
                     </Text>
                   </Flex>

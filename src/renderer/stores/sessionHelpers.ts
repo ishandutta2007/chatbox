@@ -35,11 +35,12 @@ import { getPlatformDefaultDocumentParser, settingsStore } from './settingsStore
 
 const log = getLogger('session-helpers')
 const SESSION_ATTACHMENT_RAG_INLINE_BYTE_THRESHOLD = 256 * 1024
-export const SESSION_ATTACHMENT_RAG_MAX_PARSED_BYTE_LENGTH = 3 * 1024 * 1024
+export const SESSION_ATTACHMENT_RAG_MAX_PARSED_BYTE_LENGTH = 6 * 1024 * 1024
 export const SESSION_ATTACHMENT_RAG_REQUIRES_CHATBOX_AI_ERROR = 'session_attachment_rag_requires_chatbox_ai'
 export const SESSION_ATTACHMENT_RAG_REQUIRES_KNOWLEDGE_BASE_ERROR = 'session_attachment_rag_requires_knowledge_base'
 export const SESSION_ATTACHMENT_RAG_REQUIRES_TOOL_USE_MODEL_ERROR = 'session_attachment_rag_requires_tool_use_model'
 export const SESSION_ATTACHMENT_RAG_PARSED_CONTENT_TOO_LARGE_ERROR = 'session_attachment_rag_parsed_content_too_large'
+export const SESSION_ATTACHMENT_RAG_LARGE_ATTACHMENT_WARNING = 'session_attachment_rag_large_attachment_warning'
 const SESSION_ATTACHMENT_RAG_AUTH_ERROR_PATTERNS = [
   'provider chatbox-ai not set',
   'chatbox-ai not set',
@@ -72,29 +73,8 @@ function getContentStats(content: string): ContentStats {
   }
 }
 
-function isParsedContentTooLarge(stats: ContentStats): boolean {
+function isParsedContentVeryLarge(stats: ContentStats): boolean {
   return stats.byteLength > SESSION_ATTACHMENT_RAG_MAX_PARSED_BYTE_LENGTH
-}
-
-function buildParsedContentTooLargeAttachmentResult(
-  file: File,
-  content: string,
-  storageKey: string,
-  parserType: string | undefined,
-  stats: ContentStats
-): AttachmentPreparationResult {
-  return {
-    file,
-    content,
-    storageKey,
-    ragMode: 'session-retrieval',
-    parserType,
-    lineCount: stats.lineCount,
-    byteLength: stats.byteLength,
-    sessionAttachmentAvailability: 'blocked',
-    sessionAttachmentBlockedReason: SESSION_ATTACHMENT_RAG_PARSED_CONTENT_TOO_LARGE_ERROR,
-    error: SESSION_ATTACHMENT_RAG_PARSED_CONTENT_TOO_LARGE_ERROR,
-  }
 }
 
 export function computePreviewMetadata(
@@ -191,7 +171,7 @@ async function canUseSessionAttachmentRag(): Promise<boolean> {
   }
 
   if (!hasUsableLicense) {
-    log.info(
+    log.debug(
       `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} Capability skipped: missing active Chatbox license, hasLicense=${Boolean(licenseKey)}, method=${settingsStore.getState().licenseActivationMethod ?? 'none'}, platform=${platform.type}`
     )
     sessionRagCapabilityCache = { key: capabilityCacheKey, value: false }
@@ -200,7 +180,7 @@ async function canUseSessionAttachmentRag(): Promise<boolean> {
 
   const value = !!(await remote.getSessionRagConfig({ licenseKey: licenseKey || undefined }).catch(() => undefined))
     ?.capabilities?.session_attachment_embedding
-  log.info(
+  log.debug(
     `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} Capability fetched: embedding=${value}, hasLicense=${Boolean(licenseKey)}, platform=${platform.type}`
   )
   sessionRagCapabilityCache = { key: capabilityCacheKey, value }
@@ -347,11 +327,13 @@ export async function prepareFileAttachment(
         | undefined
 
       const stats = getContentStats(existingContent)
-      if (isParsedContentTooLarge(stats)) {
+      const sessionAttachmentWarningReason = isParsedContentVeryLarge(stats)
+        ? SESSION_ATTACHMENT_RAG_LARGE_ATTACHMENT_WARNING
+        : undefined
+      if (sessionAttachmentWarningReason) {
         log.info(
-          `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} Cached parsed content too large: file="${file.name}", bytes=${stats.byteLength}, limit=${SESSION_ATTACHMENT_RAG_MAX_PARSED_BYTE_LENGTH}`
+          `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} Cached parsed content is very large: file="${file.name}", bytes=${stats.byteLength}, limit=${SESSION_ATTACHMENT_RAG_MAX_PARSED_BYTE_LENGTH}`
         )
-        return buildParsedContentTooLargeAttachmentResult(file, existingContent, uniqKey, existingParserType, stats)
       }
 
       const exceedsSessionAttachmentRagThreshold =
@@ -359,12 +341,13 @@ export async function prepareFileAttachment(
       const sessionAttachmentRagAllowed = exceedsSessionAttachmentRagThreshold
         ? await canUseSessionAttachmentRag()
         : false
-      const shouldUseSessionAttachmentRag = exceedsSessionAttachmentRagThreshold && sessionAttachmentRagAllowed
+      const shouldUseSessionAttachmentRag =
+        exceedsSessionAttachmentRagThreshold && sessionAttachmentRagAllowed && !sessionAttachmentWarningReason
       const { lineCount, byteLength, tokenCountMap } = computePreviewMetadata(existingContent, existingTokenMap, {
         includeFullTokenCounts: !shouldUseSessionAttachmentRag,
         stats,
       })
-      log.info(
+      log.debug(
         `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} Cached preprocess decision: file="${file.name}", bytes=${stats.byteLength}, tokens=${tokenCountMap[TOKEN_CACHE_KEYS.default] ?? 0}, exceedsThreshold=${exceedsSessionAttachmentRagThreshold}, ragMode=${shouldUseSessionAttachmentRag ? 'session-retrieval' : 'inline'}, allowed=${sessionAttachmentRagAllowed}`
       )
 
@@ -380,6 +363,7 @@ export async function prepareFileAttachment(
         lineCount,
         byteLength,
         sessionAttachmentAvailability: 'allowed',
+        sessionAttachmentWarningReason,
       }
     }
 
@@ -435,17 +419,12 @@ export async function prepareFileAttachment(
     }
 
     const stats = getContentStats(result.content)
-    if (isParsedContentTooLarge(stats)) {
+    const sessionAttachmentWarningReason = isParsedContentVeryLarge(stats)
+      ? SESSION_ATTACHMENT_RAG_LARGE_ATTACHMENT_WARNING
+      : undefined
+    if (sessionAttachmentWarningReason) {
       log.info(
-        `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} Parsed content too large: file="${file.name}", parser=${result.parserType}, bytes=${stats.byteLength}, limit=${SESSION_ATTACHMENT_RAG_MAX_PARSED_BYTE_LENGTH}`
-      )
-      await storage.setItem(`${result.storageKey}_parserType`, result.parserType)
-      return buildParsedContentTooLargeAttachmentResult(
-        file,
-        result.content,
-        result.storageKey,
-        result.parserType,
-        stats
+        `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} Parsed content is very large: file="${file.name}", parser=${result.parserType}, bytes=${stats.byteLength}, limit=${SESSION_ATTACHMENT_RAG_MAX_PARSED_BYTE_LENGTH}`
       )
     }
 
@@ -454,7 +433,8 @@ export async function prepareFileAttachment(
     const sessionAttachmentRagAllowed = exceedsSessionAttachmentRagThreshold
       ? await canUseSessionAttachmentRag()
       : false
-    const shouldUseSessionAttachmentRag = exceedsSessionAttachmentRagThreshold && sessionAttachmentRagAllowed
+    const shouldUseSessionAttachmentRag =
+      exceedsSessionAttachmentRagThreshold && sessionAttachmentRagAllowed && !sessionAttachmentWarningReason
     const { lineCount, byteLength, tokenCountMap } = computePreviewMetadata(result.content, result.tokenCountMap, {
       includeFullTokenCounts: !shouldUseSessionAttachmentRag,
       stats,
@@ -462,7 +442,7 @@ export async function prepareFileAttachment(
     await storage.setItem(`${result.storageKey}_tokenMap`, tokenCountMap)
     await storage.setItem(`${result.storageKey}_parserType`, result.parserType)
 
-    log.info(
+    log.debug(
       `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} Preprocess decision: file="${file.name}", parser=${result.parserType}, bytes=${stats.byteLength}, tokens=${tokenCountMap[TOKEN_CACHE_KEYS.default] ?? 0}, exceedsThreshold=${exceedsSessionAttachmentRagThreshold}, ragMode=${shouldUseSessionAttachmentRag ? 'session-retrieval' : 'inline'}, allowed=${sessionAttachmentRagAllowed}`
     )
 
@@ -476,6 +456,7 @@ export async function prepareFileAttachment(
       lineCount,
       byteLength,
       sessionAttachmentAvailability: 'allowed',
+      sessionAttachmentWarningReason,
     }
   } catch (error) {
     log.error(`${SESSION_ATTACHMENT_RAG_LOG_PREFIX} Failed to preprocess file "${file.name}":`, error)
@@ -659,6 +640,7 @@ export function constructUserMessage(
       sessionAttachmentIndexStatus:
         f.ragMode === 'session-retrieval' ? (f.sessionAttachmentIndexStatus ?? 'pending') : undefined,
       sessionAttachmentBlockedReason: f.sessionAttachmentBlockedReason,
+      sessionAttachmentWarningReason: f.sessionAttachmentWarningReason,
       sessionAttachmentChunkCount: f.sessionAttachmentChunkCount,
       sessionAttachmentTotalChunks: f.sessionAttachmentTotalChunks,
       sessionAttachmentEmbeddedChunks: f.sessionAttachmentEmbeddedChunks,

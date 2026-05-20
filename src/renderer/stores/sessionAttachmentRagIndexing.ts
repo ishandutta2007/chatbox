@@ -77,7 +77,7 @@ export async function startPreparedSessionAttachmentIndexing(params: {
   const controller = platform.getSessionAttachmentRagController()
   const draftMessageId = params.draftMessageId || uuidv4()
   const attachmentStorageKey = preparedFile.storageKey
-  log.info(
+  log.debug(
     `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} Starting attachment indexing: file="${file.name}", session=${sessionId}, draftMessage=${draftMessageId}, parser=${preparedFile.parserType}, bytes=${preparedFile.byteLength ?? 0}`
   )
   const attachment = await controller.create({
@@ -92,7 +92,7 @@ export async function startPreparedSessionAttachmentIndexing(params: {
   })
 
   if (shouldContinue && !shouldContinue()) {
-    log.info(
+    log.debug(
       `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} Aborting attachment indexing after create: attachmentId=${attachment.id}, file="${file.name}"`
     )
     await controller.deleteAttachment(attachment.id)
@@ -135,7 +135,7 @@ export async function ensureMessageFileSessionAttachment(params: {
     }
   }
 
-  log.info(
+  log.debug(
     `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} Creating message attachment task: session=${sessionId}, message=${messageId}, file="${file.name}", parser=${file.parserType}, bytes=${file.byteLength ?? 0}`
   )
   const attachment = await controller.create({
@@ -148,7 +148,7 @@ export async function ensureMessageFileSessionAttachment(params: {
     tokenEstimate: file.tokenCountMap?.default ?? 0,
     parserType: file.parserType,
   })
-  log.info(
+  log.debug(
     `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} Message attachment task created: attachmentId=${attachment.id}, file="${file.name}", status=${attachment.status}`
   )
 

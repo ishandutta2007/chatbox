@@ -494,7 +494,7 @@ async function deleteAttachmentGraphsBatch(attachmentIds: number[]): Promise<voi
 
 export async function createSessionAttachment(params: CreateSessionAttachmentParams): Promise<number> {
   const client = getDatabase()
-  log.info(
+  log.debug(
     `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} [DB] Insert attachment task: session=${params.sessionId}, message=${params.messageId}, file="${params.filename}", parser=${params.parserType ?? 'unknown'}`
   )
   const rs = await client.execute({
@@ -514,7 +514,7 @@ export async function createSessionAttachment(params: CreateSessionAttachmentPar
       'queued',
     ],
   })
-  log.info(
+  log.debug(
     `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} [DB] Inserted attachment task: attachmentId=${Number(rs.lastInsertRowid)}, status=pending`
   )
   return Number(rs.lastInsertRowid)
@@ -567,7 +567,7 @@ export async function purgeCanceledSessionAttachments(limit = 20): Promise<numbe
     return 0
   }
   for (const attachment of canceled) {
-    log.info(
+    log.debug(
       `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} [DB] Purging canceled attachment: attachmentId=${attachment.id}, file="${attachment.filename}"`
     )
   }
@@ -598,7 +598,7 @@ export async function markSessionAttachmentIndexing(id: number) {
     args: ['indexing', 'queued', id, 'pending'],
   })
   if ((result.rowsAffected || 0) > 0) {
-    log.info(`${SESSION_ATTACHMENT_RAG_LOG_PREFIX} [DB] Marked attachment indexing: attachmentId=${id}`)
+    log.debug(`${SESSION_ATTACHMENT_RAG_LOG_PREFIX} [DB] Marked attachment indexing: attachmentId=${id}`)
     return true
   }
   return false
@@ -644,7 +644,7 @@ export async function markSessionAttachmentReady(id: number) {
     args: ['ready', 'ready', id, 'indexing'],
   })
   if ((result.rowsAffected || 0) > 0) {
-    log.info(`${SESSION_ATTACHMENT_RAG_LOG_PREFIX} [DB] Marked attachment ready: attachmentId=${id}`)
+    log.debug(`${SESSION_ATTACHMENT_RAG_LOG_PREFIX} [DB] Marked attachment ready: attachmentId=${id}`)
     return true
   }
   return false
@@ -657,7 +657,7 @@ export async function markSessionAttachmentFailed(id: number, error: string) {
     args: ['failed', error, id, 'canceled'],
   })
   if ((result.rowsAffected || 0) > 0) {
-    log.info(`${SESSION_ATTACHMENT_RAG_LOG_PREFIX} [DB] Marked attachment failed: attachmentId=${id}, error=${error}`)
+    log.debug(`${SESSION_ATTACHMENT_RAG_LOG_PREFIX} [DB] Marked attachment failed: attachmentId=${id}, error=${error}`)
   }
 }
 
@@ -674,7 +674,7 @@ export async function retrySessionAttachment(id: number) {
     sql: 'UPDATE session_attachment SET status = ?, indexing_stage = ?, total_chunks = 0, embedded_chunks = 0, error = NULL, processing_started_at = NULL, completed_at = NULL WHERE id = ?',
     args: ['pending', 'queued', id],
   })
-  log.info(`${SESSION_ATTACHMENT_RAG_LOG_PREFIX} [DB] Reset attachment to pending: attachmentId=${id}`)
+  log.debug(`${SESSION_ATTACHMENT_RAG_LOG_PREFIX} [DB] Reset attachment to pending: attachmentId=${id}`)
 }
 
 export async function cancelSessionAttachment(id: number) {
@@ -683,7 +683,7 @@ export async function cancelSessionAttachment(id: number) {
     sql: 'UPDATE session_attachment SET status = ?, error = NULL, processing_started_at = NULL, completed_at = NULL WHERE id = ? AND status IN (?, ?, ?)',
     args: ['canceled', id, 'pending', 'indexing', 'failed'],
   })
-  log.info(`${SESSION_ATTACHMENT_RAG_LOG_PREFIX} [DB] Marked attachment canceled: attachmentId=${id}`)
+  log.debug(`${SESSION_ATTACHMENT_RAG_LOG_PREFIX} [DB] Marked attachment canceled: attachmentId=${id}`)
 }
 
 export async function rebindSessionAttachment(id: number, sessionId: string, messageId: string) {
@@ -692,7 +692,7 @@ export async function rebindSessionAttachment(id: number, sessionId: string, mes
     sql: 'UPDATE session_attachment SET session_id = ?, message_id = ? WHERE id = ?',
     args: [sessionId, messageId, id],
   })
-  log.info(
+  log.debug(
     `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} [DB] Rebound attachment ownership: attachmentId=${id}, session=${sessionId}, message=${messageId}`
   )
 }

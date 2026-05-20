@@ -92,7 +92,7 @@ async function embedManyWithRetry(model: EmbeddingModel, values: string[]) {
 
 async function processAttachment(attachmentId: number) {
   const attachment = await ensureAttachmentNotCanceled(attachmentId)
-  log.info(
+  log.debug(
     `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} [FILE] Begin processing attachment: id=${attachment.id}, file="${attachment.filename}", parser=${attachment.parserType ?? 'unknown'}, storageKey=${attachment.attachmentStorageKey}`
   )
 
@@ -100,7 +100,7 @@ async function processAttachment(attachmentId: number) {
   if (!content?.trim()) {
     throw new Error('Attachment content not found or empty')
   }
-  log.info(
+  log.debug(
     `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} [FILE] Loaded parsed content: attachmentId=${attachment.id}, chars=${content.length}, bytes=${new TextEncoder().encode(content).length}`
   )
 
@@ -115,7 +115,7 @@ async function processAttachment(attachmentId: number) {
     throw new Error('Attachment did not produce any retrievable chunks')
   }
   await ensureAttachmentNotCanceled(attachmentId)
-  log.info(
+  log.debug(
     `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} [FILE] Chunking completed: attachmentId=${attachment.id}, pipeline=${chunkingPipeline}, parents=${parents.length}, children=${children.length}`
   )
 
@@ -162,7 +162,7 @@ async function processAttachment(attachmentId: number) {
 
   const firstEmbedding = await embedManyWithRetry(embeddingModel, [embeddedTexts[0]])
   await ensureAttachmentNotCanceled(attachmentId)
-  log.info(
+  log.debug(
     `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} [FILE] Embedding initialized: attachmentId=${attachment.id}, dimension=${firstEmbedding.embeddings[0].length}, totalChunks=${embeddedTexts.length}`
   )
   await runVectorWrite(() =>
@@ -210,7 +210,7 @@ async function processAttachment(attachmentId: number) {
       totalChunks: children.length,
       embeddedChunks: Math.min(index + batchChildren.length, children.length),
     })
-    log.info(
+    log.debug(
       `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} [FILE] Upserted embedding batch: attachmentId=${attachment.id}, batchStart=${index}, batchSize=${batchChildren.length}`
     )
 
@@ -239,12 +239,12 @@ async function processPendingAttachments() {
 
   for (const attachment of pending) {
     try {
-      log.info(
+      log.debug(
         `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} [FILE] Transition pending -> indexing: attachmentId=${attachment.id}, file="${attachment.filename}"`
       )
       const markedIndexing = await markSessionAttachmentIndexing(attachment.id)
       if (!markedIndexing) {
-        log.info(
+        log.debug(
           `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} [FILE] Skip attachment that is no longer pending: attachmentId=${attachment.id}, file="${attachment.filename}"`
         )
         continue
@@ -252,7 +252,7 @@ async function processPendingAttachments() {
       await deleteAttachmentIndex(attachment.id)
       await processAttachment(attachment.id)
       await ensureAttachmentNotCanceled(attachment.id)
-      log.info(
+      log.debug(
         `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} [FILE] Transition indexing -> ready: attachmentId=${attachment.id}, file="${attachment.filename}"`
       )
       const markedReady = await markSessionAttachmentReady(attachment.id)
@@ -262,7 +262,7 @@ async function processPendingAttachments() {
       }
     } catch (error) {
       if (error instanceof SessionAttachmentCanceledError) {
-        log.info(
+        log.debug(
           `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} [FILE] Attachment canceled during processing: attachmentId=${attachment.id}, file="${attachment.filename}"`
         )
         await deleteAttachmentGraph(attachment.id)
@@ -273,7 +273,7 @@ async function processPendingAttachments() {
         `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} [FILE] Failed to process attachment ${attachment.id} (${attachment.filename}):`,
         error
       )
-      log.info(
+      log.debug(
         `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} [FILE] Transition indexing -> failed: attachmentId=${attachment.id}, error=${message}`
       )
       await markSessionAttachmentFailed(attachment.id, message)

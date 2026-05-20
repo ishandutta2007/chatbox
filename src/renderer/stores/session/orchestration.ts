@@ -55,7 +55,7 @@ async function refreshSessionAttachmentStatuses(messages: Message[]): Promise<Me
 
   const controller = platform.getSessionAttachmentRagController()
   const attachments = await controller.getAttachments(ids)
-  log.info(
+  log.debug(
     `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} Refreshed attachment statuses: count=${attachments.length}, statuses=${attachments
       .map((attachment) => `${attachment.id}:${attachment.indexStatus ?? attachment.status}`)
       .join(',')}`
