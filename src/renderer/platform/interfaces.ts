@@ -79,6 +79,7 @@ export interface Platform extends Storage {
   ensureAutoLaunch(enable: boolean): Promise<void>
 
   parseFileLocally(file: File): Promise<{ key?: string; isSupported: boolean }>
+  getLocalFilePath(file: File): string
   readLocalFileContent?(filePath: string): Promise<string | null>
 
   // Parse file using MinerU service (Desktop only)

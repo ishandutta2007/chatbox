@@ -162,6 +162,10 @@ export default class WebPlatform extends IndexedDBStorage implements Platform {
     return { key, isSupported: true }
   }
 
+  getLocalFilePath(file: File): string {
+    return file.path || ''
+  }
+
   public async parseUrl(url: string): Promise<{ key: string; title: string }> {
     throw new Error('Not implemented')
   }

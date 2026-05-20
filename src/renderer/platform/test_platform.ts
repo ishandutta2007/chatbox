@@ -299,6 +299,10 @@ export default class TestPlatform implements Platform {
     }
   }
 
+  public getLocalFilePath(file: File): string {
+    return file.path || ''
+  }
+
   public async isFullscreen(): Promise<boolean> {
     return false
   }

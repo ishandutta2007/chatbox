@@ -174,9 +174,11 @@ const KnowledgeBaseDocuments: React.FC<KnowledgeBaseDocumentsProps> = ({ knowled
       console.log(`[Upload] Corrected MIME type for ${file.name}: "${file.type}" -> "${mimeType}"`)
     }
 
+    const filePath = platform.getLocalFilePath(file)
+
     return {
       name: file.name,
-      path: file.path,
+      path: filePath,
       type: mimeType,
       size: file.size,
     }

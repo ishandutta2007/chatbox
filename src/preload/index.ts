@@ -1,6 +1,6 @@
 // Disable no-unused-vars, broken for spread args
 /* eslint no-unused-vars: off */
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import type { ElectronIPC } from 'src/shared/electron-types'
 
 // export type Channels = 'ipc-example';
@@ -15,6 +15,7 @@ function createListener<T extends unknown[]>(channel: string) {
 
 const electronHandler: ElectronIPC = {
   invoke: ipcRenderer.invoke,
+  getPathForFile: (file: File) => webUtils.getPathForFile(file),
   onSystemThemeChange: (callback: () => void) => {
     ipcRenderer.on('system-theme-updated', callback)
     return () => ipcRenderer.off('system-theme-updated', callback)

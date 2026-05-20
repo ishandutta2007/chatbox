@@ -6,6 +6,7 @@ import { cache } from '@shared/utils/cache'
 import localforage from 'localforage'
 import { v4 as uuidv4 } from 'uuid'
 import { parseLocale } from '@/i18n/parser'
+import { getLogger } from '@/lib/utils'
 import { type ImageGenerationStorage, IndexedDBImageGenerationStorage } from '@/storage/ImageGenerationStorage'
 import { IndexedDBSessionMetaStorage, type SessionMetaStorage } from '@/storage/SessionMetaStorage'
 import { getOS } from '../packages/navigator'
@@ -13,7 +14,6 @@ import type { Platform, PlatformType } from './interfaces'
 import DesktopKnowledgeBaseController from './knowledge-base/desktop-controller'
 import DesktopSessionAttachmentRagController from './session-attachment-rag/desktop-controller'
 import WebExporter from './web_exporter'
-import { getLogger } from '@/lib/utils'
 import { parseTextFileLocally } from './web_platform_utils'
 
 const log = getLogger('desktop-platform')
@@ -235,20 +235,25 @@ export default class DesktopPlatform implements Platform {
 
   async parseFileLocally(file: File): Promise<{ key?: string; isSupported: boolean }> {
     let result: { text: string; isSupported: boolean }
-    if (!file.path) {
+    const filePath = this.getLocalFilePath(file)
+    if (!filePath) {
       // 复制长文本粘贴的文件是没有 path 的
       result = await parseTextFileLocally(file)
     } else {
-      const resultJSON = await this.ipc.invoke('parseFileLocally', JSON.stringify({ filePath: file.path }))
+      const resultJSON = await this.ipc.invoke('parseFileLocally', JSON.stringify({ filePath }))
       result = JSON.parse(resultJSON)
     }
     if (!result.isSupported) {
-      log.error(`parseFileLocally: unsupported file "${file.name}" (path=${file.path || 'none'})`)
+      log.error(`parseFileLocally: unsupported file "${file.name}" (path=${filePath || 'none'})`)
       return { isSupported: false }
     }
     const key = `parseFile-` + uuidv4()
     await this.setStoreBlob(key, result.text)
     return { key, isSupported: true }
+  }
+
+  getLocalFilePath(file: File): string {
+    return this.ipc.getPathForFile(file)
   }
 
   async readLocalFileContent(filePath: string): Promise<string | null> {
@@ -264,13 +269,14 @@ export default class DesktopPlatform implements Platform {
     file: File,
     apiToken: string
   ): Promise<{ success: boolean; content?: string; error?: string; cancelled?: boolean }> {
-    if (!file.path) {
+    const filePath = this.getLocalFilePath(file)
+    if (!filePath) {
       // Files without path (e.g., pasted files) are not supported for MinerU parsing
       return { success: false, error: 'File path is required for MinerU parsing' }
     }
 
     return this.ipc.invoke('parser:parse-file-with-mineru', {
-      filePath: file.path,
+      filePath,
       filename: file.name,
       mimeType: file.type,
       apiToken,
