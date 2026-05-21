@@ -9,6 +9,7 @@ import { parseLocale } from '@/i18n/parser'
 import { getLogger } from '@/lib/utils'
 import { type ImageGenerationStorage, IndexedDBImageGenerationStorage } from '@/storage/ImageGenerationStorage'
 import { IndexedDBSessionMetaStorage, type SessionMetaStorage } from '@/storage/SessionMetaStorage'
+import { rememberFileNativePath } from '@/utils/file-native-path'
 import { getOS } from '../packages/navigator'
 import type { Platform, PlatformType } from './interfaces'
 import DesktopKnowledgeBaseController from './knowledge-base/desktop-controller'
@@ -253,7 +254,7 @@ export default class DesktopPlatform implements Platform {
   }
 
   getLocalFilePath(file: File): string {
-    return this.ipc.getPathForFile(file)
+    return rememberFileNativePath(file, this.ipc.getPathForFile(file))
   }
 
   async readLocalFileContent(filePath: string): Promise<string | null> {

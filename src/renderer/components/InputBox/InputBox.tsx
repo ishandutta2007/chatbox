@@ -1424,8 +1424,9 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
                       }
                       onDelete={() => {
                         // Cancel any ongoing MinerU parsing for this file
-                        if (file.path && platform.cancelMineruParse) {
-                          platform.cancelMineruParse(file.path).catch(() => {
+                        const filePath = platform.getLocalFilePath(file)
+                        if (filePath && platform.cancelMineruParse) {
+                          platform.cancelMineruParse(filePath).catch(() => {
                             // Ignore cancellation errors
                           })
                         }

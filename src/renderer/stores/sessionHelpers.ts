@@ -627,28 +627,33 @@ export function constructUserMessage(
   }
 
   if (preprocessedFiles.length > 0) {
-    msg.files = preprocessedFiles.map((f) => ({
-      id: f.storageKey || f.file.name,
-      name: f.file.name,
-      fileType: f.file.type,
-      parserType: f.parserType,
-      storageKey: f.storageKey || undefined,
-      localPath: f.ragMode === 'session-retrieval' ? undefined : (f.localPath ?? f.file.path ?? undefined),
-      ragMode: f.ragMode ?? 'inline',
-      sessionAttachmentId: f.sessionAttachmentId,
-      sessionAttachmentAvailability: f.sessionAttachmentAvailability ?? 'allowed',
-      sessionAttachmentIndexStatus:
-        f.ragMode === 'session-retrieval' ? (f.sessionAttachmentIndexStatus ?? 'pending') : undefined,
-      sessionAttachmentBlockedReason: f.sessionAttachmentBlockedReason,
-      sessionAttachmentWarningReason: f.sessionAttachmentWarningReason,
-      sessionAttachmentChunkCount: f.sessionAttachmentChunkCount,
-      sessionAttachmentTotalChunks: f.sessionAttachmentTotalChunks,
-      sessionAttachmentEmbeddedChunks: f.sessionAttachmentEmbeddedChunks,
-      sessionAttachmentIndexingStage: f.sessionAttachmentIndexingStage,
-      tokenCountMap: f.tokenCountMap,
-      lineCount: f.lineCount,
-      byteLength: f.byteLength,
-    }))
+    msg.files = preprocessedFiles.map((f) => {
+      const localPath =
+        f.ragMode === 'session-retrieval' ? undefined : f.localPath || platform.getLocalFilePath(f.file) || undefined
+
+      return {
+        id: f.storageKey || f.file.name,
+        name: f.file.name,
+        fileType: f.file.type,
+        parserType: f.parserType,
+        storageKey: f.storageKey || undefined,
+        localPath,
+        ragMode: f.ragMode ?? 'inline',
+        sessionAttachmentId: f.sessionAttachmentId,
+        sessionAttachmentAvailability: f.sessionAttachmentAvailability ?? 'allowed',
+        sessionAttachmentIndexStatus:
+          f.ragMode === 'session-retrieval' ? (f.sessionAttachmentIndexStatus ?? 'pending') : undefined,
+        sessionAttachmentBlockedReason: f.sessionAttachmentBlockedReason,
+        sessionAttachmentWarningReason: f.sessionAttachmentWarningReason,
+        sessionAttachmentChunkCount: f.sessionAttachmentChunkCount,
+        sessionAttachmentTotalChunks: f.sessionAttachmentTotalChunks,
+        sessionAttachmentEmbeddedChunks: f.sessionAttachmentEmbeddedChunks,
+        sessionAttachmentIndexingStage: f.sessionAttachmentIndexingStage,
+        tokenCountMap: f.tokenCountMap,
+        lineCount: f.lineCount,
+        byteLength: f.byteLength,
+      }
+    })
   }
 
   if (preprocessedLinks.length > 0) {
