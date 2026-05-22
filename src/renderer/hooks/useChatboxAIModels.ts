@@ -36,14 +36,14 @@ const useChatboxAIModels = () => {
         }))
       }
 
-      return res.models
+      return res
     },
     staleTime: 3600 * 1000,
   })
 
   const allChatboxAIModels = useMemo(
     () =>
-      data?.map(
+      data?.models.map(
         (item) =>
           ({
             modelId: item.modelId,
@@ -56,12 +56,28 @@ const useChatboxAIModels = () => {
     [data]
   )
 
+  const chatboxAIImageModels = useMemo(
+    () =>
+      data?.imageModels.map(
+        (item) =>
+          ({
+            modelId: item.modelId,
+            nickname: item.modelName,
+            labels: item.labels,
+            capabilities: item.capabilities,
+            type: item.type || 'image',
+            contextWindow: item.contextWindow || undefined,
+          }) as ProviderModelInfo
+      ) || [],
+    [data]
+  )
+
   const chatboxAIModels = useMemo(
     () => allChatboxAIModels.filter((m) => !chatboxAISettings?.excludedModels?.includes(m.modelId)),
     [allChatboxAIModels, chatboxAISettings]
   )
 
-  return { allChatboxAIModels, chatboxAIModels, ...others }
+  return { allChatboxAIModels, chatboxAIModels, chatboxAIImageModels, ...others }
 }
 
 export default useChatboxAIModels

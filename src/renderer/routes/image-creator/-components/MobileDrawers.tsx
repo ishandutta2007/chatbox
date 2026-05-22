@@ -1,8 +1,10 @@
-import { ActionIcon, Flex, ScrollArea, Stack, Text, UnstyledButton } from '@mantine/core'
+import { ActionIcon, Box, Flex, ScrollArea, Stack, Text, UnstyledButton } from '@mantine/core'
 import type { ImageGeneration } from '@shared/types'
-import { IconPlus } from '@tabler/icons-react'
+import { IconPlus, IconServer } from '@tabler/icons-react'
 import { useTranslation } from 'react-i18next'
 import { Drawer } from 'vaul'
+import { ScalableIcon } from '@/components/common/ScalableIcon'
+import ProviderIcon from '@/components/icons/ProviderIcon'
 import { HistoryListContent } from './HistoryPanel'
 
 /* ============================================
@@ -15,6 +17,7 @@ export interface MobileHistoryDrawerProps {
   historyCache: ImageGeneration[]
   historyLoading: boolean
   currentRecordId: string | null
+  getModelDisplayName: (record: ImageGeneration) => string
   hasNextPage: boolean
   isFetchingNextPage: boolean
   onItemClick: (record: ImageGeneration) => void
@@ -29,6 +32,7 @@ export function MobileHistoryDrawer({
   historyCache,
   historyLoading,
   currentRecordId,
+  getModelDisplayName,
   hasNextPage,
   isFetchingNextPage,
   onItemClick,
@@ -69,11 +73,12 @@ export function MobileHistoryDrawer({
             </ActionIcon>
           </Flex>
 
-          <ScrollArea flex={1} type="auto" offsetScrollbars>
+          <Box flex={1}>
             <HistoryListContent
               historyCache={historyCache}
               historyLoading={historyLoading}
               currentRecordId={currentRecordId}
+              getModelDisplayName={getModelDisplayName}
               hasNextPage={hasNextPage}
               isFetchingNextPage={isFetchingNextPage}
               isMobile
@@ -84,7 +89,7 @@ export function MobileHistoryDrawer({
               onLoadMore={onLoadMore}
               onDelete={onDelete}
             />
-          </ScrollArea>
+          </Box>
         </Drawer.Content>
       </Drawer.Portal>
     </Drawer.Root>
@@ -98,7 +103,12 @@ export function MobileHistoryDrawer({
 export interface MobileModelDrawerProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  modelGroups: { label: string; providerId: string; models: { modelId: string; displayName: string }[] }[]
+  modelGroups: {
+    label: string
+    providerId: string
+    isCustom?: boolean
+    models: { modelId: string; displayName: string }[]
+  }[]
   selectedProvider: string
   selectedModel: string
   onSelect: (provider: string, model: string) => void
@@ -138,9 +148,16 @@ export function MobileModelDrawer({
             <Stack gap="md" p="xs" pb="xl">
               {modelGroups.map((group, groupIndex) => (
                 <Stack key={group.providerId} gap={2}>
-                  <Text size="xs" fw={600} c="dimmed" px="sm" tt="uppercase" style={{ letterSpacing: 0.5 }}>
-                    {group.label}
-                  </Text>
+                  <Flex align="center" gap={6} px="sm">
+                    {group.isCustom ? (
+                      <ScalableIcon icon={IconServer} size={14} className="text-chatbox-tint-gray" />
+                    ) : (
+                      <ProviderIcon size={14} provider={group.providerId} className="opacity-50" />
+                    )}
+                    <Text size="xs" fw={500} c="dimmed">
+                      {group.label}
+                    </Text>
+                  </Flex>
                   {group.models.map((model) => {
                     const isSelected = selectedProvider === group.providerId && selectedModel === model.modelId
                     return (

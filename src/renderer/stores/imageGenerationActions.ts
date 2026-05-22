@@ -1,9 +1,15 @@
+import { BaseError } from '@shared/models/errors'
 import { getModel } from '@shared/providers'
 import type { ImageGeneration, ImageGenerationModel } from '@shared/types'
 import { ModelProviderEnum } from '@shared/types'
 import { createModelDependencies } from '@/adapters'
 import { getLogger } from '@/lib/utils'
-import { pollImageTask, pollTaskUntilComplete, submitImageGeneration } from '@/packages/remote'
+import {
+  pollImageTask,
+  pollTaskUntilComplete,
+  submitImageGeneration,
+  type ImageGenerationTaskResponse,
+} from '@/packages/remote'
 import platform from '@/platform'
 import storage from '@/storage'
 import { StorageKeyGenerator } from '@/storage/StoreStorage'
@@ -34,6 +40,23 @@ function getLicenseKey(): string {
 
 function shouldUseAsyncPath(provider: string): boolean {
   return provider === ModelProviderEnum.ChatboxAI
+}
+
+function getErrorRecordUpdate(error: unknown): Pick<ImageGeneration, 'status' | 'error' | 'errorCode'> {
+  const normalizedError = error instanceof Error ? error : new Error(`${error}`)
+  return {
+    status: 'error',
+    error: normalizedError.message,
+    errorCode: error instanceof BaseError ? error.code : undefined,
+  }
+}
+
+function getFailedImageGenerationMessage(result: ImageGenerationTaskResponse, fallback: string): string {
+  return result.items.find((item) => item.status === 'failed' && item.error_message)?.error_message || fallback
+}
+
+function getCompletedImageUrls(result: ImageGenerationTaskResponse): string[] {
+  return result.items.flatMap((item) => (item.status === 'completed' && item.image_url ? [item.image_url] : []))
 }
 
 export interface GenerateImageParams {
@@ -150,9 +173,7 @@ async function generateImages(recordId: string, params: GenerateImageParams): Pr
     const finalResult = await pollTaskUntilComplete(submission.task_id, licenseKey, {
       signal,
       onPoll: async (response) => {
-        const completedUrls = response.items
-          .filter((item) => item.status === 'completed' && item.image_url)
-          .map((item) => item.image_url!)
+        const completedUrls = getCompletedImageUrls(response)
         if (completedUrls.length > lastCompletedCount) {
           lastCompletedCount = completedUrls.length
           currentRecord = await updateRecord(recordId, { generatedImages: completedUrls })
@@ -164,21 +185,20 @@ async function generateImages(recordId: string, params: GenerateImageParams): Pr
     })
 
     // Final update: set status based on results
-    const completedUrls = finalResult.items
-      .filter((item) => item.status === 'completed' && item.image_url)
-      .map((item) => item.image_url!)
+    const completedUrls = getCompletedImageUrls(finalResult)
     const hasError = finalResult.items.some((item) => item.status === 'failed')
 
     if (completedUrls.length > 0) {
+      const error = getFailedImageGenerationMessage(finalResult, 'Some images failed to generate')
       currentRecord = await updateRecord(recordId, {
         generatedImages: completedUrls,
         status: hasError && completedUrls.length < num ? 'error' : 'done',
-        error: hasError && completedUrls.length < num ? 'Some images failed to generate' : undefined,
+        error: hasError && completedUrls.length < num ? error : undefined,
       })
     } else {
       currentRecord = await updateRecord(recordId, {
         status: 'error',
-        error: 'All images failed to generate',
+        error: getFailedImageGenerationMessage(finalResult, 'All images failed to generate'),
       })
     }
 
@@ -194,13 +214,9 @@ async function generateImages(recordId: string, params: GenerateImageParams): Pr
       return
     }
 
-    const error = !(err instanceof Error) ? new Error(`${err}`) : err
-    log.error('Image generation failed:', error)
+    log.error('Image generation failed:', err)
 
-    const updatedRecord = await updateRecord(recordId, {
-      status: 'error',
-      error: error.message,
-    })
+    const updatedRecord = await updateRecord(recordId, getErrorRecordUpdate(err))
     if (updatedRecord) {
       queryClient.setQueryData([IMAGE_GEN_QUERY_KEY, updatedRecord.id], updatedRecord)
     }
@@ -306,13 +322,9 @@ async function generateImagesDirect(recordId: string, params: GenerateImageParam
       return
     }
 
-    const error = !(err instanceof Error) ? new Error(`${err}`) : err
-    log.error('Direct image generation failed:', error)
+    log.error('Direct image generation failed:', err)
 
-    const updatedRecord = await updateRecord(recordId, {
-      status: 'error',
-      error: error.message,
-    })
+    const updatedRecord = await updateRecord(recordId, getErrorRecordUpdate(err))
     if (updatedRecord) {
       queryClient.setQueryData([IMAGE_GEN_QUERY_KEY, updatedRecord.id], updatedRecord)
     }
@@ -389,7 +401,7 @@ export async function resumeGeneration(recordId: string): Promise<void> {
         completedUrls.push(item.image_url)
       } else if (item.status === 'failed') {
         hasError = true
-        log.error('Image generation item failed on resume:', item.uuid)
+        log.error('Image generation item failed on resume:', item.uuid, item.error_message)
       }
     }
 
@@ -398,7 +410,10 @@ export async function resumeGeneration(recordId: string): Promise<void> {
     const updatedRecord = await updateRecord(recordId, {
       generatedImages: completedUrls,
       status: completedUrls.length >= expectedNum ? 'done' : hasError ? 'error' : 'done',
-      error: hasError && completedUrls.length < expectedNum ? 'Some images failed to generate' : undefined,
+      error:
+        hasError && completedUrls.length < expectedNum
+          ? getFailedImageGenerationMessage(finalResult, 'Some images failed to generate')
+          : undefined,
     })
 
     if (updatedRecord) {
@@ -410,13 +425,9 @@ export async function resumeGeneration(recordId: string): Promise<void> {
       return
     }
 
-    const error = !(err instanceof Error) ? new Error(`${err}`) : err
-    log.error('Resume generation failed:', error)
+    log.error('Resume generation failed:', err)
 
-    const failedRecord = await updateRecord(recordId, {
-      status: 'error',
-      error: error.message,
-    })
+    const failedRecord = await updateRecord(recordId, getErrorRecordUpdate(err))
     if (failedRecord) {
       queryClient.setQueryData([IMAGE_GEN_QUERY_KEY, failedRecord.id], failedRecord)
     }
@@ -451,6 +462,7 @@ export async function retryGeneration(recordId: string): Promise<void> {
     generatedImages: [],
     status: 'pending',
     error: undefined,
+    errorCode: undefined,
   })
 
   store.setCurrentGeneratingId(recordId)

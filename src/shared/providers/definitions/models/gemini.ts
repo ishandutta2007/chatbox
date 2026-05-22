@@ -1,4 +1,5 @@
 import { createGoogleGenerativeAI, type GoogleGenerativeAIProviderOptions } from '@ai-sdk/google'
+import { buildGeminiImageConfig } from '../gemini-types'
 import type { LanguageModelV3 } from '@ai-sdk/provider'
 import { generateText } from 'ai'
 import AbstractAISDKModel, { type CallSettings } from '../../../models/abstract-ai-sdk'
@@ -8,13 +9,7 @@ import type { ProviderModelInfo } from '../../../types'
 import type { ModelDependencies } from '../../../types/adapters'
 import { normalizeGoogleThinkingConfig } from '../../../utils/google-thinking'
 import { normalizeGeminiHost } from '../../../utils/llm_utils'
-
-const GEMINI_IMAGE_MODELS = [
-  'gemini-2.5-flash-image',
-  'gemini-3-pro-image-preview',
-  'gemini-3.1-flash-image-preview',
-  'gemini-3.1-flash-image',
-]
+import { isGeminiImageModel } from '../image-models'
 
 interface Options {
   geminiAPIKey: string
@@ -29,7 +24,10 @@ interface Options {
 export default class Gemini extends AbstractAISDKModel {
   public name = 'Google Gemini'
 
-  constructor(public options: Options, dependencies: ModelDependencies) {
+  constructor(
+    public options: Options,
+    dependencies: ModelDependencies
+  ) {
     super(options, dependencies)
     this.injectDefaultMetadata = false
   }
@@ -90,7 +88,7 @@ export default class Gemini extends AbstractAISDKModel {
         } satisfies GoogleGenerativeAIProviderOptions,
       },
     }
-    if (GEMINI_IMAGE_MODELS.includes(this.options.model.modelId)) {
+    if (isGeminiImageModel(this.options.model.modelId)) {
       settings.providerOptions = {
         google: {
           ...providerParams,
@@ -109,9 +107,9 @@ export default class Gemini extends AbstractAISDKModel {
       aspectRatio?: string
     },
     signal?: AbortSignal,
-    callback?: (picBase64: string) => void
+    callback?: (picBase64: string) => void | Promise<void>
   ): Promise<string[]> {
-    if (!GEMINI_IMAGE_MODELS.includes(this.options.model.modelId)) {
+    if (!isGeminiImageModel(this.options.model.modelId)) {
       throw new ApiError('This Gemini model does not support image generation')
     }
 
@@ -123,8 +121,9 @@ export default class Gemini extends AbstractAISDKModel {
       const providerOptions: GoogleGenerativeAIProviderOptions = {
         responseModalities: ['TEXT', 'IMAGE'],
       }
-      if (params.aspectRatio && params.aspectRatio !== 'auto') {
-        providerOptions.imageConfig = { aspectRatio: params.aspectRatio }
+      const imageConfig = buildGeminiImageConfig(params.aspectRatio)
+      if (imageConfig) {
+        providerOptions.imageConfig = imageConfig
       }
 
       const result = await generateText({
@@ -142,7 +141,7 @@ export default class Gemini extends AbstractAISDKModel {
         if (file.mediaType?.startsWith('image/') && file.base64) {
           const dataUrl = `data:${file.mediaType};base64,${file.base64}`
           results.push(dataUrl)
-          callback?.(dataUrl)
+          await callback?.(dataUrl)
         }
       }
     }
@@ -167,7 +166,7 @@ export default class Gemini extends AbstractAISDKModel {
     const res = await this.dependencies.request.apiRequest({
       url: `${this.options.geminiAPIHost}/v1beta/models?key=${this.options.geminiAPIKey}`,
       method: 'GET',
-      headers: {}
+      headers: {},
     })
     const json: Response = await res.json()
     if (!json.models) {

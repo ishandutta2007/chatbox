@@ -401,6 +401,7 @@
   "If conversations are missing from the list, use this feature to scan and recover them from storage": "Om konversationer saknas från listan, använd denna funktion för att söka igenom och återställa dem från lagring",
   "If no account exists, it will automatically create one.": "Om inget konto finns skapas ett automatiskt.",
   "If you have never had a license before, you can claim it after logging in on the official website.": "Om du aldrig har haft en licens tidigare kan du hämta den efter att ha loggat in på den officiella webbplatsen.",
+  "Image": "Bild",
   "Image Creator": "Bildskapare",
   "Image Creator Intro": "Hej! Jag är Chatbox Bildskapare, din konstnärliga AI-följeslagare som omvandlar dina ord till slående bilder. Om du kan drömma det kan jag skapa det - från förtrollande landskap och dynamiska karaktärer till app-ikoner och bortom det abstrakta.\n\nJag är en tyst robot, **berätta bara för mig hur bilden du har i åtanke ser ut**, så fokuserar jag alla mina pixlar på att förverkliga din vision.\n\nLåt oss skapa konst!",
   "Image Quota (Remaining/Total)": "Bildkvot (Återstående/Totalt)",

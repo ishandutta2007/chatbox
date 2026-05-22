@@ -127,4 +127,72 @@ describe('imageGenerationActions reference image payload', () => {
     )
     expect(trackEventMock).toHaveBeenCalledWith('generate_image', expect.objectContaining({ has_reference: true }))
   })
+
+  it('stores structured error codes from Chatbox AI image generation failures', async () => {
+    const { BaseError } = await import('@shared/models/errors')
+    class StructuredImageGenerationError extends BaseError {
+      public code = 20004
+    }
+    submitImageGenerationMock.mockRejectedValueOnce(new StructuredImageGenerationError('license not found'))
+
+    const { createAndGenerate } = await import('./imageGenerationActions')
+
+    await createAndGenerate({
+      prompt: 'make an image',
+      referenceImages: [],
+      model: {
+        provider: 'chatbox-ai',
+        modelId: 'gpt-image-1',
+      },
+      imageGenerateNum: 1,
+    })
+
+    await vi.waitFor(() => {
+      expect(updateRecordMock).toHaveBeenCalledWith(
+        'record-1',
+        expect.objectContaining({
+          status: 'error',
+          error: 'license not found',
+          errorCode: 20004,
+        })
+      )
+    })
+  })
+
+  it('stores failed item error messages from async image generation results', async () => {
+    pollTaskUntilCompleteMock.mockResolvedValueOnce({
+      task_id: 'task-1',
+      is_finished: true,
+      items: [
+        {
+          uuid: 'item-1',
+          status: 'failed',
+          created_at: '2026-05-08T15:23:34.442+08:00',
+          error_message: 'Content rejected by content moderation',
+        },
+      ],
+    })
+
+    const { createAndGenerate } = await import('./imageGenerationActions')
+
+    await createAndGenerate({
+      prompt: 'make an image',
+      referenceImages: [],
+      model: {
+        provider: 'chatbox-ai',
+        modelId: 'gpt-image-1',
+      },
+      imageGenerateNum: 1,
+    })
+
+    await vi.waitFor(() => {
+      expect(updateRecordMock).toHaveBeenCalledWith(
+        'record-1',
+        expect.objectContaining({
+          status: 'error',
+          error: 'Content rejected by content moderation',
+        })
+      )
+    })
+  })
 })

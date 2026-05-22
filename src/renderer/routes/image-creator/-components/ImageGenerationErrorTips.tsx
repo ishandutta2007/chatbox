@@ -20,7 +20,7 @@ export function ImageGenerationErrorTips({ record, onRetry, isRetrying }: ImageG
   const { t } = useTranslation()
 
   const chatboxAIErrorDetail = record.errorCode ? ChatboxAIAPIError.getDetail(record.errorCode) : null
-  const showDetailedError = !chatboxAIErrorDetail
+  const showRawErrorDetail = Boolean(chatboxAIErrorDetail && record.error)
   const isLicenseError =
     chatboxAIErrorDetail && ['license_not_found', 'expired_license'].includes(chatboxAIErrorDetail.name)
 
@@ -82,7 +82,7 @@ export function ImageGenerationErrorTips({ record, onRetry, isRetrying }: ImageG
           </Text>
         )}
 
-        {showDetailedError && record.error && chatboxAIErrorDetail && (
+        {showRawErrorDetail && (
           <Text size="xs" c="dimmed" ta="center" className="whitespace-pre-wrap opacity-60" maw={400}>
             {record.error}
           </Text>

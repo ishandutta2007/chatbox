@@ -1,5 +1,5 @@
 import NiceModal, { useModal } from '@ebay/nice-modal-react'
-import { Button, Checkbox, Flex, Loader, NumberInput, Select, Stack, Text, TextInput, Tooltip } from '@mantine/core'
+import { Button, Checkbox, Flex, Loader, NumberInput, Stack, Text, TextInput, Tooltip } from '@mantine/core'
 import type { ProviderModelInfo } from '@shared/types'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -28,6 +28,7 @@ const ModelEdit = NiceModal.create((props: { model?: ProviderModelInfo; provider
 
   const typeOptions = [
     { value: 'chat', label: t('Chat')?.toString() ?? 'Chat' },
+    { value: 'image', label: t('Image')?.toString() ?? 'Image' },
     { value: 'embedding', label: t('Embedding')?.toString() ?? 'Embedding' },
     { value: 'rerank', label: t('Rerank')?.toString() ?? 'Rerank' },
   ]

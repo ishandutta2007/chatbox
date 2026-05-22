@@ -401,6 +401,7 @@
   "If conversations are missing from the list, use this feature to scan and recover them from storage": "إذا كانت المحادثات مفقودة من القائمة، استخدم هذه الميزة لمسحها واستعادتها من التخزين",
   "If no account exists, it will automatically create one.": "في حال عدم وجود حساب، سيتم إنشاء حساب تلقائياً.",
   "If you have never had a license before, you can claim it after logging in on the official website.": "إذا لم تكن قد حصلت على ترخيص من قبل، يمكنك المطالبة به بعد تسجيل الدخول إلى الموقع الرسمي.",
+  "Image": "صورة",
   "Image Creator": "مُنشِئ الصور",
   "Image Creator Intro": "مرحبًا! أنا منشئ الصور في Chatbox، رفيقك الفني المدعوم بالذكاء الاصطناعي المكرس لتحويل كلماتك إلى صور مذهلة. إذا كنت تستطيع أن تحلم بها، يمكنني أن أخلقها - من المناظر الطبيعية الساحرة، الشخصيات الديناميكية، رموز التطبيقات إلى التجريد وما وراءه.\n\nأنا روبوت هادئ، فقط **أخبرني ببساطة بوصف الصورة التي في ذهنك**، وسأركز كل وحدات البكسل الخاصة بي على إنشاء رؤيتك.\n\nلنصنع الفن!",
   "Image Quota (Remaining/Total)": "حصة الصور (المتبقي/الإجمالي)",

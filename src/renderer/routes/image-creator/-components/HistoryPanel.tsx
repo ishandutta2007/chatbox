@@ -1,8 +1,35 @@
-import { ActionIcon, Box, Button, Flex, ScrollArea, Skeleton, Stack, Text, Tooltip } from '@mantine/core'
+import { ActionIcon, Box, Button, Flex, Skeleton, Stack, Text, Tooltip } from '@mantine/core'
 import type { ImageGeneration } from '@shared/types'
 import { IconChevronRight, IconClock, IconPlus } from '@tabler/icons-react'
 import { useTranslation } from 'react-i18next'
+import { Virtuoso } from 'react-virtuoso'
 import { HistoryItem } from './HistoryItem'
+
+interface HistoryListFooterContext {
+  hasNextPage: boolean
+  isFetchingNextPage: boolean
+  loadMoreText: string
+  onLoadMore: () => void
+}
+
+function HistoryListFooter({ context }: { context: HistoryListFooterContext }) {
+  if (!context.hasNextPage) return null
+
+  return (
+    <div className="px-3 pb-3 pt-2">
+      <Button
+        variant="subtle"
+        size="xs"
+        color="gray"
+        onClick={context.onLoadMore}
+        loading={context.isFetchingNextPage}
+        fullWidth
+      >
+        {context.loadMoreText}
+      </Button>
+    </div>
+  )
+}
 
 /* ============================================
    History List Content (shared between desktop/mobile)
@@ -12,6 +39,7 @@ export interface HistoryListContentProps {
   historyCache: ImageGeneration[]
   historyLoading: boolean
   currentRecordId: string | null
+  getModelDisplayName: (record: ImageGeneration) => string
   hasNextPage: boolean
   isFetchingNextPage: boolean
   isMobile?: boolean
@@ -24,6 +52,7 @@ export function HistoryListContent({
   historyCache,
   historyLoading,
   currentRecordId,
+  getModelDisplayName,
   hasNextPage,
   isFetchingNextPage,
   isMobile,
@@ -34,38 +63,13 @@ export function HistoryListContent({
   const { t } = useTranslation()
 
   return (
-    <Stack gap={2} p="xs">
+    <Box className="h-full">
       {historyLoading && historyCache.length === 0 && (
-        <Stack gap="xs" p="xs">
+        <Stack gap="sm" p={0}>
           {[1, 2, 3].map((i) => (
-            <Skeleton key={i} h={64} radius="md" />
+            <Skeleton key={i} className="w-full aspect-square" radius="lg" />
           ))}
         </Stack>
-      )}
-
-      {historyCache.map((record) => (
-        <HistoryItem
-          key={record.id}
-          record={record}
-          isActive={currentRecordId === record.id}
-          isMobile={isMobile}
-          onClick={() => onItemClick(record)}
-          onDelete={onDelete}
-        />
-      ))}
-
-      {hasNextPage && (
-        <Button
-          variant="subtle"
-          size="xs"
-          color="gray"
-          onClick={onLoadMore}
-          loading={isFetchingNextPage}
-          fullWidth
-          mt="sm"
-        >
-          {t('Load More')}
-        </Button>
       )}
 
       {historyCache.length === 0 && !historyLoading && (
@@ -76,7 +80,41 @@ export function HistoryListContent({
           </Text>
         </Flex>
       )}
-    </Stack>
+
+      {historyCache.length > 0 && (
+        <Virtuoso<ImageGeneration, HistoryListFooterContext>
+          style={{ height: '100%' }}
+          data={historyCache}
+          context={{
+            hasNextPage,
+            isFetchingNextPage,
+            loadMoreText: t('Load More'),
+            onLoadMore,
+          }}
+          itemContent={(_index, record) => (
+            <div className="px-3 py-1">
+              <HistoryItem
+                key={record.id}
+                record={record}
+                isActive={currentRecordId === record.id}
+                isMobile={isMobile}
+                modelDisplayName={getModelDisplayName(record)}
+                onClick={() => onItemClick(record)}
+                onDelete={onDelete}
+              />
+            </div>
+          )}
+          endReached={() => {
+            if (hasNextPage && !isFetchingNextPage) {
+              onLoadMore()
+            }
+          }}
+          components={{
+            Footer: HistoryListFooter,
+          }}
+        />
+      )}
+    </Box>
   )
 }
 
@@ -90,6 +128,7 @@ export interface HistoryPanelProps {
   historyCache: ImageGeneration[]
   historyLoading: boolean
   currentRecordId: string | null
+  getModelDisplayName: (record: ImageGeneration) => string
   hasNextPage: boolean
   isFetchingNextPage: boolean
   onItemClick: (record: ImageGeneration) => void
@@ -105,6 +144,7 @@ export function HistoryPanel({
   historyCache,
   historyLoading,
   currentRecordId,
+  getModelDisplayName,
   hasNextPage,
   isFetchingNextPage,
   onItemClick,
@@ -119,45 +159,40 @@ export function HistoryPanel({
     <Box
       w={show ? width : 0}
       h="100%"
-      className="border-l border-[var(--chatbox-border-primary)] bg-[var(--chatbox-background-primary)] transition-all duration-300 ease-in-out overflow-hidden shrink-0"
+      className="border-0 border-l border-solid border-[var(--chatbox-border-primary)] bg-[var(--chatbox-background-primary)] transition-all duration-300 ease-in-out overflow-hidden shrink-0"
     >
       <Flex direction="column" h="100%" w={width}>
-        <Flex
-          align="center"
-          justify="space-between"
-          px="md"
-          py="sm"
-          className="border-b border-[var(--chatbox-border-primary)]"
-        >
-          <Text size="xs" fw={600} c="dimmed" tt="uppercase" style={{ letterSpacing: 0.5 }}>
+        <Flex align="center" justify="space-between" px="xs" py="xs" className="">
+          <Text size="sm" fw={600}>
             {t('History')}
           </Text>
-          <Flex gap="xs">
+          <Flex gap={4}>
             <Tooltip label={t('New Creation')}>
               <ActionIcon variant="subtle" color="gray" size="sm" onClick={onNewCreation}>
-                <IconPlus size={16} />
+                <IconPlus size={14} />
               </ActionIcon>
             </Tooltip>
             <Tooltip label={t('Close')}>
               <ActionIcon variant="subtle" color="gray" size="sm" onClick={onClose}>
-                <IconChevronRight size={16} />
+                <IconChevronRight size={14} />
               </ActionIcon>
             </Tooltip>
           </Flex>
         </Flex>
 
-        <ScrollArea flex={1} type="auto" offsetScrollbars>
+        <Box flex={1}>
           <HistoryListContent
             historyCache={historyCache}
             historyLoading={historyLoading}
             currentRecordId={currentRecordId}
+            getModelDisplayName={getModelDisplayName}
             hasNextPage={hasNextPage}
             isFetchingNextPage={isFetchingNextPage}
             onItemClick={onItemClick}
             onLoadMore={onLoadMore}
             onDelete={onDelete}
           />
-        </ScrollArea>
+        </Box>
       </Flex>
     </Box>
   )

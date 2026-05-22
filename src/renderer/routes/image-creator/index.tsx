@@ -9,11 +9,10 @@ import {
   Stack,
   Text,
   Textarea,
-  Tooltip,
   UnstyledButton,
 } from '@mantine/core'
-import type { ImageGeneration } from '@shared/types'
-import { ModelProviderEnum, ModelProviderType } from '@shared/types'
+import type { ImageGeneration, ImageGenerationModel } from '@shared/types'
+import { ModelProviderEnum } from '@shared/types'
 import {
   IconAspectRatio,
   IconChevronRight,
@@ -26,13 +25,17 @@ import {
 import { createFileRoute } from '@tanstack/react-router'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { CHATBOXAI_DEFAULT_IMAGE_MODEL, ImageModelSelect } from '@/components/ImageModelSelect'
+import { JK_PAGE_NAMES } from '@/analytics/jk-events'
+import { ChatboxWelcomeCard } from '@/components/common/ChatboxWelcomeCard'
+import { ImageModelSelect } from '@/components/ImageModelSelect'
 import Page from '@/components/layout/Page'
+import { type ImageModelGroup, useImageModelGroups } from '@/hooks/useImageModelGroups'
 import { useProviders } from '@/hooks/useProviders'
 import { useIsSmallScreen } from '@/hooks/useScreenChange'
 import { getLogger } from '@/lib/utils'
 import storage from '@/storage'
 import { StorageKeyGenerator } from '@/storage/StoreStorage'
+import { useAuthInfoStore } from '@/stores/authInfoStore'
 import { cancelGeneration, createAndGenerate, resumeGeneration, retryGeneration } from '@/stores/imageGenerationActions'
 import {
   deleteRecord,
@@ -44,16 +47,14 @@ import {
   useImageGenerationRecord,
 } from '@/stores/imageGenerationStore'
 import { queryClient } from '@/stores/queryClient'
-import { settingsStore } from '@/stores/settingsStore'
+import { settingsStore, useSettingsStore } from '@/stores/settingsStore'
 import * as toastActions from '@/stores/toastActions'
+import { getHomeWelcomeCardMode } from '@/utils/homeWelcomeCard'
 import {
-  CHATBOXAI_IMAGE_MODEL_IDS,
-  GEMINI_IMAGE_MODEL_IDS,
   getRatioOptionsForModel,
+  HISTORY_IMAGE_MODEL_DISPLAY_NAMES,
   HISTORY_PANEL_WIDTH,
-  IMAGE_MODEL_FALLBACK_NAMES,
   MAX_REFERENCE_IMAGES,
-  OPENAI_IMAGE_MODEL_IDS,
 } from './-components/constants'
 import { EmptyState } from './-components/EmptyState'
 import { GeneratedImagesGallery } from './-components/GeneratedImagesGallery'
@@ -76,6 +77,7 @@ export const Route = createFileRoute('/image-creator/')({
 
 interface InputToolbarProps {
   isSmallScreen: boolean
+  modelGroups: ImageModelGroup[]
   modelDisplayName: string
   selectedRatio: string
   ratioOptions: string[]
@@ -89,6 +91,7 @@ interface InputToolbarProps {
 
 function InputToolbar({
   isSmallScreen,
+  modelGroups,
   modelDisplayName,
   selectedRatio,
   ratioOptions,
@@ -118,7 +121,7 @@ function InputToolbar({
             <IconChevronRight size={14} className="text-[var(--chatbox-tint-tertiary)] rotate-90" />
           </UnstyledButton>
         ) : (
-          <ImageModelSelect onSelect={onModelSelect}>
+          <ImageModelSelect modelGroups={modelGroups} onSelect={onModelSelect}>
             <UnstyledButton className="flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-[var(--chatbox-background-tertiary)] transition-colors">
               <IconSparkles size={16} className="text-[var(--chatbox-tint-secondary)]" />
               <Text size="sm" className="text-[var(--chatbox-tint-secondary)] max-w-[120px] truncate">
@@ -208,6 +211,14 @@ function ImageCreatorPage() {
   const { t } = useTranslation()
   const isSmallScreen = useIsSmallScreen()
   const { providers } = useProviders()
+  const imageModelGroups = useImageModelGroups()
+  const hasLicense = useSettingsStore((s) => Boolean(s.licenseKey))
+  const hasExpiredLicense = useSettingsStore((s) => s.hasExpiredLicense)
+  const isLoggedIn = useAuthInfoStore((s) => Boolean(s.accessToken && s.refreshToken))
+  const welcomeCardMode = useMemo(
+    () => getHomeWelcomeCardMode({ providerCount: providers.length, isLoggedIn, hasLicense, hasExpiredLicense }),
+    [providers.length, isLoggedIn, hasLicense, hasExpiredLicense]
+  )
 
   const [prompt, setPrompt] = useState('')
   const [referenceImages, setReferenceImages] = useState<
@@ -262,8 +273,21 @@ function ImageCreatorPage() {
     )
   }, [])
 
-  // Default model is always ChatboxAI "GPT Image" (provider=ChatboxAI, modelId='')
-  // No need to restore from lastUsedModelStore
+  useEffect(() => {
+    if (imageModelGroups.length === 0) return
+    const selectedGroup = imageModelGroups.find((group) => group.providerId === selectedProvider)
+    const selectedOption = selectedGroup?.models.find((model) => model.modelId === selectedModel)
+    if (selectedOption) return
+
+    const firstGroup = imageModelGroups.find((group) => group.models.length > 0)
+    const firstModel = firstGroup?.models[0]
+    if (!firstGroup || !firstModel) return
+
+    setSelectedProvider(firstGroup.providerId)
+    setSelectedModel(firstModel.modelId)
+    const ratioOptionsForFirstModel = getRatioOptionsForModel(firstModel.modelId)
+    setSelectedRatio((prev) => (ratioOptionsForFirstModel.includes(prev) ? prev : 'auto'))
+  }, [imageModelGroups, selectedProvider, selectedModel])
 
   // Cleanup orphan temp uploads if user leaves the page mid-way.
   useEffect(() => {
@@ -329,6 +353,10 @@ function ImageCreatorPage() {
 
   const handleSubmit = useCallback(async () => {
     if (!prompt.trim() || isCurrentlyGenerating) return
+    if (!selectedModel) {
+      toastActions.add(t('Please select a model'))
+      return
+    }
 
     if (selectedProvider === ModelProviderEnum.ChatboxAI && !settingsStore.getState().licenseKey) {
       toastActions.add(t('Please log in to Chatbox AI first'))
@@ -365,6 +393,10 @@ function ImageCreatorPage() {
   const handleQuickPromptSubmit = useCallback(
     async (quickPrompt: string) => {
       if (isCurrentlyGenerating) return
+      if (!selectedModel) {
+        toastActions.add(t('Please select a model'))
+        return
+      }
 
       if (selectedProvider === ModelProviderEnum.ChatboxAI && !settingsStore.getState().licenseKey) {
         toastActions.add(t('Please log in to Chatbox AI first'))
@@ -386,10 +418,10 @@ function ImageCreatorPage() {
         log.error('Failed to generate image:', error)
       }
     },
-    [selectedProvider, selectedModel, selectedRatio, isCurrentlyGenerating, t]
+    [selectedProvider, selectedModel, isCurrentlyGenerating, t]
   )
 
-  const handleUseAsReference = useCallback(async (storageKey: string, sourceRecordId?: string) => {
+  const handleUseAsReference = useCallback((storageKey: string, sourceRecordId?: string) => {
     setReferenceImages((prev) => {
       if (prev.length >= MAX_REFERENCE_IMAGES) return prev
       return [...prev, { storageKey, sourceRecordId, isTempUpload: false }]
@@ -430,93 +462,48 @@ function ImageCreatorPage() {
     }
   }, [])
 
-  const getAvailableImageModels = (
-    providerModels: { modelId: string; nickname?: string }[],
-    imageModelIds: string[]
-  ) => {
-    return imageModelIds
-      .map((modelId) => {
-        const model = providerModels.find((m) => m.modelId === modelId)
-        if (!model) return null
-        return {
-          modelId,
-          displayName: model.nickname || IMAGE_MODEL_FALLBACK_NAMES[modelId] || modelId,
-        }
-      })
-      .filter((m): m is { modelId: string; displayName: string } => m !== null)
-  }
+  const getImageModelDisplayName = useCallback(
+    (model: ImageGenerationModel) => {
+      const group = imageModelGroups.find((item) => item.providerId === model.provider)
+      const imageModel = group?.models.find((item) => item.modelId === model.modelId)
+      const provider = providers.find((item) => item.id === model.provider)
+      const providerModels = provider?.models || provider?.defaultSettings?.models || []
+      const providerModel = providerModels.find((item) => item.modelId === model.modelId)
+      const modelName = imageModel?.displayName || providerModel?.nickname || model.modelId || 'Image'
 
-  const imageModelGroups = useMemo(() => {
-    const groups: { label: string; providerId: string; models: { modelId: string; displayName: string }[] }[] = []
-
-    const chatboxProvider = providers.find((p) => p.id === ModelProviderEnum.ChatboxAI)
-    const chatboxModels = chatboxProvider
-      ? getAvailableImageModels(
-          chatboxProvider.models || chatboxProvider.defaultSettings?.models || [],
-          CHATBOXAI_IMAGE_MODEL_IDS
-        )
-      : []
-    groups.push({
-      label: 'Chatbox AI',
-      providerId: ModelProviderEnum.ChatboxAI,
-      models: [CHATBOXAI_DEFAULT_IMAGE_MODEL, ...chatboxModels],
-    })
-
-    const geminiProvider = providers.find((p) => p.id === ModelProviderEnum.Gemini)
-    if (geminiProvider) {
-      const providerModels = geminiProvider.models || geminiProvider.defaultSettings?.models || []
-      const models = getAvailableImageModels(providerModels, GEMINI_IMAGE_MODEL_IDS)
-      if (models.length > 0) {
-        groups.push({ label: 'Google Gemini', providerId: ModelProviderEnum.Gemini, models })
+      if (model.provider === ModelProviderEnum.ChatboxAI) {
+        return modelName
       }
-    }
-
-    providers
-      .filter((p) => p.isCustom && p.type === ModelProviderType.Gemini)
-      .forEach((provider) => {
-        const providerModels = provider.models || provider.defaultSettings?.models || []
-        const models = getAvailableImageModels(providerModels, GEMINI_IMAGE_MODEL_IDS)
-        if (models.length > 0) {
-          groups.push({ label: provider.name, providerId: provider.id, models })
-        }
-      })
-
-    providers
-      .filter((p) => [ModelProviderEnum.OpenAI, ModelProviderEnum.Azure].includes(p.id as ModelProviderEnum))
-      .forEach((provider) => {
-        const providerModels = provider.models || provider.defaultSettings?.models || []
-        const models = getAvailableImageModels(providerModels, OPENAI_IMAGE_MODEL_IDS)
-        if (models.length > 0) {
-          groups.push({ label: provider.name, providerId: provider.id, models })
-        }
-      })
-
-    return groups
-  }, [providers])
-
-  // Workaround: DALL-E-3 was removed in new version, fallback to default
-  useEffect(() => {
-    if (selectedModel === 'DALL-E-3') {
-      setSelectedModel('')
-    }
-  }, [selectedModel])
+      const providerName = group?.label || provider?.name || model.provider
+      return `${providerName} - ${modelName}`
+    },
+    [imageModelGroups, providers]
+  )
 
   const modelDisplayName = useMemo(() => {
-    const provider = providers.find((p) => p.id === selectedProvider)
-    const providerModels = provider?.models || provider?.defaultSettings?.models || []
-    const model = providerModels.find((m) => m.modelId === selectedModel)
-    const modelName =
-      model?.nickname ||
-      IMAGE_MODEL_FALLBACK_NAMES[selectedModel] ||
-      selectedModel ||
-      CHATBOXAI_DEFAULT_IMAGE_MODEL.displayName
+    if (!selectedModel) return t('No models available')
+    return getImageModelDisplayName({
+      provider: selectedProvider,
+      modelId: selectedModel,
+    })
+  }, [selectedProvider, selectedModel, getImageModelDisplayName, t])
 
-    if (selectedProvider === ModelProviderEnum.ChatboxAI) {
-      return modelName
-    }
-    const providerName = provider?.name || selectedProvider
-    return `${providerName} - ${modelName}`
-  }, [selectedProvider, selectedModel, providers])
+  const getHistoryImageModelDisplayName = useCallback(
+    (model: ImageGenerationModel) => {
+      const legacyName = HISTORY_IMAGE_MODEL_DISPLAY_NAMES[model.modelId]
+      if (!legacyName) return getImageModelDisplayName(model)
+
+      if (model.provider === ModelProviderEnum.ChatboxAI) {
+        return legacyName
+      }
+
+      const group = imageModelGroups.find((item) => item.providerId === model.provider)
+      const provider = providers.find((item) => item.id === model.provider)
+      const providerName = group?.label || provider?.name || model.provider
+      return `${providerName} - ${legacyName}`
+    },
+    [getImageModelDisplayName, imageModelGroups, providers]
+  )
 
   const headerRight = isSmallScreen ? (
     <ActionIcon
@@ -568,7 +555,7 @@ function ImageCreatorPage() {
 
                   <PromptDisplay
                     prompt={currentRecord.prompt}
-                    model={currentRecord.model}
+                    modelDisplayName={getImageModelDisplayName(currentRecord.model)}
                     referenceImageCount={currentRecord.referenceImages.length}
                   />
 
@@ -594,7 +581,11 @@ function ImageCreatorPage() {
 
           {/* Input Area */}
           <Box py="md" px="sm">
-            <Stack gap="xs" maw={800} mx="auto">
+            <Stack gap="sm" maw={800} mx="auto">
+              {!currentRecord && welcomeCardMode !== 'none' && (
+                <ChatboxWelcomeCard mode={welcomeCardMode} pageName={JK_PAGE_NAMES.IMAGE_PAGE} />
+              )}
+
               <ReferenceImagesPreview
                 images={referenceImages}
                 onRemove={handleRemoveReferenceImage}
@@ -653,11 +644,11 @@ function ImageCreatorPage() {
                       color={isCurrentlyGenerating ? 'dark' : 'chatbox-brand'}
                       radius="xl"
                       onClick={isCurrentlyGenerating ? cancelGeneration : handleSubmit}
-                      disabled={!prompt.trim() && !isCurrentlyGenerating}
-                      className={`shrink-0 mb-1 ${!prompt.trim() && !isCurrentlyGenerating ? 'disabled:!opacity-100 !text-white' : ''}`}
+                      disabled={(!prompt.trim() || !selectedModel) && !isCurrentlyGenerating}
+                      className={`shrink-0 mb-1 ${(!prompt.trim() || !selectedModel) && !isCurrentlyGenerating ? 'disabled:!opacity-100 !text-white' : ''}`}
                       style={{
                         cursor: isCurrentlyGenerating ? 'pointer' : undefined,
-                        ...(!prompt.trim() && !isCurrentlyGenerating
+                        ...((!prompt.trim() || !selectedModel) && !isCurrentlyGenerating
                           ? { backgroundColor: 'rgba(222, 226, 230, 1)' }
                           : {}),
                       }}
@@ -669,6 +660,7 @@ function ImageCreatorPage() {
                   {/* Toolbar Row */}
                   <InputToolbar
                     isSmallScreen={isSmallScreen}
+                    modelGroups={imageModelGroups}
                     modelDisplayName={modelDisplayName}
                     selectedRatio={selectedRatio}
                     ratioOptions={ratioOptions}
@@ -697,6 +689,7 @@ function ImageCreatorPage() {
             historyCache={historyCache}
             historyLoading={historyLoading}
             currentRecordId={currentRecord?.id ?? null}
+            getModelDisplayName={(record) => getHistoryImageModelDisplayName(record.model)}
             hasNextPage={hasNextPage}
             isFetchingNextPage={isFetchingNextPage}
             onItemClick={handleHistoryClick}
@@ -716,6 +709,7 @@ function ImageCreatorPage() {
               historyCache={historyCache}
               historyLoading={historyLoading}
               currentRecordId={currentRecord?.id ?? null}
+              getModelDisplayName={(record) => getHistoryImageModelDisplayName(record.model)}
               hasNextPage={hasNextPage}
               isFetchingNextPage={isFetchingNextPage}
               onItemClick={handleHistoryClick}

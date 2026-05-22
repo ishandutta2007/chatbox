@@ -401,6 +401,7 @@
   "If conversations are missing from the list, use this feature to scan and recover them from storage": "Se mancano conversazioni dall'elenco, utilizza questa funzione per scansionarle e recuperarle dall'archivio",
   "If no account exists, it will automatically create one.": "Se non esiste un account, ne verrà creato uno automaticamente.",
   "If you have never had a license before, you can claim it after logging in on the official website.": "Se non hai mai avuto una licenza in precedenza, puoi riscattarla dopo aver effettuato l'accesso sul sito ufficiale.",
+  "Image": "Immagine",
   "Image Creator": "Creatore Immagini",
   "Image Creator Intro": "Ciao! Sono Chatbox Image Creator, il tuo compagno artistico AI dedicato a trasformare le tue parole in immagini sorprendenti. Se puoi sognarlo, io posso crearlo—da paesaggi incantevoli, personaggi dinamici, icone di app fino all'astratto e oltre.\n\nSono un robot silenzioso, **basta che tu mi dica la descrizione dell'immagine che hai in mente**, e concentrerò tutti i miei pixel per realizzare la tua visione.\n\nFacciamo arte!",
   "Image Quota (Remaining/Total)": "Quota immagini (Rimanente/Totale)",

@@ -8,7 +8,7 @@ export const CUSTOM_PROVIDER_ID_CONFLICT = 'builtin-provider-id-conflict'
 const modelInfoSchema = z.object({
   modelId: z.string(),
   nickname: z.string().optional(),
-  type: z.enum(['chat', 'embedding', 'rerank']).optional().default('chat'),
+  type: z.enum(['chat', 'embedding', 'rerank', 'image']).optional().default('chat'),
   capabilities: z.array(z.enum(['vision', 'reasoning', 'tool_use'])).optional(),
   contextWindow: z.number().optional(),
   maxOutput: z.number().optional(),

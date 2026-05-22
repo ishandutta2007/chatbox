@@ -401,6 +401,7 @@
   "If conversations are missing from the list, use this feature to scan and recover them from storage": "如果對話從列表中遺失，請使用此功能來掃描並從儲存空間中復原它們",
   "If no account exists, it will automatically create one.": "若帳號不存在，將自動建立一個。",
   "If you have never had a license before, you can claim it after logging in on the official website.": "如果您以前從未有過許可證，可以在登入官方網站後領取。",
+  "Image": "圖片",
   "Image Creator": "圖片產生器",
   "Image Creator Intro": "Hi！我是 Chatbox Image Creator，圖片製造機。我可以根據你的描述生成精美圖片，只要你能想像得到，我就能創造出來——迷人的風景、生動的角色、App 圖示、或者抽象的構思……\n\n(๑•́ ₃ •̀๑) 呃…我是一個有點自閉的機器人，所以**請直接告訴我你想要圖片的文字描述**，我會集中我所有的像素去實現你的想像。\n\n現在請發揮你的想像力吧！",
   "Image Quota (Remaining/Total)": "圖片點數 (剩餘/總計)",

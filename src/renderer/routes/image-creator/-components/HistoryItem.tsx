@@ -1,31 +1,30 @@
-import { ActionIcon, Button, Flex, Image, Popover, Skeleton, Stack, Text, Tooltip, UnstyledButton } from '@mantine/core'
+import { ActionIcon, Button, Flex, Image, Popover, Skeleton, Stack, Text, UnstyledButton } from '@mantine/core'
 import type { ImageGeneration } from '@shared/types'
-import { IconPhoto, IconTrash } from '@tabler/icons-react'
+import { IconPhoto, IconPhotoOff, IconTrash } from '@tabler/icons-react'
 import { useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useBlob } from '@/hooks/useBlob'
-import { blobToDataUrl, IMAGE_MODEL_FALLBACK_NAMES } from './constants'
+import { blobToDataUrl } from './constants'
 
 export interface HistoryItemProps {
   record: ImageGeneration
   isActive: boolean
   isMobile?: boolean
+  modelDisplayName: string
   onClick: () => void
   onDelete: (id: string) => void
 }
 
-export function HistoryItem({ record, isActive, isMobile, onClick, onDelete }: HistoryItemProps) {
+export function HistoryItem({ record, isActive, isMobile, modelDisplayName, onClick, onDelete }: HistoryItemProps) {
   const { t } = useTranslation()
-  const [hovered, setHovered] = useState(false)
   const [deletePopoverOpened, setDeletePopoverOpened] = useState(false)
   const firstImage = record.generatedImages[0]
-  const modelName = IMAGE_MODEL_FALLBACK_NAMES[record.model.modelId] || record.model.modelId || 'Unknown'
 
   const handleDeleteClick = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation()
       if (isMobile) {
-        if (window.confirm(t('Delete this record?'))) {
+        if (window.confirm(t('Delete this record?') ?? '')) {
           onDelete(record.id)
         }
       } else {
@@ -50,47 +49,44 @@ export function HistoryItem({ record, isActive, isMobile, onClick, onDelete }: H
   }, [])
 
   return (
-    <UnstyledButton
-      onClick={onClick}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      className={`
-        w-full p-2 rounded-lg transition-all duration-150
-        ${
+    <Stack gap={4} className="w-full">
+      {/* Thumbnail — clickable */}
+      <UnstyledButton
+        onClick={onClick}
+        style={{ borderWidth: 1, borderStyle: 'solid' }}
+        className={`w-full aspect-square rounded-lg overflow-hidden transition-colors duration-150 ${
           isActive
-            ? 'bg-[var(--chatbox-background-brand-secondary)] ring-1 ring-[var(--chatbox-tint-brand)]'
-            : isMobile
-              ? ''
-              : 'hover:bg-[var(--chatbox-background-secondary)]'
-        }
-      `}
-    >
-      <Flex gap="sm" align="center">
-        <div className="w-12 h-12 rounded-md overflow-hidden shrink-0 bg-[var(--chatbox-background-secondary)]">
-          {firstImage ? (
-            <HistoryThumbnail storageKey={firstImage} size={48} />
-          ) : (
-            <Flex align="center" justify="center" h="100%">
-              <IconPhoto size={16} className="opacity-30" />
-            </Flex>
-          )}
-        </div>
+            ? 'border-[var(--chatbox-tint-brand)]'
+            : 'border-[var(--chatbox-border-primary)] hover:border-[var(--chatbox-border-secondary)]'
+        }`}
+      >
+        {firstImage ? (
+          <HistoryThumbnail storageKey={firstImage} />
+        ) : (
+          <Flex align="center" justify="center" h="100%" className="bg-[var(--chatbox-background-secondary)]">
+            <IconPhoto size={24} className="opacity-20" />
+          </Flex>
+        )}
+      </UnstyledButton>
 
-        <Stack gap={2} flex={1} style={{ overflow: 'hidden' }}>
-          <Text size="xs" lineClamp={2} fw={isActive ? 500 : 400} lh={1.3}>
+      {/* Prompt + Model name + Date + Delete */}
+      <Flex align="center" justify="space-between" gap={4} px={2}>
+        {record.prompt && (
+          <Text size={isMobile ? 'sm' : 'xs'} lineClamp={1} title={record.prompt}>
             {record.prompt}
           </Text>
-          <Flex align="center" gap={4}>
+        )}
+      </Flex>
+      <Flex align="center" justify="space-between" gap={4} px={2}>
+        <Stack gap={0} style={{ flex: 1, overflow: 'hidden' }}>
+          <Text size={isMobile ? 'sm' : 'xs'} c="gray.7" lineClamp={1}>
+            {modelDisplayName}
+          </Text>
+          {isMobile && (
             <Text size="xs" c="dimmed">
               {new Date(record.createdAt).toLocaleDateString()}
             </Text>
-            <Text size="xs" c="dimmed" className="opacity-40">
-              ·
-            </Text>
-            <Text size="xs" c="dimmed">
-              {modelName}
-            </Text>
-          </Flex>
+          )}
         </Stack>
 
         {isMobile ? (
@@ -99,9 +95,9 @@ export function HistoryItem({ record, isActive, isMobile, onClick, onDelete }: H
             color="gray"
             size="sm"
             onClick={handleDeleteClick}
-            className="shrink-0 opacity-40 hover:opacity-100 transition-opacity"
+            className="shrink-0 opacity-60 hover:opacity-100 transition-opacity"
           >
-            <IconTrash size={14} />
+            <IconTrash size={16} />
           </ActionIcon>
         ) : (
           <Popover
@@ -114,19 +110,16 @@ export function HistoryItem({ record, isActive, isMobile, onClick, onDelete }: H
           >
             <Popover.Target>
               <ActionIcon
-                variant="subtle"
-                color="red"
-                size="sm"
-                radius="md"
+                variant="transparent"
+                color="gray"
+                size="xs"
                 onClick={handleDeleteClick}
-                className={`shrink-0 transition-opacity duration-150 ${
-                  hovered || deletePopoverOpened ? 'opacity-100' : 'opacity-0'
-                }`}
+                className="shrink-0 opacity-60 hover:opacity-100 transition-opacity"
               >
-                <IconTrash size={14} />
+                <IconTrash size={12} />
               </ActionIcon>
             </Popover.Target>
-            <Popover.Dropdown onClick={(e) => e.stopPropagation()}>
+            <Popover.Dropdown>
               <Stack gap="xs">
                 <Text size="sm">{t('Delete this record?')}</Text>
                 <Flex gap="xs" justify="flex-end">
@@ -142,22 +135,30 @@ export function HistoryItem({ record, isActive, isMobile, onClick, onDelete }: H
           </Popover>
         )}
       </Flex>
-    </UnstyledButton>
+    </Stack>
   )
 }
 
 interface HistoryThumbnailProps {
   storageKey: string
-  size?: number
 }
 
-function HistoryThumbnail({ storageKey, size = 48 }: HistoryThumbnailProps) {
-  const { data: blob } = useBlob(storageKey)
-  const imageUrl = blob ? blobToDataUrl(blob) : null
+function HistoryThumbnail({ storageKey }: HistoryThumbnailProps) {
+  const isHttpUrl = storageKey.startsWith('http://') || storageKey.startsWith('https://')
+  const { data: blob, isError } = useBlob(isHttpUrl ? undefined : storageKey)
+  const imageUrl = isHttpUrl ? storageKey : blob ? blobToDataUrl(blob) : null
 
-  if (!imageUrl) {
-    return <Skeleton h={size} w={size} radius={0} />
+  if (isError) {
+    return (
+      <Flex align="center" justify="center" h="100%" className="bg-[var(--chatbox-background-tertiary)]">
+        <IconPhotoOff size={20} className="opacity-30" />
+      </Flex>
+    )
   }
 
-  return <Image src={imageUrl} h={size} w={size} fit="cover" radius={0} />
+  if (!imageUrl) {
+    return <Skeleton h="100%" w="100%" radius={0} />
+  }
+
+  return <Image src={imageUrl} h="100%" w="100%" fit="cover" radius={0} />
 }
