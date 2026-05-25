@@ -1,4 +1,4 @@
-import { CapacitorSQLite, SQLiteConnection, type SQLiteDBConnection } from '@capacitor-community/sqlite'
+import { CapacitorSQLite, SQLiteConnection, type capSQLiteSet, type SQLiteDBConnection } from '@capacitor-community/sqlite'
 import type { SessionMetaPage, SessionMetaRecord } from '@shared/types'
 import { type SessionMetaStorage, sortSessionRecords } from './SessionMetaStorage'
 
@@ -116,33 +116,30 @@ export class SQLiteSessionMetaStorage implements SessionMetaStorage {
   async createMany(records: SessionMetaRecord[]): Promise<void> {
     await this.initialize()
     if (records.length === 0) return
-    await this.database.run('BEGIN TRANSACTION')
-    try {
-      for (const record of records) {
-        const row = this.recordToRow(record)
-        await this.database.run(
-          `INSERT OR REPLACE INTO session_meta
-           (id, name, starred, hidden, assistant_avatar_key, pic_url, background_image, type, sort_order, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            row.id,
-            row.name,
-            row.starred,
-            row.hidden,
-            row.assistant_avatar_key,
-            row.pic_url,
-            row.background_image,
-            row.type,
-            row.sort_order,
-            row.created_at,
-          ]
-        )
+
+    const statement = `INSERT OR REPLACE INTO session_meta
+      (id, name, starred, hidden, assistant_avatar_key, pic_url, background_image, type, sort_order, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    const set: capSQLiteSet[] = records.map((record) => {
+      const row = this.recordToRow(record)
+      return {
+        statement,
+        values: [
+          row.id,
+          row.name,
+          row.starred,
+          row.hidden,
+          row.assistant_avatar_key,
+          row.pic_url,
+          row.background_image,
+          row.type,
+          row.sort_order,
+          row.created_at,
+        ],
       }
-      await this.database.run('COMMIT')
-    } catch (error) {
-      await this.database.run('ROLLBACK')
-      throw error
-    }
+    })
+
+    await this.database.executeSet(set, true)
   }
 
   async update(id: string, updates: Partial<SessionMetaRecord>): Promise<SessionMetaRecord | null> {
