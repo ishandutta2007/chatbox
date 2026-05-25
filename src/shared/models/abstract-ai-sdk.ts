@@ -71,6 +71,50 @@ function isRetryableStatusError(error: unknown): boolean {
   return false
 }
 
+class StatusQueue {
+  private queue: ModelStatus[] = []
+  private version = 0
+  private waiters = new Set<() => void>()
+
+  push(status: ModelStatus): void {
+    this.queue.push(status)
+    this.version += 1
+    for (const waiter of this.waiters) {
+      waiter()
+    }
+    this.waiters.clear()
+  }
+
+  shift(): ModelStatus | undefined {
+    return this.queue.shift()
+  }
+
+  getVersion(): number {
+    return this.version
+  }
+
+  waitForChange(version: number): { promise: Promise<void>; cancel: () => void } {
+    if (this.version !== version || this.queue.length > 0) {
+      return { promise: Promise.resolve(), cancel: () => undefined }
+    }
+
+    let resolveWaiter: (() => void) | undefined
+    const promise = new Promise<void>((resolve) => {
+      resolveWaiter = resolve
+      this.waiters.add(resolve)
+    })
+
+    return {
+      promise,
+      cancel: () => {
+        if (resolveWaiter) {
+          this.waiters.delete(resolveWaiter)
+        }
+      },
+    }
+  }
+}
+
 // ai sdk CallSettings类型的子集
 export interface CallSettings {
   temperature?: number
@@ -184,7 +228,7 @@ export default abstract class AbstractAISDKModel implements ModelInterface {
       })
     }
 
-    const statusQueue: ModelStatus[] = []
+    const statusQueue = new StatusQueue()
 
     const retryableStatusAttempt = (context: RetryContext<LanguageModelV3>) => {
       if (isErrorAttempt(context.current)) {
@@ -247,14 +291,38 @@ export default abstract class AbstractAISDKModel implements ModelInterface {
       maxRetries: 0,
     })
 
-    for await (const chunk of result.fullStream) {
-      while (statusQueue.length > 0) {
-        const status = statusQueue.shift()
-        if (status) {
-          yield { type: 'status', status }
-        }
+    const streamIterator = result.fullStream[Symbol.asyncIterator]()
+    let nextChunk = streamIterator.next()
+
+    while (true) {
+      let status = statusQueue.shift()
+      while (status) {
+        yield { type: 'status', status }
+        status = statusQueue.shift()
       }
 
+      const currentVersion = statusQueue.getVersion()
+      const statusWait = statusQueue.waitForChange(currentVersion)
+      let next: { type: 'chunk'; iteration: IteratorResult<TextStreamPart<T>> } | { type: 'status' }
+      try {
+        next = await Promise.race([
+          nextChunk.then((iteration) => ({ type: 'chunk' as const, iteration })),
+          statusWait.promise.then(() => ({ type: 'status' as const })),
+        ])
+      } finally {
+        statusWait.cancel()
+      }
+
+      if (next.type === 'status') {
+        continue
+      }
+
+      if (next.iteration.done) {
+        break
+      }
+
+      const chunk = next.iteration.value
+      nextChunk = streamIterator.next()
       if (chunk.type === 'error') {
         this.handleError(chunk.error)
       }
@@ -262,11 +330,10 @@ export default abstract class AbstractAISDKModel implements ModelInterface {
       yield chunk
     }
 
-    while (statusQueue.length > 0) {
-      const status = statusQueue.shift()
-      if (status) {
-        yield { type: 'status', status }
-      }
+    let status = statusQueue.shift()
+    while (status) {
+      yield { type: 'status', status }
+      status = statusQueue.shift()
     }
   }
 

@@ -383,10 +383,11 @@ const _Message: FC<Props> = (props) => {
   const [actionMenuOpened, setActionMenuOpened] = useState(false)
 
   const isUserBubble = isBubbleLayout && msg.role === 'user'
+  const statusElements = <MessageStatuses statuses={msg.status} />
 
   const messageContent = (
     <>
-      <MessageStatuses statuses={msg.status} />
+      {!isBubbleLayout && statusElements}
       <div
         className={cn(
           isBubbleLayout ? 'inline-block max-w-full' : msg.role === 'assistant' ? 'w-full' : 'inline-block',
@@ -406,6 +407,7 @@ const _Message: FC<Props> = (props) => {
               : ''
         )}
       >
+        {isBubbleLayout && statusElements}
         <Box
           className={cn('msg-content', { 'msg-content-small': small })}
           sx={small ? { fontSize: theme.typography.body2.fontSize } : {}}
