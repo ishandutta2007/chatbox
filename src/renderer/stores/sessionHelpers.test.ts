@@ -253,6 +253,51 @@ describe('preprocessFile local parser fallback', () => {
     expect(result.tokenCountMap?.default_preview).toBeDefined()
   })
 
+  it('keeps over-threshold CSV attachments inline instead of session retrieval', async () => {
+    const file = createFile('large-data.csv')
+    const parsedContent = 'a,b,c\n'.repeat(64 * 1024)
+    blobStore.set('local-key', parsedContent)
+    mockParseFileLocally.mockResolvedValueOnce({ isSupported: true, key: 'local-key' })
+
+    const result = await prepareFileAttachment(file, { provider: '', modelId: '' })
+
+    expect(mockGetSessionRagConfig).not.toHaveBeenCalled()
+    expect(result.error).toBeUndefined()
+    expect(result.ragMode).toBe('inline')
+    expect(result.sessionAttachmentAvailability).toBe('allowed')
+    expect(result.tokenCountMap?.default).toBe(parsedContent.length)
+  })
+
+  it('keeps over-threshold Excel attachments inline instead of session retrieval', async () => {
+    const file = createFile('large-budget.xlsx')
+    const parsedContent = 'cell text\n'.repeat(64 * 1024)
+    blobStore.set('local-key', parsedContent)
+    mockParseFileLocally.mockResolvedValueOnce({ isSupported: true, key: 'local-key' })
+
+    const result = await prepareFileAttachment(file, { provider: '', modelId: '' })
+
+    expect(mockGetSessionRagConfig).not.toHaveBeenCalled()
+    expect(result.error).toBeUndefined()
+    expect(result.ragMode).toBe('inline')
+    expect(result.sessionAttachmentAvailability).toBe('allowed')
+    expect(result.tokenCountMap?.default).toBe(parsedContent.length)
+  })
+
+  it('keeps over-threshold code attachments inline instead of session retrieval', async () => {
+    const file = createFile('large-app.tsx')
+    const parsedContent = 'export const value = 1\n'.repeat(16 * 1024)
+    blobStore.set('local-key', parsedContent)
+    mockParseFileLocally.mockResolvedValueOnce({ isSupported: true, key: 'local-key' })
+
+    const result = await prepareFileAttachment(file, { provider: '', modelId: '' })
+
+    expect(mockGetSessionRagConfig).not.toHaveBeenCalled()
+    expect(result.error).toBeUndefined()
+    expect(result.ragMode).toBe('inline')
+    expect(result.sessionAttachmentAvailability).toBe('allowed')
+    expect(result.tokenCountMap?.default).toBe(parsedContent.length)
+  })
+
   it('keeps over-threshold attachments inline without a Chatbox license', async () => {
     const file = createFile('byok-large.pdf')
     const parsedContent = 'a'.repeat(256 * 1024 + 1)

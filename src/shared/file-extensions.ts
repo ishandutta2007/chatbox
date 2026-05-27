@@ -109,6 +109,32 @@ export function isTextFilePath(filePath: string) {
   return textExts.some((ext) => filePath.toLowerCase().endsWith(ext))
 }
 
+export const sessionAttachmentRagExts = [
+  '.pdf',
+  '.docx',
+  '.pptx',
+  '.odt',
+  '.odp',
+  '.epub',
+  '.txt',
+  '.md',
+  '.mdx',
+  '.html',
+  '.htm',
+  '.xhtml',
+  '.xml',
+  '.json',
+  '.jsonl',
+  '.yaml',
+  '.yml',
+  '.ini',
+  '.log',
+]
+
+export function isSessionAttachmentRagSupportedFilePath(filePath: string) {
+  return sessionAttachmentRagExts.some((ext) => filePath.toLowerCase().endsWith(ext))
+}
+
 export const epubExts = ['.epub']
 
 export function isEpubFilePath(filePath: string) {

@@ -1,4 +1,4 @@
-import { isTextFilePath } from '@shared/file-extensions'
+import { isSessionAttachmentRagSupportedFilePath, isTextFilePath } from '@shared/file-extensions'
 import type {
   ExportChatFormat,
   ExportChatScope,
@@ -336,8 +336,11 @@ export async function prepareFileAttachment(
         )
       }
 
+      const isSessionAttachmentRagFileType = isSessionAttachmentRagSupportedFilePath(file.name)
       const exceedsSessionAttachmentRagThreshold =
-        platform.type === 'desktop' && stats.byteLength > SESSION_ATTACHMENT_RAG_INLINE_BYTE_THRESHOLD
+        platform.type === 'desktop' &&
+        isSessionAttachmentRagFileType &&
+        stats.byteLength > SESSION_ATTACHMENT_RAG_INLINE_BYTE_THRESHOLD
       const sessionAttachmentRagAllowed = exceedsSessionAttachmentRagThreshold
         ? await canUseSessionAttachmentRag()
         : false
@@ -348,7 +351,7 @@ export async function prepareFileAttachment(
         stats,
       })
       log.debug(
-        `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} Cached preprocess decision: file="${file.name}", bytes=${stats.byteLength}, tokens=${tokenCountMap[TOKEN_CACHE_KEYS.default] ?? 0}, exceedsThreshold=${exceedsSessionAttachmentRagThreshold}, ragMode=${shouldUseSessionAttachmentRag ? 'session-retrieval' : 'inline'}, allowed=${sessionAttachmentRagAllowed}`
+        `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} Cached preprocess decision: file="${file.name}", bytes=${stats.byteLength}, tokens=${tokenCountMap[TOKEN_CACHE_KEYS.default] ?? 0}, ragFileType=${isSessionAttachmentRagFileType}, exceedsThreshold=${exceedsSessionAttachmentRagThreshold}, ragMode=${shouldUseSessionAttachmentRag ? 'session-retrieval' : 'inline'}, allowed=${sessionAttachmentRagAllowed}`
       )
 
       await storage.setItem(`${uniqKey}_tokenMap`, tokenCountMap)
@@ -428,8 +431,11 @@ export async function prepareFileAttachment(
       )
     }
 
+    const isSessionAttachmentRagFileType = isSessionAttachmentRagSupportedFilePath(file.name)
     const exceedsSessionAttachmentRagThreshold =
-      platform.type === 'desktop' && stats.byteLength > SESSION_ATTACHMENT_RAG_INLINE_BYTE_THRESHOLD
+      platform.type === 'desktop' &&
+      isSessionAttachmentRagFileType &&
+      stats.byteLength > SESSION_ATTACHMENT_RAG_INLINE_BYTE_THRESHOLD
     const sessionAttachmentRagAllowed = exceedsSessionAttachmentRagThreshold
       ? await canUseSessionAttachmentRag()
       : false
@@ -443,7 +449,7 @@ export async function prepareFileAttachment(
     await storage.setItem(`${result.storageKey}_parserType`, result.parserType)
 
     log.debug(
-      `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} Preprocess decision: file="${file.name}", parser=${result.parserType}, bytes=${stats.byteLength}, tokens=${tokenCountMap[TOKEN_CACHE_KEYS.default] ?? 0}, exceedsThreshold=${exceedsSessionAttachmentRagThreshold}, ragMode=${shouldUseSessionAttachmentRag ? 'session-retrieval' : 'inline'}, allowed=${sessionAttachmentRagAllowed}`
+      `${SESSION_ATTACHMENT_RAG_LOG_PREFIX} Preprocess decision: file="${file.name}", parser=${result.parserType}, bytes=${stats.byteLength}, tokens=${tokenCountMap[TOKEN_CACHE_KEYS.default] ?? 0}, ragFileType=${isSessionAttachmentRagFileType}, exceedsThreshold=${exceedsSessionAttachmentRagThreshold}, ragMode=${shouldUseSessionAttachmentRag ? 'session-retrieval' : 'inline'}, allowed=${sessionAttachmentRagAllowed}`
     )
 
     return {

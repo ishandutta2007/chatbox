@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid'
 import { getLogger } from '@/lib/utils'
 import platform from '@/platform'
+import { isSessionAttachmentRagSupportedFilePath } from '../../shared/file-extensions'
 import { SESSION_ATTACHMENT_RAG_LOG_PREFIX } from '../../shared/session-attachment-rag/logging'
 import type { MessageFile, SessionAttachment } from '../../shared/types'
 import type { AttachmentPreparationResult, PreprocessedFile } from '../types/input-box'
@@ -24,6 +25,7 @@ function shouldIndexMessageFile(file: MessageFile) {
     platform.type === 'desktop' &&
     file.ragMode === 'session-retrieval' &&
     !!file.storageKey &&
+    isSessionAttachmentRagSupportedFilePath(file.name) &&
     file.sessionAttachmentAvailability !== 'blocked'
   )
 }
@@ -70,7 +72,7 @@ export async function startPreparedSessionAttachmentIndexing(params: {
   shouldContinue?: () => boolean
 }): Promise<PreprocessedFile | undefined> {
   const { file, preparedFile, sessionId, shouldContinue } = params
-  if (!shouldIndexPreparedAttachment(preparedFile)) {
+  if (!isSessionAttachmentRagSupportedFilePath(file.name) || !shouldIndexPreparedAttachment(preparedFile)) {
     return preparedFile
   }
 
