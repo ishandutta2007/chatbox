@@ -58,7 +58,7 @@ export class OCRError extends BaseError {
 
 // Chatbox AI 服务错误
 // 注意，在开发时 i18nKey 中的标签和参数，都需要在 MessageErrTips 中定义
-// NOTE： 这个文件不会被 translate script 扫描到，为了能提取 key，把这里新增的 key 去 `src/renderer/i18n/for-key-scan.ts` 也添加一份
+// NOTE： 这个文件不会被 translate script 扫描到，`pnpm translate` 会先同步这里的 key 到 `src/renderer/i18n/for-key-scan.ts`
 export class ChatboxAIAPIError extends BaseError {
   static codeNameMap: { [codename: string]: ChatboxAIAPIErrorDetail } = {
     // 超出配额
@@ -114,12 +114,12 @@ export class ChatboxAIAPIError extends BaseError {
       i18nKey:
         'Invalid request parameters detected. Please try again later. Persistent failures may indicate an outdated software version. Consider upgrading to access the latest performance improvements and features.',
     },
-    // 文件类型不支持。支持的类型有 txt、md、html、doc、docx、pdf、excel、pptx、csv 以及所有文本类型的文件，包括代码文件
+    // 文件类型不支持。不同解析器支持的格式不同；旧版 Office 格式可能需要 Chatbox AI 云端解析。
     file_type_not_supported: {
       name: 'file_type_not_supported',
       code: 20007,
       i18nKey:
-        'File type not supported. Supported types include txt, md, html, doc, docx, pdf, excel, pptx, csv, and all text-based files, including code files.',
+        'File type not supported. Supported formats vary by parser. Try PDF, modern Office files, EPUB, CSV/TSV, HTML/Markdown, or non-binary text/code files. Legacy Office formats may require Chatbox AI cloud parsing.',
     },
     // 发送的文件已经超过七天，为了保护您的隐私，所有文件相关的缓存数据已经清理。您需要重新创建对话或刷新上下文，然后再次发送文件。
     file_expired: {
