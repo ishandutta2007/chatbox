@@ -6,12 +6,11 @@ import { z } from 'zod'
 import { mcpController } from '@/packages/mcp/controller'
 import fileToolSet from '@/packages/model-calls/toolsets/file'
 import { getToolSet as getKBToolSet } from '@/packages/model-calls/toolsets/knowledge-base'
-import { getToolSet as getSessionAttachmentRagToolSet } from '@/packages/model-calls/toolsets/session-attachment-rag'
 import sandboxToolSet from '@/packages/model-calls/toolsets/sandbox'
-import websearchToolSet, { parseLinkTool, webSearchTool } from '@/packages/model-calls/toolsets/web-search'
-import { PROVIDERS_WITH_PARSE_LINK } from '@/packages/web-search'
-import platform from '@/platform'
+import { getToolSet as getSessionAttachmentRagToolSet } from '@/packages/model-calls/toolsets/session-attachment-rag'
+import { getToolSetDescription, parseLinkTool, webSearchTool } from '@/packages/model-calls/toolsets/web-search'
 import { skillsController } from '@/packages/skills/controller'
+import { PROVIDERS_WITH_PARSE_LINK } from '@/packages/web-search'
 import * as settingActions from '@/stores/settingActions'
 
 export interface BuildToolsOptions {
@@ -89,6 +88,8 @@ export async function buildToolsForSession(
   const needSessionAttachmentRagToolSet = sessionAttachmentIds.length > 0 && model.isSupportToolUse('read-file')
   const kbSupported = knowledgeBase && model.isSupportToolUse('knowledge-base')
   const webSupported = webBrowsing && model.isSupportToolUse('web-browsing')
+  const searchProvider = settingActions.getExtensionSettings().webSearch.provider
+  const includeParseLinkTool = webSupported && PROVIDERS_WITH_PARSE_LINK.has(searchProvider)
 
   let kbToolSet: Awaited<ReturnType<typeof getKBToolSet>> | null = null
   if (knowledgeBase && kbSupported) {
@@ -119,7 +120,7 @@ export async function buildToolsForSession(
     instructions += fileToolSet.description
   }
   if (webSupported) {
-    instructions += websearchToolSet.description
+    instructions += getToolSetDescription({ includeParseLink: includeParseLinkTool })
   }
   if (sandboxEnabled) {
     instructions += sandboxToolSet.description
@@ -133,8 +134,7 @@ export async function buildToolsForSession(
     tools.web_search = webSearchTool
     // Inject parse_link based on the selected provider's declared capability.
     // Validation (Pro for build-in, API key for third parties) happens at execution time.
-    const searchProvider = settingActions.getExtensionSettings().webSearch.provider
-    if (PROVIDERS_WITH_PARSE_LINK.has(searchProvider)) {
+    if (includeParseLinkTool) {
       tools.parse_link = parseLinkTool
     }
   }

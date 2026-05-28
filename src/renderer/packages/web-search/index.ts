@@ -1,15 +1,16 @@
 import { cachified } from '@epic-web/cachified'
 import type { SearchResultItem } from '@shared/types'
 import { truncate } from 'lodash'
+import platform from '@/platform'
 import { getExtensionSettings, getLanguage, getLicenseKey } from '@/stores/settingActions'
 import { ChatboxAIAPIError } from '../../../shared/models/errors'
 import type WebSearch from './base'
 import { BingSearch } from './bing'
 import { BingNewsSearch } from './bing-news'
+import { BochaSearch } from './bocha'
 import { ChatboxSearch } from './chatbox-search'
 import { QueritSearch } from './querit'
 import { TavilySearch } from './tavily'
-import { BochaSearch } from './bocha'
 
 const MAX_CONTEXT_ITEMS = 10
 
@@ -34,8 +35,8 @@ function getSearchProviders() {
       break
     case 'bing':
       selectedProviders.push(new BingSearch())
-      if (language !== 'zh-Hans') {
-        selectedProviders.push(new BingNewsSearch()) // 国内无法使用
+      if (language !== 'zh-Hans' && platform.type !== 'mobile') {
+        selectedProviders.push(new BingNewsSearch()) // 国内和移动端容易被重定向到 Bing 首页
       }
       break
     case 'tavily':

@@ -1,4 +1,5 @@
 import type { SearchResult } from '@shared/types'
+import { getSearchAcceptLanguage } from './accept-language'
 import WebSearch from './base'
 
 export class BingSearch extends WebSearch {
@@ -11,7 +12,12 @@ export class BingSearch extends WebSearch {
   private async fetchSerp(query: string, signal?: AbortSignal) {
     const html = await this.fetch('https://www.bing.com/search', {
       method: 'GET',
+      headers: {
+        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': getSearchAcceptLanguage(),
+      },
       query: { q: query },
+      responseType: 'text',
       signal,
     })
     return html as string

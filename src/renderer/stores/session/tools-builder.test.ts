@@ -1,9 +1,21 @@
-import type { SkillInfo } from '@shared/types/skills'
 import type { ModelInterface } from '@shared/models/types'
 import type { Message } from '@shared/types'
+import type { SkillInfo } from '@shared/types/skills'
 import { describe, expect, it, vi } from 'vitest'
-import { buildToolsForSession, generateSkillsXml } from '@/stores/session/tools-builder'
 import { getToolSet as getSessionAttachmentRagToolSet } from '@/packages/model-calls/toolsets/session-attachment-rag'
+import { buildToolsForSession, generateSkillsXml } from '@/stores/session/tools-builder'
+
+const mockSettings = vi.hoisted(() => ({
+  provider: 'bing',
+}))
+
+vi.mock('@/stores/settingActions', () => ({
+  getExtensionSettings: () => ({
+    webSearch: {
+      provider: mockSettings.provider,
+    },
+  }),
+}))
 
 vi.mock('@/packages/model-calls/toolsets/session-attachment-rag', () => ({
   getToolSet: vi.fn(async (attachmentIds: number[]) => ({
@@ -172,5 +184,48 @@ describe('buildToolsForSession session attachment RAG', () => {
 
     expect(result.instructions).not.toContain('session_attachment_rag')
     expect(result.tools).not.toHaveProperty('query_session_attachment')
+  })
+})
+
+describe('buildToolsForSession web search tools', () => {
+  function makeModel(toolUseSupported = true): ModelInterface {
+    return {
+      name: 'mock',
+      modelId: 'mock-model',
+      isSupportVision: () => false,
+      isSupportToolUse: () => toolUseSupported,
+      isSupportSystemMessage: () => true,
+      chat: vi.fn(),
+      chatStream: vi.fn(),
+      paint: vi.fn(),
+    } as unknown as ModelInterface
+  }
+
+  it('should not mention parse_link when the selected search provider does not expose it', async () => {
+    mockSettings.provider = 'bing'
+
+    const result = await buildToolsForSession(makeModel(true), {
+      webBrowsing: true,
+      messages: [],
+    })
+
+    expect(result.tools).toHaveProperty('web_search')
+    expect(result.tools).not.toHaveProperty('parse_link')
+    expect(result.instructions).toContain('web_search')
+    expect(result.instructions).not.toContain('parse_link')
+  })
+
+  it('should mention parse_link only when the selected search provider exposes it', async () => {
+    mockSettings.provider = 'build-in'
+
+    const result = await buildToolsForSession(makeModel(true), {
+      webBrowsing: true,
+      messages: [],
+    })
+
+    expect(result.tools).toHaveProperty('web_search')
+    expect(result.tools).toHaveProperty('parse_link')
+    expect(result.instructions).toContain('web_search')
+    expect(result.instructions).toContain('parse_link')
   })
 })

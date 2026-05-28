@@ -6,15 +6,21 @@ import { getParseLinkProvider, webSearchExecutor } from '@/packages/web-search'
 import platform from '@/platform'
 import * as settingActions from '@/stores/settingActions'
 
-const toolSetDescription = `
-Use these tools to search the web and extract content from URLs when doing so would genuinely improve your answer.
+const webSearchDescription = `
+Use web_search to search the web when doing so would genuinely improve your answer.
 
 ## web_search
 Search the web when the question benefits from fresh, real-time, or source-specific information — e.g. current events, recent releases, live data, or facts you aren't confident about. For questions you can already answer well from your own knowledge, answer directly. Use short, concise queries (English preferred).
+`
 
+const parseLinkDescription = `
 ## parse_link
 Extract readable content from a specific URL — typically one the user shared or that a prior search returned.
 `
+
+export function getToolSetDescription(options: { includeParseLink: boolean }) {
+  return options.includeParseLink ? `${webSearchDescription}${parseLinkDescription}` : webSearchDescription
+}
 
 export const webSearchTool = tool({
   description:
@@ -97,7 +103,7 @@ export const parseLinkTool = tool({
 })
 
 export default {
-  description: toolSetDescription,
+  description: getToolSetDescription({ includeParseLink: true }),
   tools: {
     web_search: webSearchTool,
     parse_link: parseLinkTool,
