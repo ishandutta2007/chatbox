@@ -3,6 +3,9 @@ import {
   type GoogleGenerativeAIProvider,
   type GoogleGenerativeAIProviderOptions,
 } from '@ai-sdk/google'
+import { createAnthropic } from '@ai-sdk/anthropic'
+import { buildGeminiImageConfig } from '../gemini-types'
+import { createOpenAI, type OpenAIProvider } from '@ai-sdk/openai'
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible'
 import { type ModelMessage, streamText, type ToolSet } from 'ai'
 import AbstractAISDKModel, { type CallSettings } from '../../../models/abstract-ai-sdk'
@@ -74,6 +77,28 @@ export default class ChatboxAI extends AbstractAISDKModel implements ModelInterf
         fetch: this.chatboxAIFetch.bind(this),
       })
       return provider
+    } else if (this.options.model.apiStyle === 'anthropic') {
+      const provider = createAnthropic({
+        apiKey: this.options.licenseKey || '',
+        baseURL: `${getChatboxAPIOrigin()}/gateway/anthropic/v1`,
+        headers: {
+          'Instance-Id': instanceId,
+          'chatbox-session-id': options.sessionId || '',
+        },
+        fetch: this.chatboxAIFetch.bind(this),
+      })
+      return provider
+    } else if (this.options.model.apiStyle === 'openai-responses') {
+      const provider = createOpenAI({
+        apiKey: this.options.licenseKey || '',
+        baseURL: `${getChatboxAPIOrigin()}/gateway/openai-responses/v1`,
+        headers: {
+          'Instance-Id': instanceId,
+          'chatbox-session-id': options.sessionId || '',
+        },
+        fetch: this.chatboxAIFetch.bind(this),
+      })
+      return provider
     } else {
       const provider = createOpenAICompatible({
         name: 'ChatboxAI',
@@ -101,6 +126,8 @@ export default class ChatboxAI extends AbstractAISDKModel implements ModelInterf
     const provider = this.getProvider(options)
     if (this.options.model.apiStyle === 'google') {
       return (provider as GoogleGenerativeAIProvider).chat(this.options.model.modelId)
+    } else if (this.options.model.apiStyle === 'openai-responses') {
+      return (provider as OpenAIProvider).responses(this.options.model.modelId)
     } else {
       return provider.languageModel(this.options.model.modelId)
     }

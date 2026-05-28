@@ -34,7 +34,7 @@ export const DEFAULT_DOCUMENT_PARSER_CONFIG: DocumentParserConfig = {
 export const ProviderModelInfoSchema = z.object({
   modelId: z.string(),
   type: z.enum(['chat', 'embedding', 'rerank', 'image']).optional().catch(undefined),
-  apiStyle: z.enum(['google', 'openai', 'anthropic']).optional().catch(undefined),
+  apiStyle: z.enum(['google', 'openai', 'openai-responses', 'anthropic']).optional().catch(undefined),
   nickname: z.string().optional().catch(undefined),
   labels: z.array(z.string()).optional().catch([]),
   capabilities: z
