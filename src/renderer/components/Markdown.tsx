@@ -1,12 +1,14 @@
 import { sanitizeUrl } from '@braintree/sanitize-url'
 import { useTheme } from '@mui/material'
 import {
+  type CSSProperties,
   createContext,
   type ElementType,
   memo,
   type ReactNode,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
 } from 'react'
@@ -343,6 +345,54 @@ const CodeIcons: { [key: string]: ElementType<IconProps> } = {
   DART: IconDart,
 }
 
+function useShikiHtml(code: string, language: string, theme: ShikiTheme): string | null {
+  const syncHtml = useMemo(() => highlightSync(code, language, theme), [code, language, theme])
+  const [asyncHtml, setAsyncHtml] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (syncHtml !== null) return
+    let cancelled = false
+    void highlight(code, language, theme).then((result) => {
+      if (!cancelled) setAsyncHtml(result)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [syncHtml, code, language, theme])
+
+  return syncHtml ?? asyncHtml
+}
+
+const ShikiCodeBlock = memo(({ code, language, theme }: { code: string; language: string; theme: ShikiTheme }) => {
+  const html = useShikiHtml(code, language, theme)
+  const lineNumberStyle = useMemo(() => {
+    const lines = code.split('\n').length
+    const lineNumberWidth = `${Math.max(1, lines).toString().length}em`
+    return {
+      '--shiki-line-number-width': lineNumberWidth,
+    } as CSSProperties
+  }, [code])
+
+  if (!html) {
+    return (
+      <div className="shiki-code-wrapper shiki-code-fallback" style={lineNumberStyle}>
+        <pre>
+          <code>{code}</code>
+        </pre>
+      </div>
+    )
+  }
+
+  return (
+    <div
+      className="shiki-code-wrapper"
+      style={lineNumberStyle}
+      // biome-ignore lint/security/noDangerouslySetInnerHtml: shiki generates safe HTML from code tokenization
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
+  )
+})
+
 const BlockCode = memo(
   ({ children, uniqueId, hiddenCodeCopyButton, language, generating, forceColorScheme }: BlockCodeProps) => {
     const { t } = useTranslation()
@@ -414,7 +464,7 @@ const BlockCode = memo(
         <Flex
           justify="space-between"
           className={clsx(
-            'p-xs bg-chatbox-background-secondary rounded-t-md border border-solid border-[var(--chatbox-border-primary)]',
+            'p-xs bg-chatbox-background-secondary rounded-t-md border border-solid border-[var(--chatbox-border-primary)] select-none',
             !needCollapse || !collapsed ? 'sticky top-0 z-10' : ''
           )}
         >
