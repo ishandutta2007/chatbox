@@ -138,10 +138,13 @@ export function updateSessionListData(updater: (items: SessionMetaRecord[]) => S
   })
 }
 
-/** Re-read entire session list from DB and update cache. Use for bulk operations only. */
+/** Re-read the first session list page from DB and update cache. Use for bulk operations only. */
 export async function refreshSessionListCache() {
-  queryClient.removeQueries({ queryKey: QueryKeys.ChatSessionsList })
-  await queryClient.prefetchInfiniteQuery(listSessionsMetaQueryOptions)
+  const firstPage = await _listSessionsMetaPage(0)
+  queryClient.setQueryData<InfiniteSessionData>(QueryKeys.ChatSessionsList, {
+    pages: [firstPage],
+    pageParams: [0],
+  })
 }
 
 // MARK: session operations
@@ -344,14 +347,13 @@ export async function deleteSessions(ids: string[]) {
     await storage.removeItem(StorageKeyGenerator.session(id))
   })
 
-  const deletedIdSet = new Set(uniqueIds)
   for (const id of uniqueIds) {
     _setSessionCache(id, null)
   }
 
   const metaStorage = await getMetaStorage()
   await metaStorage.deleteMany(uniqueIds)
-  updateSessionListData((items) => items.filter((session) => !deletedIdSet.has(session.id)))
+  await refreshSessionListCache()
 
   for (const id of uniqueIds) {
     uiStore.getState().clearSessionWebBrowsing(id)
