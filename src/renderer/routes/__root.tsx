@@ -70,10 +70,10 @@ function BackgroundImageOverlay() {
   const globalBackgroundImageKey = useSettingsStore((s) => s.backgroundImageKey)
   const showSidebar = useUIStore((s) => s.showSidebar)
   const sidebarWidth = useSidebarWidth()
-  const currentSessionId = useAtomValue(atoms.currentSessionIdAtom)
   const isRootPage = location.pathname === '/'
   const isSessionPage = location.pathname.startsWith('/session/') && location.pathname.length > '/session/'.length
-  const sessionId = isSessionPage && currentSessionId && currentSessionId !== 'new' ? currentSessionId : null
+  const sessionId =
+    isSessionPage && location.pathname !== '/session/new' ? location.pathname.slice('/session/'.length) : null
   const { session } = useSession(sessionId)
   const effectiveKey =
     session?.backgroundImage?.type === 'storage-key'
