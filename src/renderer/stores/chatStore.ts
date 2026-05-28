@@ -95,6 +95,12 @@ export async function listSessionsMeta(): Promise<SessionMetaRecord[]> {
   return data.pages.flatMap((p) => p.items)
 }
 
+/** Get all session metas from storage, bypassing the paginated cache. */
+export async function listAllSessionsMeta(): Promise<SessionMetaRecord[]> {
+  const metaStorage = await getMetaStorage()
+  return await metaStorage.getAll()
+}
+
 export function useSessionList() {
   const result = useInfiniteQuery(listSessionsMetaQueryOptions)
   const sessionMetaList = useMemo(() => result.data?.pages.flatMap((p) => p.items), [result.data])
@@ -180,6 +186,12 @@ function _setSessionCache(sessionId: string, updated: Session | null) {
   queryClient.setQueryData(QueryKeys.ChatSession(sessionId), updated)
 }
 
+async function runInChunks<T>(items: T[], chunkSize: number, worker: (item: T) => Promise<void>) {
+  for (let i = 0; i < items.length; i += chunkSize) {
+    await Promise.all(items.slice(i, i + chunkSize).map((item) => worker(item)))
+  }
+}
+
 // create session
 export async function createSession(newSession: Omit<Session, 'id'>, previousId?: string) {
   console.debug('chatStore', 'createSession', newSession)
@@ -252,7 +264,9 @@ export async function updateSessionWithMessages(sessionId: string, updater: Upda
     const newMeta = getSessionMeta(updated)
     const metaStorage = await getMetaStorage()
     await metaStorage.update(sessionId, newMeta)
-    updateSessionListData((items) => items.map((s) => (s.id === sessionId ? { ...s, ...newMeta } : s)))
+    updateSessionListData((items) =>
+      sortSessionRecords(items.map((s) => (s.id === sessionId ? { ...s, ...newMeta } : s)))
+    )
   }
   _setSessionCache(sessionId, updated)
   return updated
@@ -310,6 +324,42 @@ export async function deleteSession(id: string) {
   cleanupSessionAtomCache(id)
   clearScrollPositionCache(id)
   delete sessionUpdateQueues[id]
+}
+
+export async function deleteSessions(ids: string[]) {
+  const uniqueIds = [...new Set(ids)]
+  if (uniqueIds.length === 0) return
+
+  if (platform.type === 'desktop') {
+    await runInChunks(uniqueIds, 10, async (id) => {
+      try {
+        await platform.getSessionAttachmentRagController().deleteSessionAttachments(id)
+      } catch (error) {
+        console.warn('Failed to cleanup session attachment RAG entries for session deletion:', error)
+      }
+    })
+  }
+
+  await runInChunks(uniqueIds, 20, async (id) => {
+    await storage.removeItem(StorageKeyGenerator.session(id))
+  })
+
+  const deletedIdSet = new Set(uniqueIds)
+  for (const id of uniqueIds) {
+    _setSessionCache(id, null)
+  }
+
+  const metaStorage = await getMetaStorage()
+  await metaStorage.deleteMany(uniqueIds)
+  updateSessionListData((items) => items.filter((session) => !deletedIdSet.has(session.id)))
+
+  for (const id of uniqueIds) {
+    uiStore.getState().clearSessionWebBrowsing(id)
+    uiStore.getState().removeSessionKnowledgeBase(id)
+    cleanupSessionAtomCache(id)
+    clearScrollPositionCache(id)
+    delete sessionUpdateQueues[id]
+  }
 }
 
 // MARK: session settings operations

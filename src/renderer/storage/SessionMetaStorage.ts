@@ -11,6 +11,7 @@ export interface SessionMetaStorage {
   update(id: string, updates: Partial<SessionMetaRecord>): Promise<SessionMetaRecord | null>
   getById(id: string): Promise<SessionMetaRecord | null>
   delete(id: string): Promise<void>
+  deleteMany(ids: string[]): Promise<void>
   getAll(): Promise<SessionMetaRecord[]>
   getPage(cursor: number, limit?: number): Promise<SessionMetaPage>
   getTotal(): Promise<number>
@@ -127,6 +128,21 @@ export class IndexedDBSessionMetaStorage implements SessionMetaStorage {
       const request = store.delete(id)
       request.onsuccess = () => resolve()
       request.onerror = () => reject(request.error)
+    })
+  }
+
+  async deleteMany(ids: string[]): Promise<void> {
+    await this.initialize()
+    if (ids.length === 0) return
+    return new Promise((resolve, reject) => {
+      if (!this.db) throw new Error('Database not initialized')
+      const tx = this.db.transaction(STORE_NAME, 'readwrite')
+      const store = tx.objectStore(STORE_NAME)
+      tx.oncomplete = () => resolve()
+      tx.onerror = () => reject(tx.error)
+      for (const id of ids) {
+        store.delete(id)
+      }
     })
   }
 

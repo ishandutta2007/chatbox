@@ -113,7 +113,7 @@ function Markdown(props: {
           : [remarkGfm, remarkBreaks, remarkAddCodeIndex]
       }
       rehypePlugins={[rehypeKatex]}
-      className={`break-words ${className || ''}`}
+      className={`break-words [overflow-wrap:anywhere] ${className || ''}`}
       // react-markdown's default defaultUrlTransform will incorrectly encode query parameters in URLs (e.g. & becomes &amp;)
       // Use sanitizeUrl here to avoid that and to prevent XSS attacks
       urlTransform={(url) => sanitizeUrl(url)}

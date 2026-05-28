@@ -437,7 +437,7 @@ const _Message: FC<Props> = (props) => {
                         {item.text || ''}
                       </Markdown>
                     ) : (
-                      <div className="break-words whitespace-pre-line">
+                      <div className="break-words [overflow-wrap:anywhere] whitespace-pre-line">
                         {needCollapse && isCollapsed ? `${item.text.slice(0, collapseThreshold)}...` : item.text}
                         {needCollapse && isCollapsed && CollapseButton}
                       </div>

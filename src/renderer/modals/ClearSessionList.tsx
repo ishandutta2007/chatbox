@@ -10,6 +10,7 @@ const ClearSessionList = NiceModal.create(() => {
   const modal = useModal()
   const { t } = useTranslation()
   const [value, setValue] = useState(100)
+  const [cleaning, setCleaning] = useState(false)
   const handleInput = (event: ChangeEvent<HTMLInputElement>) => {
     const int = parseInt(event.target.value || '0')
     if (int >= 0) {
@@ -21,10 +22,16 @@ const ClearSessionList = NiceModal.create(() => {
     trackingEvent('clear_conversation_list_window', { event_category: 'screen_view' })
   }, [])
 
-  const clean = () => {
-    clearConversationList(value)
-    trackingEvent('clear_conversation_list', { event_category: 'user' })
-    handleClose()
+  const clean = async () => {
+    if (cleaning) return
+    setCleaning(true)
+    try {
+      await clearConversationList(value)
+      trackingEvent('clear_conversation_list', { event_category: 'user' })
+      handleClose()
+    } finally {
+      setCleaning(false)
+    }
   }
 
   const handleClose = () => {
@@ -62,7 +69,7 @@ const ClearSessionList = NiceModal.create(() => {
 
       <AdaptiveModal.Actions>
         <AdaptiveModal.CloseButton onClick={handleClose} />
-        <Button onClick={clean} color="chatbox-error">
+        <Button onClick={clean} color="chatbox-error" loading={cleaning}>
           {t('clean it up')}
         </Button>
       </AdaptiveModal.Actions>

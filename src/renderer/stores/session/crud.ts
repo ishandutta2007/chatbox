@@ -134,27 +134,42 @@ export async function reorderSessions(oldIndex: number, newIndex: number) {
   const sessions = await chatStore.listSessionsMeta()
   const movedSession = sessions[oldIndex]
   if (!movedSession || oldIndex === newIndex) return
+  const targetSession = sessions[newIndex]
+  const nextStarred = targetSession?.starred ?? movedSession.starred
 
   // Remove the moved item to get the remaining list
   const remaining = sessions.filter((_, i) => i !== oldIndex)
+  const comparableRemaining = remaining.filter((s) => s.starred === nextStarred)
+  const targetGroupIndex = Math.max(
+    0,
+    sessions.slice(0, newIndex).filter((s) => s.id !== movedSession.id && s.starred === nextStarred).length
+  )
 
   let newSortOrder: number
   if (remaining.length === 0) {
     return
-  } else if (newIndex <= 0) {
-    newSortOrder = remaining[0].sortOrder + 1000
-  } else if (newIndex >= remaining.length) {
-    newSortOrder = remaining[remaining.length - 1].sortOrder - 1000
+  } else if (comparableRemaining.length === 0) {
+    newSortOrder = Date.now()
+  } else if (targetGroupIndex <= 0) {
+    newSortOrder = comparableRemaining[0].sortOrder + 1000
+  } else if (targetGroupIndex >= comparableRemaining.length) {
+    newSortOrder = comparableRemaining[comparableRemaining.length - 1].sortOrder - 1000
   } else {
-    const before = remaining[newIndex - 1]
-    const after = remaining[newIndex]
+    const before = comparableRemaining[targetGroupIndex - 1]
+    const after = comparableRemaining[targetGroupIndex]
     newSortOrder = (before.sortOrder + after.sortOrder) / 2
   }
 
+  if (nextStarred !== movedSession.starred) {
+    await chatStore.updateSession(movedSession.id, { starred: nextStarred })
+  }
+
   const metaStorage = await chatStore.getMetaStorage()
-  await metaStorage.update(movedSession.id, { sortOrder: newSortOrder })
+  await metaStorage.update(movedSession.id, { sortOrder: newSortOrder, starred: nextStarred })
   chatStore.updateSessionListData((items) => {
-    const updated = items.map((s) => (s.id === movedSession.id ? { ...s, sortOrder: newSortOrder } : s))
+    const updated = items.map((s) =>
+      s.id === movedSession.id ? { ...s, sortOrder: newSortOrder, starred: nextStarred } : s
+    )
     return sortSessionRecords(updated)
   })
 }
@@ -201,14 +216,12 @@ export async function switchToNext(reversed?: boolean) {
  * Clear session list, keeping only specified number of sessions
  */
 async function clearSessionList(keepNum: number) {
-  const sessionMetaList = await chatStore.listSessionsMeta()
+  const sessionMetaList = await chatStore.listAllSessionsMeta()
   const deleted = sessionMetaList?.slice(keepNum)
   if (!deleted?.length) {
     return
   }
-  for (const s of deleted) {
-    await chatStore.deleteSession(s.id)
-  }
+  await chatStore.deleteSessions(deleted.map((s) => s.id))
   // Navigate to home if the current session was deleted
   const store = getDefaultStore()
   const currentSessionId = store.get(atoms.currentSessionIdAtom)

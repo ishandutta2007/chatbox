@@ -1,4 +1,9 @@
-import { CapacitorSQLite, SQLiteConnection, type capSQLiteSet, type SQLiteDBConnection } from '@capacitor-community/sqlite'
+import {
+  CapacitorSQLite,
+  SQLiteConnection,
+  type capSQLiteSet,
+  type SQLiteDBConnection,
+} from '@capacitor-community/sqlite'
 import type { SessionMetaPage, SessionMetaRecord } from '@shared/types'
 import { type SessionMetaStorage, sortSessionRecords } from './SessionMetaStorage'
 
@@ -182,6 +187,16 @@ export class SQLiteSessionMetaStorage implements SessionMetaStorage {
   async delete(id: string): Promise<void> {
     await this.initialize()
     await this.database.run('DELETE FROM session_meta WHERE id = ?', [id])
+  }
+
+  async deleteMany(ids: string[]): Promise<void> {
+    await this.initialize()
+    if (ids.length === 0) return
+    const set: capSQLiteSet[] = ids.map((id) => ({
+      statement: 'DELETE FROM session_meta WHERE id = ?',
+      values: [id],
+    }))
+    await this.database.executeSet(set, true)
   }
 
   async getAll(): Promise<SessionMetaRecord[]> {

@@ -2,6 +2,8 @@ import type { DragEndEvent } from '@dnd-kit/core'
 import {
   closestCenter,
   DndContext,
+  DragOverlay,
+  type DragStartEvent,
   KeyboardSensor,
   MouseSensor,
   TouchSensor,
@@ -20,7 +22,7 @@ import NiceModal from '@ebay/nice-modal-react'
 import { ActionIcon, Flex, Text, Tooltip } from '@mantine/core'
 import { IconArchive, IconLoader2, IconSearch } from '@tabler/icons-react'
 import { useRouterState } from '@tanstack/react-router'
-import { type MutableRefObject, useCallback, useMemo } from 'react'
+import { type MutableRefObject, useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Virtuoso } from 'react-virtuoso'
 import { useSessionList } from '@/stores/chatStore'
@@ -34,7 +36,8 @@ export interface Props {
 
 export default function SessionList(props: Props) {
   const { t } = useTranslation()
-  const { sessionMetaList: sortedSessions, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } = useSessionList()
+  const { sessionMetaList: sortedSessions, fetchNextPage, hasNextPage, isFetchingNextPage } = useSessionList()
+  const [activeDragId, setActiveDragId] = useState<string | null>(null)
   const setOpenSearchDialog = useUIStore((s) => s.setOpenSearchDialog)
   const sensors = useSensors(
     useSensor(TouchSensor, {
@@ -52,22 +55,32 @@ export default function SessionList(props: Props) {
       coordinateGetter: sortableKeyboardCoordinates,
     })
   )
+  const onDragStart = (event: DragStartEvent) => {
+    setActiveDragId(String(event.active.id))
+  }
   const onDragEnd = async (event: DragEndEvent) => {
+    setActiveDragId(null)
     if (!event.over) {
       return
     }
     if (!sortedSessions) {
       return
     }
-    const activeId = event.active.id
-    const overId = event.over.id
+    const activeId = String(event.active.id)
+    const overId = String(event.over.id)
     if (activeId !== overId) {
       const oldIndex = sortedSessions.findIndex((s) => s.id === activeId)
       const newIndex = sortedSessions.findIndex((s) => s.id === overId)
       await reorderSessions(oldIndex, newIndex)
-      refetch()
     }
   }
+  const onDragCancel = () => {
+    setActiveDragId(null)
+  }
+  const activeDragSession = useMemo(
+    () => sortedSessions?.find((session) => session.id === activeDragId),
+    [activeDragId, sortedSessions]
+  )
   const routerState = useRouterState()
   const onEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) {
@@ -122,7 +135,9 @@ export default function SessionList(props: Props) {
         modifiers={[restrictToVerticalAxis]}
         sensors={sensors}
         collisionDetection={closestCenter}
+        onDragStart={onDragStart}
         onDragEnd={onDragEnd}
+        onDragCancel={onDragCancel}
       >
         {sortedSessions && (
           <SortableContext items={sortedSessions} strategy={verticalListSortingStrategy}>
@@ -146,6 +161,16 @@ export default function SessionList(props: Props) {
                 </SortableItem>
               )}
             />
+            <DragOverlay>
+              {activeDragSession ? (
+                <div className="pointer-events-none">
+                  <SessionItem
+                    selected={routerState.location.pathname === `/session/${activeDragSession.id}`}
+                    session={activeDragSession}
+                  />
+                </div>
+              ) : null}
+            </DragOverlay>
           </SortableContext>
         )}
       </DndContext>

@@ -87,6 +87,21 @@ describe('IndexedDBSessionMetaStorage', () => {
     expect(result).toBeNull()
   })
 
+  it('deleteMany removes selected records', async () => {
+    await storage.createMany([
+      makeRecord({ id: 'a', sortOrder: 100 }),
+      makeRecord({ id: 'b', sortOrder: 200 }),
+      makeRecord({ id: 'c', sortOrder: 300 }),
+    ])
+
+    await storage.deleteMany(['a', 'c'])
+
+    expect(await storage.getById('a')).toBeNull()
+    expect(await storage.getById('c')).toBeNull()
+    expect((await storage.getById('b'))?.id).toBe('b')
+    expect(await storage.getTotal()).toBe(1)
+  })
+
   it('getAll sorts starred first, then by sortOrder desc', async () => {
     await storage.create(makeRecord({ id: 'a', sortOrder: 100 }))
     await storage.create(makeRecord({ id: 'b', sortOrder: 300, starred: true }))

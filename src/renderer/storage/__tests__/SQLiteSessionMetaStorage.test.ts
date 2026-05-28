@@ -75,4 +75,30 @@ describe('SQLiteSessionMetaStorage', () => {
 
     expect(mockDatabase.run).not.toHaveBeenCalledWith('ROLLBACK')
   })
+
+  it('deleteMany delegates batch deletes to the Capacitor SQLite transaction API', async () => {
+    const storage = new SQLiteSessionMetaStorage()
+
+    await storage.deleteMany(['a', 'b'])
+
+    expect(mockDatabase.executeSet).toHaveBeenCalledTimes(1)
+    expect(mockDatabase.executeSet).toHaveBeenCalledWith(
+      [
+        { statement: 'DELETE FROM session_meta WHERE id = ?', values: ['a'] },
+        { statement: 'DELETE FROM session_meta WHERE id = ?', values: ['b'] },
+      ],
+      true
+    )
+    expect(mockDatabase.run).not.toHaveBeenCalled()
+  })
+
+  it('deleteMany preserves the original write error instead of masking it with rollback failure', async () => {
+    const storage = new SQLiteSessionMetaStorage()
+    const originalError = new Error('delete failed')
+    mockDatabase.executeSet.mockRejectedValueOnce(originalError)
+
+    await expect(storage.deleteMany(['a'])).rejects.toThrow('delete failed')
+
+    expect(mockDatabase.run).not.toHaveBeenCalledWith('ROLLBACK')
+  })
 })

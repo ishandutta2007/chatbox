@@ -66,7 +66,18 @@ function getHttpStatusCode(msg: Message): number | undefined {
 
 function getRequestId(msg: Message): string | undefined {
   const requestId = msg.errorExtra?.['requestId']
-  return typeof requestId === 'string' && requestId.length > 0 ? requestId : undefined
+  if (typeof requestId !== 'string' || requestId.length === 0) {
+    return undefined
+  }
+  const uniqueRequestIds = [
+    ...new Set(
+      requestId
+        .split(',')
+        .map((id) => id.trim())
+        .filter(Boolean)
+    ),
+  ]
+  return uniqueRequestIds.length > 0 ? uniqueRequestIds.join(', ') : undefined
 }
 
 function shouldTruncate(text: string): boolean {
@@ -163,6 +174,7 @@ export default function MessageErrTips(props: { msg: Message; onRetry?: () => vo
 
   const displayedErrorMessage = translatedText ?? errorMessage
   const requestId = getRequestId(msg)
+  const showRequestId = !!requestId && !errorMessage.includes(requestId)
   const { copied, copy } = useCopied(displayedErrorMessage)
   const isTruncated = shouldTruncate(errorMessage)
   const showTranslateButton = language !== 'en' && errorMessage.length > 0
@@ -355,7 +367,7 @@ export default function MessageErrTips(props: { msg: Message; onRetry?: () => vo
           </Text>
         </Flex>
       )}
-      {requestId && (
+      {showRequestId && (
         <Text size="xs" c="chatbox-tertiary" mt="xs" className="break-all select-text">
           {t('Request ID: {{requestId}}', { requestId })}
         </Text>

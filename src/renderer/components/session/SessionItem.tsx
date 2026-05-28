@@ -62,12 +62,7 @@ function SessionItem(props: Props) {
         text: session.starred ? t('Unstar') : t('Star'),
         icon: session.starred ? IconStarFilled : IconStar,
         onClick: () => {
-          void updateSessionStore(session.id, (s) => {
-            if (!s) {
-              throw new Error(`Session ${session.id} not found`)
-            }
-            return { ...s, starred: !s?.starred }
-          })
+          void updateSessionStore(session.id, { starred: !session.starred })
         },
       },
       { divider: true },
