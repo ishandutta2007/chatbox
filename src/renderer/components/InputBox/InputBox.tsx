@@ -1423,8 +1423,10 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
                           : undefined
                       }
                       onDelete={() => {
+                        const fileKeysToRemove = new Set([fileKey])
                         // Cancel any ongoing MinerU parsing for this file
                         const filePath = platform.getLocalFilePath(file)
+                        fileKeysToRemove.add(StorageKeyGenerator.fileUniqKey(file))
                         if (filePath && platform.cancelMineruParse) {
                           platform.cancelMineruParse(filePath).catch(() => {
                             // Ignore cancellation errors
@@ -1434,13 +1436,13 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
                           void platform
                             .getSessionAttachmentRagController()
                             .deleteAttachment(preprocessedFile.sessionAttachmentId)
+                            .catch(() => {
+                              // Ignore cancellation errors
+                            })
                         }
-                        setPreConstructedMessage((prev) => ({
-                          ...cleanupFile(prev, file),
-                          attachments: (prev.attachments || []).filter(
-                            (f) => StorageKeyGenerator.fileUniqKey(f) !== fileKey
-                          ),
-                        }))
+                        setPreConstructedMessage((prev) =>
+                          cleanupFile(prev, file, { fileKeys: fileKeysToRemove, removeAttachment: true })
+                        )
                       }}
                     />
                   )

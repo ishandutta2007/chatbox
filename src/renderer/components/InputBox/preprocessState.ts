@@ -2,6 +2,16 @@ import { StorageKeyGenerator } from '@/storage/StoreStorage'
 import type { PreConstructedMessageState, PreprocessedFile, PreprocessedLink } from '../../types/input-box'
 export type { PreConstructedMessageState }
 
+function getFileKeys(file: File, additionalKeys: Iterable<string> = []): Set<string> {
+  const keys = new Set(additionalKeys)
+  keys.add(StorageKeyGenerator.fileUniqKey(file))
+  return keys
+}
+
+function fileKeyMatches(file: File, keys: Set<string>): boolean {
+  return keys.has(StorageKeyGenerator.fileUniqKey(file))
+}
+
 // ----- Link helpers -----
 
 export function markLinkProcessing(prev: PreConstructedMessageState, url: string): PreConstructedMessageState {
@@ -154,20 +164,29 @@ export function onFileProcessed(
   }
 }
 
-export function cleanupFile(prev: PreConstructedMessageState, file: File): PreConstructedMessageState {
-  const key = StorageKeyGenerator.fileUniqKey(file)
+export function cleanupFile(
+  prev: PreConstructedMessageState,
+  file: File,
+  options: { fileKeys?: Iterable<string>; removeAttachment?: boolean } = {}
+): PreConstructedMessageState {
+  const keys = getFileKeys(file, options.fileKeys)
   const newFilePromises = new Map(prev.preprocessingPromises.files)
-  newFilePromises.delete(key)
+  for (const key of keys) {
+    newFilePromises.delete(key)
+  }
+
+  const nextFileStatuses = { ...prev.preprocessingStatus.files }
+  for (const key of keys) {
+    nextFileStatuses[key] = undefined
+  }
 
   return {
     ...prev,
-    preprocessedFiles: prev.preprocessedFiles.filter((f) => f.file.name !== file.name),
+    attachments: options.removeAttachment ? prev.attachments.filter((f) => !fileKeyMatches(f, keys)) : prev.attachments,
+    preprocessedFiles: prev.preprocessedFiles.filter((f) => !fileKeyMatches(f.file, keys)),
     preprocessingStatus: {
       ...prev.preprocessingStatus,
-      files: {
-        ...prev.preprocessingStatus.files,
-        [key]: undefined,
-      },
+      files: nextFileStatuses,
     },
     preprocessingPromises: {
       ...prev.preprocessingPromises,
