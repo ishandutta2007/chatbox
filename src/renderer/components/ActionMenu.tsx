@@ -1,6 +1,6 @@
 import { Menu, type MenuItemProps, type MenuProps, Stack, Text, useMantineTheme } from '@mantine/core'
 import { IconCheck, type IconProps } from '@tabler/icons-react'
-import { type FC, type MouseEventHandler, type ReactElement, useEffect, useRef, useState } from 'react'
+import { type FC, type MouseEventHandler, type ReactElement, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Drawer } from 'vaul'
 import { useIsSmallScreen } from '@/hooks/useScreenChange'
@@ -13,6 +13,7 @@ export type ActionMenuItemProps =
       text: string
       icon?: React.ElementType<IconProps>
       color?: MenuItemProps['color']
+      disabled?: boolean
       onClick?: MouseEventHandler<HTMLButtonElement>
       doubleCheck?:
         | boolean
@@ -70,6 +71,7 @@ const DesktopActionMenu: FC<ActionMenuProps> = ({
               doubleCheckText={item.doubleCheck === true ? undefined : item.doubleCheck.text}
               doubleCheckIcon={item.doubleCheck === true ? undefined : item.doubleCheck.icon}
               doubleCheckColor={item.doubleCheck === true ? undefined : item.doubleCheck.color}
+              disabled={item.disabled}
               onClick={item.onClick}
             />
           ) : (
@@ -77,6 +79,7 @@ const DesktopActionMenu: FC<ActionMenuProps> = ({
               key={`${item.text}${index}`}
               leftSection={item.icon ? <ScalableIcon icon={item.icon} size={14} /> : undefined}
               color={item.color || 'chatbox-primary'}
+              disabled={item.disabled}
               style={{
                 color: theme.variantColorResolver({ color: item.color || 'chatbox-primary', theme, variant: 'light' })
                   .color,
@@ -131,6 +134,7 @@ const MobileActionMenu: FC<ActionMenuProps> = ({ children, items, title }) => {
                   <button
                     key={`${item.text}${index}`}
                     onClick={handleItemClick(item.onClick)}
+                    disabled={item.disabled}
                     className="border-0 bg-transparent p-2.5"
                   >
                     <Text span lineClamp={1} fw={600} c={item.color || 'chatbox-primary'}>
@@ -164,7 +168,7 @@ const MobileDoubleCheckMenuItem: FC<{
   return (
     <Drawer.NestedRoot noBodyStyles open={confirmOpen} onOpenChange={setConfirmOpen}>
       <Drawer.Trigger asChild>
-        <button className="border-0 bg-transparent p-2.5">
+        <button className="border-0 bg-transparent p-2.5" disabled={item.disabled}>
           <Text
             span
             lineClamp={1}
@@ -186,6 +190,7 @@ const MobileDoubleCheckMenuItem: FC<{
                   onClick={(e) => {
                     onConfirm?.(e)
                   }}
+                  disabled={item.disabled}
                   className="border-0 bg-transparent p-2.5"
                 >
                   <Text span lineClamp={1} fw={600} c={doubleCheckColor}>

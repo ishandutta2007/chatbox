@@ -129,6 +129,7 @@ export default function SessionList(props: Props) {
             <Virtuoso
               style={{ flex: 1 }}
               data={sortedSessions}
+              computeItemKey={(_index, session) => session.id}
               scrollerRef={(ref) => {
                 if (ref instanceof HTMLDivElement) {
                   props.sessionListViewportRef.current = ref

@@ -3,7 +3,7 @@ import { ActionIcon, Flex, Text } from '@mantine/core'
 import type { SessionMeta } from '@shared/types'
 import { IconCopy, IconDots, IconEdit, IconStar, IconStarFilled, IconTrash } from '@tabler/icons-react'
 import clsx from 'clsx'
-import { memo, useMemo, useState } from 'react'
+import { memo, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useIsSmallScreen } from '@/hooks/useScreenChange'
 import { router } from '@/router'
@@ -37,6 +37,8 @@ function SessionItem(props: Props) {
   // const smallSize = theme.typography.pxToRem(20)
 
   const [menuOpened, setMenuOpened] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const deletingRef = useRef(false)
 
   const actionMenuItems = useMemo<ActionMenuItemProps[]>(
     () => [
@@ -73,7 +75,13 @@ function SessionItem(props: Props) {
         doubleCheck: true,
         text: t('Delete'),
         icon: IconTrash,
+        disabled: deleting,
         onClick: async () => {
+          if (deletingRef.current) {
+            return
+          }
+          deletingRef.current = true
+          setDeleting(true)
           try {
             await deleteSessionStore(session.id)
             // Only navigate if deleting the currently selected session
@@ -82,11 +90,13 @@ function SessionItem(props: Props) {
             }
           } catch (error) {
             console.error('Failed to delete session:', error)
+            deletingRef.current = false
+            setDeleting(false)
           }
         },
       },
     ],
-    [session, selected, t]
+    [session, selected, t, deleting]
   )
 
   return (
