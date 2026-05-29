@@ -954,33 +954,52 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
     }
 
     const insertLinks = (urls: string[]) => {
-      let newLinks = [...(links || []), ...urls.map((u) => ({ url: u }))]
-      newLinks = _.uniqBy(newLinks, 'url')
-      newLinks = newLinks.slice(-6) // 最多插入 6 个链接
+      const MAX_LINKS = 6
+      const dedupedLinks = _.uniqBy([...(links || []), ...urls.map((u) => ({ url: u }))], 'url')
+      // 保留最先添加的前 6 个链接，多出来的直接丢弃（而非静默丢掉最早的）
+      const newLinks = dedupedLinks.slice(0, MAX_LINKS)
       setLinks(newLinks)
 
-      // 预处理链接（只处理前6个）
-      for (let i = 0; i < Math.min(urls.length, 6); i++) {
-        const url = urls[i]
-        const linkIndex = newLinks.findIndex((l) => l.url === url)
+      if (dedupedLinks.length > newLinks.length) {
+        toastActions.add(
+          t('Only the first {{limit}} links can be attached. The extra links were skipped.', { limit: MAX_LINKS })
+        )
+      }
 
-        if (linkIndex < 6) {
+      // 只预处理实际保留下来的链接（findIndex 返回 -1 表示该链接已被裁剪，跳过）
+      for (const url of urls) {
+        const linkIndex = newLinks.findIndex((l) => l.url === url)
+        if (linkIndex >= 0 && linkIndex < MAX_LINKS) {
           startLinkPreprocessing(url)
         }
       }
     }
 
     const insertFiles = async (files: File[]) => {
+      const MAX_IMAGES = 8
+      const MAX_ATTACHMENTS = 20
+      // 用本地累加器跟踪本次新增数量：同步循环内 state/ref 可能尚未刷新，靠它做无竞态的限额判断
+      let imageCount = preConstructedMessageRef.current.pictureKeys?.length || 0
+      let attachmentCount = preConstructedMessageRef.current.attachments?.length || 0
+      let droppedImages = 0
+      let droppedAttachments = 0
+
       for (const file of files) {
         // 文件和图片插入方法复用，会导致 svg、gif 这类不支持的图片也被插入，但暂时没看到有什么问题
         if (file.type.startsWith('image/')) {
+          // 超过上限时直接跳过：保留最先添加的前 8 张，且不浪费转码/不产生孤儿 blob
+          if (imageCount >= MAX_IMAGES) {
+            droppedImages++
+            continue
+          }
           const base64 = await picUtils.getImageBase64AndResize(file)
           const key = StorageKeyGenerator.picture('input-box')
           await saveBlob.mutateAsync({ key, value: base64 })
           setPreConstructedMessage((prev) => ({
             ...prev,
-            pictureKeys: [...(prev.pictureKeys || []), key].slice(-8),
-          })) // Maximum 8 images
+            pictureKeys: [...(prev.pictureKeys || []), key].slice(0, MAX_IMAGES), // 保留最先添加的前 8 张
+          }))
+          imageCount++
         } else {
           if (file.size > KNOWLEDGE_BASE_MAX_FILE_SIZE) {
             toastActions.add(
@@ -1014,6 +1033,16 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
             toastActions.add(errorMsg)
             continue
           }
+
+          // 已存在的文件视为重复（不占新增名额），新文件超过上限时直接跳过：保留最先添加的前 20 个
+          const isDuplicate = (preConstructedMessageRef.current.attachments || []).some(
+            (f) => StorageKeyGenerator.fileUniqKey(f) === StorageKeyGenerator.fileUniqKey(file)
+          )
+          if (!isDuplicate && attachmentCount >= MAX_ATTACHMENTS) {
+            droppedAttachments++
+            continue
+          }
+
           setPreConstructedMessage((prev) => {
             const draftMessageId = prev.draftMessageId || draftMessageIdRef.current || uuidv4()
             draftMessageIdRef.current = draftMessageId
@@ -1021,13 +1050,13 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
               (f) => StorageKeyGenerator.fileUniqKey(f) === StorageKeyGenerator.fileUniqKey(file)
             )
               ? prev.attachments
-              : [...(prev.attachments || []), file].slice(-20) // Maximum 20 attachments
+              : [...(prev.attachments || []), file].slice(0, MAX_ATTACHMENTS) // 保留最先添加的前 20 个
 
-            // Only preprocess first 20 files to avoid wasting resources
+            // 只预处理实际保留下来的文件（findIndex 返回 -1 表示已被裁剪，跳过，避免残留状态阻塞发送）
             const fileIndex = newAttachments.findIndex(
               (f) => f.name === file.name && f.lastModified === file.lastModified
             )
-            if (fileIndex < 20) {
+            if (fileIndex >= 0 && fileIndex < MAX_ATTACHMENTS) {
               const preprocessPromise = startFilePreprocessing(file)
               return {
                 ...storeFilePromise(markFileProcessing({ ...prev, draftMessageId }, file), file, preprocessPromise),
@@ -1041,7 +1070,21 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
               attachments: newAttachments,
             }
           })
+          if (!isDuplicate) {
+            attachmentCount++
+          }
         }
+      }
+
+      if (droppedImages > 0) {
+        toastActions.add(
+          t('You can attach up to {{limit}} images. The extra images were skipped.', { limit: MAX_IMAGES })
+        )
+      }
+      if (droppedAttachments > 0) {
+        toastActions.add(
+          t('You can attach up to {{limit}} files. The extra files were skipped.', { limit: MAX_ATTACHMENTS })
+        )
       }
     }
     insertFilesRef.current = insertFiles
@@ -1281,7 +1324,12 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
             </Flex>
 
             {(!!pictureKeys.length || !!attachments.length || !!links.length) && (
-              <Flex align="center" wrap="wrap" onClick={() => dom.focusMessageInput()}>
+              <Flex
+                align="center"
+                wrap="wrap"
+                className="max-h-[30vh] overflow-y-auto"
+                onClick={() => dom.focusMessageInput()}
+              >
                 {showSessionRetrievalToolWarning && (
                   <Flex
                     role="status"
