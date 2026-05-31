@@ -17,7 +17,6 @@ import platform from '@/platform'
 import * as chatStore from '../chatStore'
 import * as settingActions from '../settingActions'
 import { settingsStore } from '../settingsStore'
-import { uiStore } from '../uiStore'
 import { getSessionWebBrowsing } from './utils'
 
 /**
@@ -160,7 +159,7 @@ export async function submitNewUserMessage(
 
   const globalSettings = settingsStore.getState().getSettings()
   const isPro = settingActions.isPro()
-  const remoteConfig = settingActions.getRemoteConfig()
+  const remoteConfig = await settingActions.getRemoteConfig()
 
   // 根据需要，插入空白的回复消息
   let newAssistantMsg = createMessage('assistant', '')

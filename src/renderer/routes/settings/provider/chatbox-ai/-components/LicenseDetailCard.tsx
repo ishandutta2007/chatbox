@@ -226,9 +226,6 @@ export function LicenseDetailCard({ licenseDetail, language, utmContent }: Licen
 
   const planDetail = licenseDetail.unified_token_usage_details?.find((detail) => detail.type === 'plan')
   const trialDetail = licenseDetail.unified_token_usage_details?.find((detail) => detail.type === 'trial')
-  const invitationDetail = licenseDetail.unified_token_usage_details?.find(
-    (detail) => detail.type === 'invitation_reward'
-  )
   const rewardDetail = licenseDetail.aggregated_reward_details
   const quotaDetail = planDetail?.token_limit ? planDetail : trialDetail
   const isTrialOnly = (planDetail?.token_limit || 0) === 0 && (trialDetail?.token_limit || 0) > 0
@@ -240,10 +237,6 @@ export function LicenseDetailCard({ licenseDetail, language, utmContent }: Licen
     (licenseDetail.expansion_pack_limit || 0) - (licenseDetail.expansion_pack_usage || 0),
     0
   )
-  const invitationRemaining = invitationDetail
-    ? Math.max((invitationDetail.token_limit || 0) - (invitationDetail.token_usage || 0), 0)
-    : 0
-
   const rewardRemaining = rewardDetail
     ? Math.max((rewardDetail.token_limit || 0) - (rewardDetail.token_usage || 0), 0)
     : 0
@@ -305,7 +298,7 @@ export function LicenseDetailCard({ licenseDetail, language, utmContent }: Licen
       <div className={clsx('grid gap-md md:grid-cols-3')}>
         {quotaDetail && quotaDetail.token_limit > 0 && (
           <QuotaCard
-            title={licenseDetail.name + t('Quota') + '\n' + t('(Remaining/Total)')}
+            title={`${licenseDetail.name}${t('Quota')}\n${t('(Remaining/Total)')}`}
             remaining={Math.max(quotaDetail.token_limit - quotaDetail.token_usage, 0)}
             total={quotaDetail.token_limit}
             helper={refreshText}
@@ -330,7 +323,7 @@ export function LicenseDetailCard({ licenseDetail, language, utmContent }: Licen
         )}
 
         <QuotaCard
-          title={t('Expansion Pack Quota') + '\n' + t('(Remaining/Total)')}
+          title={`${t('Expansion Pack Quota')}\n${t('(Remaining/Total)')}`}
           remaining={licenseDetail.expansion_pack_limit > 0 ? expansionRemaining : undefined}
           total={licenseDetail.expansion_pack_limit > 0 ? licenseDetail.expansion_pack_limit : undefined}
           mutedValue={licenseDetail.expansion_pack_limit > 0 ? undefined : (t('No Expansion Pack') as string)}
@@ -350,7 +343,7 @@ export function LicenseDetailCard({ licenseDetail, language, utmContent }: Licen
         />
 
         <QuotaCard
-          title={t('Reward Quota') + '\n' + t('(Remaining/Total)')}
+          title={`${t('Reward Quota')}\n${t('(Remaining/Total)')}`}
           remaining={rewardDetail && rewardDetail.token_limit > 0 ? rewardRemaining : undefined}
           total={rewardDetail && rewardDetail.token_limit > 0 ? rewardDetail.token_limit : undefined}
           mutedValue={rewardDetail && rewardDetail.token_limit > 0 ? undefined : (t('No rewards yet') as string)}

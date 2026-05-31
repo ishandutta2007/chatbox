@@ -13,7 +13,7 @@ import { generateText } from '.'
  * @param result The model response result containing content parts
  * @returns The parsed search action object or null if none found
  */
-function extractSearchActionFromResult<T = any>(result: {
+function extractSearchActionFromResult<T = unknown>(result: {
   contentParts: Array<{ type: string; text?: string }>
 }): T | null {
   const regex = /{(?:[^{}]|{(?:[^{}]|{[^{}]*})*})*}/g
@@ -141,7 +141,7 @@ export async function combinedSearchByPromptEngineering(
 
 export function constructMessagesWithSearchResults(
   messages: Message[],
-  searchResults: { title: string; snippet: string; link: string; rawContent: string | null }[]
+  searchResults: { title: string; snippet: string; link: string; rawContent?: string | null }[]
 ) {
   const systemPrompt = promptFormat.answerWithSearchResults()
   const formattedSearchResults = searchResults
