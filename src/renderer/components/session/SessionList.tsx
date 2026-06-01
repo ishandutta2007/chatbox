@@ -22,7 +22,7 @@ import NiceModal from '@ebay/nice-modal-react'
 import { ActionIcon, Flex, Text, Tooltip } from '@mantine/core'
 import { IconArchive, IconLoader2, IconSearch } from '@tabler/icons-react'
 import { useRouterState } from '@tanstack/react-router'
-import { type MutableRefObject, useCallback, useMemo, useState } from 'react'
+import { type CSSProperties, type MutableRefObject, useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Virtuoso } from 'react-virtuoso'
 import { useSessionList } from '@/stores/chatStore'
@@ -71,6 +71,9 @@ export default function SessionList(props: Props) {
     if (activeId !== overId) {
       const oldIndex = sortedSessions.findIndex((s) => s.id === activeId)
       const newIndex = sortedSessions.findIndex((s) => s.id === overId)
+      if (oldIndex < 0 || newIndex < 0) {
+        return
+      }
       await reorderSessions(oldIndex, newIndex)
     }
   }
@@ -81,6 +84,7 @@ export default function SessionList(props: Props) {
     () => sortedSessions?.find((session) => session.id === activeDragId),
     [activeDragId, sortedSessions]
   )
+  const sortableSessionIds = useMemo(() => sortedSessions?.map((session) => session.id) ?? [], [sortedSessions])
   const routerState = useRouterState()
   const onEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) {
@@ -140,7 +144,7 @@ export default function SessionList(props: Props) {
         onDragCancel={onDragCancel}
       >
         {sortedSessions && (
-          <SortableContext items={sortedSessions} strategy={verticalListSortingStrategy}>
+          <SortableContext items={sortableSessionIds} strategy={verticalListSortingStrategy}>
             <Virtuoso
               style={{ flex: 1 }}
               data={sortedSessions}
@@ -180,17 +184,14 @@ export default function SessionList(props: Props) {
 
 function SortableItem(props: { id: string; children?: React.ReactNode }) {
   const { id, children } = props
-  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id })
+  const { attributes, isDragging, listeners, setNodeRef, transform, transition } = useSortable({ id })
+  const style: CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0 : undefined,
+  }
   return (
-    <div
-      ref={setNodeRef}
-      style={{
-        transform: CSS.Transform.toString(transform),
-        transition,
-      }}
-      {...attributes}
-      {...listeners}
-    >
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
       {children}
     </div>
   )

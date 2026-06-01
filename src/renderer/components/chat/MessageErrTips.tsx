@@ -174,7 +174,6 @@ export default function MessageErrTips(props: { msg: Message; onRetry?: () => vo
 
   const displayedErrorMessage = translatedText ?? errorMessage
   const requestId = getRequestId(msg)
-  const showRequestId = !!requestId && !errorMessage.includes(requestId)
   const { copied, copy } = useCopied(displayedErrorMessage)
   const isTruncated = shouldTruncate(errorMessage)
   const showTranslateButton = language !== 'en' && errorMessage.length > 0
@@ -367,7 +366,7 @@ export default function MessageErrTips(props: { msg: Message; onRetry?: () => vo
           </Text>
         </Flex>
       )}
-      {showRequestId && (
+      {requestId && (
         <Text size="xs" c="chatbox-tertiary" mt="xs" className="break-all select-text">
           {t('Request ID: {{requestId}}', { requestId })}
         </Text>

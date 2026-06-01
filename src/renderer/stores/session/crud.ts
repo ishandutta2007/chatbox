@@ -134,29 +134,27 @@ export async function reorderSessions(oldIndex: number, newIndex: number) {
   const sessions = await chatStore.listSessionsMeta()
   const movedSession = sessions[oldIndex]
   if (!movedSession || oldIndex === newIndex) return
-  const targetSession = sessions[newIndex]
+  const reorderedSessions = [...sessions]
+  reorderedSessions.splice(oldIndex, 1)
+  reorderedSessions.splice(newIndex, 0, movedSession)
+  const targetSession = reorderedSessions[newIndex]
   const nextStarred = targetSession?.starred ?? movedSession.starred
 
-  // Remove the moved item to get the remaining list
-  const remaining = sessions.filter((_, i) => i !== oldIndex)
-  const comparableRemaining = remaining.filter((s) => s.starred === nextStarred)
-  const targetGroupIndex = Math.max(
-    0,
-    sessions.slice(0, newIndex).filter((s) => s.id !== movedSession.id && s.starred === nextStarred).length
-  )
+  const comparableReordered = reorderedSessions.filter((s) => s.starred === nextStarred)
+  const targetGroupIndex = comparableReordered.findIndex((s) => s.id === movedSession.id)
+  const before = comparableReordered[targetGroupIndex - 1]
+  const after = comparableReordered[targetGroupIndex + 1]
 
   let newSortOrder: number
-  if (remaining.length === 0) {
+  if (targetGroupIndex < 0 || reorderedSessions.length === 0) {
     return
-  } else if (comparableRemaining.length === 0) {
+  } else if (!before && !after) {
     newSortOrder = Date.now()
-  } else if (targetGroupIndex <= 0) {
-    newSortOrder = comparableRemaining[0].sortOrder + 1000
-  } else if (targetGroupIndex >= comparableRemaining.length) {
-    newSortOrder = comparableRemaining[comparableRemaining.length - 1].sortOrder - 1000
+  } else if (!before) {
+    newSortOrder = after.sortOrder + 1000
+  } else if (!after) {
+    newSortOrder = before.sortOrder - 1000
   } else {
-    const before = comparableRemaining[targetGroupIndex - 1]
-    const after = comparableRemaining[targetGroupIndex]
     newSortOrder = (before.sortOrder + after.sortOrder) / 2
   }
 

@@ -1,6 +1,6 @@
 import { Menu, type MenuItemProps, type MenuProps, Stack, Text, useMantineTheme } from '@mantine/core'
 import { IconCheck, type IconProps } from '@tabler/icons-react'
-import { type FC, type MouseEventHandler, type ReactElement, useEffect, useState } from 'react'
+import { type FC, type MouseEventHandler, type ReactElement, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Drawer } from 'vaul'
 import { useIsSmallScreen } from '@/hooks/useScreenChange'
@@ -189,7 +189,7 @@ const MobileDoubleCheckMenuItem: FC<{
             <Stack className="px-2" gap={0}>
               <Drawer.Close asChild>
                 <button
-                  disabled={confirming}
+                  disabled={confirming || item.disabled}
                   onClick={async (e) => {
                     if (confirmingRef.current) return
                     confirmingRef.current = true
@@ -201,7 +201,6 @@ const MobileDoubleCheckMenuItem: FC<{
                       setConfirming(false)
                     }
                   }}
-                  disabled={item.disabled}
                   className="border-0 bg-transparent p-2.5"
                 >
                   <Text span lineClamp={1} fw={600} c={doubleCheckColor}>
