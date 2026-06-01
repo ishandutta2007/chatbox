@@ -1037,16 +1037,21 @@ export interface ImageCompletionRequest {
 }
 
 // Zod schemas for runtime validation
+// 后端异步生图任务的单个图片 item 状态；不要和客户端本地状态 ImageGeneration.status 混淆。
+// 这些状态来自接口，客户端会在 imageGenerationActions.ts 中聚合成一条本地生成记录的整体状态。
 const ImageGenerationItemSchema = z.object({
   uuid: z.string(),
   status: z.enum(['pending', 'processing', 'completed', 'failed']),
   created_at: z.string(),
   image_url: z.string().optional(),
   generated_at: z.string().optional(),
+  error_code: z.string().optional(),
   error_message: z.string().optional(),
 })
 
 const ImageGenerationTaskResponseSchema = z.object({
+  // 接口结构预留为数组，但当前产品功能层面不支持一次异步生成多张图。
+  // 现阶段后端也写死item 为 1；
   items: z.array(ImageGenerationItemSchema),
   is_finished: z.boolean(),
   task_id: z.string(),

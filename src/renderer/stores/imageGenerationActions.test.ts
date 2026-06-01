@@ -168,6 +168,7 @@ describe('imageGenerationActions reference image payload', () => {
           uuid: 'item-1',
           status: 'failed',
           created_at: '2026-05-08T15:23:34.442+08:00',
+          error_code: 'image_content_moderation_blocked',
           error_message: 'Content rejected by content moderation',
         },
       ],
@@ -191,6 +192,8 @@ describe('imageGenerationActions reference image payload', () => {
         expect.objectContaining({
           status: 'error',
           error: 'Content rejected by content moderation',
+          errorCode: 'image_content_moderation_blocked',
+          errorItemUuid: 'item-1',
         })
       )
     })

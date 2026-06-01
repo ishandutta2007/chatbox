@@ -5,10 +5,10 @@ import { ModelProviderEnum } from '@shared/types'
 import { createModelDependencies } from '@/adapters'
 import { getLogger } from '@/lib/utils'
 import {
+  type ImageGenerationTaskResponse,
   pollImageTask,
   pollTaskUntilComplete,
   submitImageGeneration,
-  type ImageGenerationTaskResponse,
 } from '@/packages/remote'
 import platform from '@/platform'
 import storage from '@/storage'
@@ -42,17 +42,28 @@ function shouldUseAsyncPath(provider: string): boolean {
   return provider === ModelProviderEnum.ChatboxAI
 }
 
-function getErrorRecordUpdate(error: unknown): Pick<ImageGeneration, 'status' | 'error' | 'errorCode'> {
+function getErrorRecordUpdate(
+  error: unknown
+): Pick<ImageGeneration, 'status' | 'error' | 'errorCode' | 'errorItemUuid'> {
   const normalizedError = error instanceof Error ? error : new Error(`${error}`)
   return {
     status: 'error',
     error: normalizedError.message,
     errorCode: error instanceof BaseError ? error.code : undefined,
+    errorItemUuid: undefined,
   }
 }
 
-function getFailedImageGenerationMessage(result: ImageGenerationTaskResponse, fallback: string): string {
-  return result.items.find((item) => item.status === 'failed' && item.error_message)?.error_message || fallback
+function getFailedImageGenerationError(
+  result: ImageGenerationTaskResponse,
+  fallback: string
+): Pick<ImageGeneration, 'error' | 'errorCode' | 'errorItemUuid'> {
+  const failedItem = result.items.find((item) => item.status === 'failed')
+  return {
+    error: failedItem?.error_message || fallback,
+    errorCode: failedItem?.error_code,
+    errorItemUuid: failedItem?.uuid,
+  }
 }
 
 function getCompletedImageUrls(result: ImageGenerationTaskResponse): string[] {
@@ -189,16 +200,18 @@ async function generateImages(recordId: string, params: GenerateImageParams): Pr
     const hasError = finalResult.items.some((item) => item.status === 'failed')
 
     if (completedUrls.length > 0) {
-      const error = getFailedImageGenerationMessage(finalResult, 'Some images failed to generate')
+      const failedError = getFailedImageGenerationError(finalResult, 'Some images failed to generate')
       currentRecord = await updateRecord(recordId, {
         generatedImages: completedUrls,
         status: hasError && completedUrls.length < num ? 'error' : 'done',
-        error: hasError && completedUrls.length < num ? error : undefined,
+        error: hasError && completedUrls.length < num ? failedError.error : undefined,
+        errorCode: hasError && completedUrls.length < num ? failedError.errorCode : undefined,
+        errorItemUuid: hasError && completedUrls.length < num ? failedError.errorItemUuid : undefined,
       })
     } else {
       currentRecord = await updateRecord(recordId, {
         status: 'error',
-        error: getFailedImageGenerationMessage(finalResult, 'All images failed to generate'),
+        ...getFailedImageGenerationError(finalResult, 'All images failed to generate'),
       })
     }
 
@@ -410,10 +423,9 @@ export async function resumeGeneration(recordId: string): Promise<void> {
     const updatedRecord = await updateRecord(recordId, {
       generatedImages: completedUrls,
       status: completedUrls.length >= expectedNum ? 'done' : hasError ? 'error' : 'done',
-      error:
-        hasError && completedUrls.length < expectedNum
-          ? getFailedImageGenerationMessage(finalResult, 'Some images failed to generate')
-          : undefined,
+      ...(hasError && completedUrls.length < expectedNum
+        ? getFailedImageGenerationError(finalResult, 'Some images failed to generate')
+        : { error: undefined, errorCode: undefined, errorItemUuid: undefined }),
     })
 
     if (updatedRecord) {
@@ -463,6 +475,7 @@ export async function retryGeneration(recordId: string): Promise<void> {
     status: 'pending',
     error: undefined,
     errorCode: undefined,
+    errorItemUuid: undefined,
   })
 
   store.setCurrentGeneratingId(recordId)
