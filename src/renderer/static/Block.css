@@ -3,6 +3,9 @@
   -webkit-user-select: text;
   user-select: text;
 
+  .msg-content h1 { font-size: 1.3em; }
+  .msg-content h2 { font-size: 1.2em; }
+  .msg-content h3 { font-size: 1.1em; }
   .msg-content p {
     margin: 0.5rem 0 0.5rem 0;
   }
