@@ -9,7 +9,7 @@ export const openaiResponsesProvider = defineProvider({
   type: ModelProviderType.OpenAIResponses,
   description: 'openai-responses',
   modelsDevProviderId: 'openai',
-  curatedModelIds: ['gpt-5.4', 'gpt-5-mini', 'o3-pro'],
+  curatedModelIds: ['gpt-5.4', 'gpt-5.4-mini', 'gpt-5.4-nano', 'gpt-5.2', 'gpt-5.2-pro', 'o3-pro'],
   urls: {
     website: 'https://openai.com',
     docs: 'https://platform.openai.com/docs/api-reference/responses',
@@ -26,7 +26,25 @@ export const openaiResponsesProvider = defineProvider({
         maxOutput: 128_000,
       },
       {
-        modelId: 'gpt-5-mini',
+        modelId: 'gpt-5.4-mini',
+        capabilities: ['vision', 'tool_use', 'reasoning'],
+        contextWindow: 400_000,
+        maxOutput: 128_000,
+      },
+      {
+        modelId: 'gpt-5.4-nano',
+        capabilities: ['vision', 'tool_use', 'reasoning'],
+        contextWindow: 400_000,
+        maxOutput: 128_000,
+      },
+      {
+        modelId: 'gpt-5.2',
+        capabilities: ['vision', 'tool_use', 'reasoning'],
+        contextWindow: 400_000,
+        maxOutput: 128_000,
+      },
+      {
+        modelId: 'gpt-5.2-pro',
         capabilities: ['vision', 'tool_use', 'reasoning'],
         contextWindow: 400_000,
         maxOutput: 128_000,

@@ -1,9 +1,8 @@
 import { getModel } from '@shared/models'
-import type { ModelInterface } from '@shared/models/types'
+import type { CallChatCompletionOptions, ModelInterface } from '@shared/models/types'
 import type { Config, Settings } from '@shared/types'
 import type { ModelDependencies } from '@shared/types/adapters'
-import { tool } from 'ai'
-import { z } from 'zod'
+import { jsonSchema, type ToolSet } from 'ai'
 
 export type TestResult = {
   status: 'success' | 'error' | 'pending'
@@ -28,6 +27,21 @@ export type TestModelOptions = {
 
 const TEST_IMAGE_BASE64 =
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg=='
+
+const testWeatherTools: CallChatCompletionOptions['tools'] = {
+  get_weather: {
+    description: 'Get the weather',
+    inputSchema: jsonSchema({
+      type: 'object',
+      properties: {
+        location: { type: 'string', description: 'City name' },
+      },
+      required: ['location'],
+      additionalProperties: false,
+    }),
+    execute: async () => ({ temperature: 72, condition: 'sunny' }),
+  },
+} satisfies ToolSet
 
 /**
  * Test a model's capabilities
@@ -123,13 +137,7 @@ async function testVisionRequest(modelInstance: ModelInterface, state: ModelTest
 async function testToolUseRequest(modelInstance: ModelInterface, state: ModelTestState): Promise<ModelTestState> {
   try {
     await modelInstance.chat([{ role: 'user', content: 'What is the weather in San Francisco?' }], {
-      tools: {
-        get_weather: tool({
-          description: 'Get the weather',
-          inputSchema: z.object({ location: z.string().describe('City name') }),
-          execute: async () => ({ temperature: 72, condition: 'sunny' }),
-        }),
-      },
+      tools: testWeatherTools,
       onResultChange: () => {},
       maxSteps: 1,
     })

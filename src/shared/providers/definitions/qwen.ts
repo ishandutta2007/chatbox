@@ -9,6 +9,7 @@ export const qwenProvider = defineProvider({
   name: 'Qwen',
   type: ModelProviderType.OpenAI,
   modelsDevProviderId: 'alibaba',
+  curatedModelIds: ['qwen3.7-max', 'qwen3.6-plus', 'qwen3.6-flash', 'qwen3-coder-plus', 'qwen3-vl-plus'],
   urls: {
     website: 'https://chat.qwen.ai',
     docs: 'https://qwenlm.github.io/qwen-code-docs/en/users/overview/',
@@ -17,14 +18,24 @@ export const qwenProvider = defineProvider({
     apiHost: QWEN_API_HOST,
     models: [
       {
-        modelId: 'qwen3.5-plus',
+        modelId: 'qwen3.7-max',
+        capabilities: ['tool_use'],
+      },
+      {
+        modelId: 'qwen3.6-plus',
+        capabilities: ['tool_use'],
+      },
+      {
+        modelId: 'qwen3.6-flash',
+        capabilities: ['tool_use'],
       },
       {
         modelId: 'qwen3-coder-plus',
         capabilities: ['tool_use'],
       },
       {
-        modelId: 'qwen3-max-2026-01-23',
+        modelId: 'qwen3-vl-plus',
+        capabilities: ['vision', 'tool_use'],
       },
     ],
   },

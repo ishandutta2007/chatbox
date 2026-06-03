@@ -7,7 +7,7 @@ export const vercelAIGatewayProvider = defineProvider({
   name: 'Vercel AI Gateway',
   type: ModelProviderType.OpenAI,
   curatedModelIds: [
-    'google/gemini-3-flash',
+    'google/gemini-3.5-flash',
     'anthropic/claude-opus-4.6',
     'xai/grok-4.1-fast-non-reasoning',
     'anthropic/claude-sonnet-4.6',
@@ -15,9 +15,10 @@ export const vercelAIGatewayProvider = defineProvider({
     'minimax/minimax-m2.7',
     'google/gemini-2.5-flash-lite',
     'anthropic/claude-haiku-4.5',
-    'moonshotai/kimi-k2.5',
+    'moonshotai/kimi-k2.6',
     'openai/gpt-5.4',
     'google/gemini-3.1-pro-preview',
+    'kwaipilot/kat-coder-pro-v2',
   ],
   urls: {
     website: 'https://vercel.com/ai-gateway',
@@ -29,8 +30,8 @@ export const vercelAIGatewayProvider = defineProvider({
     models: [
       // --- Google ---
       {
-        modelId: 'google/gemini-3-flash',
-        nickname: 'Gemini 3 Flash',
+        modelId: 'google/gemini-3.5-flash',
+        nickname: 'Gemini 3.5 Flash',
         capabilities: ['tool_use', 'reasoning', 'vision'],
         contextWindow: 1_048_576,
         maxOutput: 65_536,
@@ -111,16 +112,16 @@ export const vercelAIGatewayProvider = defineProvider({
       },
       // --- Moonshot ---
       {
-        modelId: 'moonshotai/kimi-k2.5',
-        nickname: 'Kimi K2.5',
+        modelId: 'moonshotai/kimi-k2.6',
+        nickname: 'Kimi K2.6',
         capabilities: ['tool_use'],
         contextWindow: 131_072,
         maxOutput: 32_768,
       },
       // --- KwaiPilot ---
       {
-        modelId: 'kwaipilot/kat-coder-pro-v1',
-        nickname: 'KAT Coder Pro',
+        modelId: 'kwaipilot/kat-coder-pro-v2',
+        nickname: 'KAT Coder Pro V2',
         capabilities: ['tool_use'],
         contextWindow: 131_072,
         maxOutput: 32_768,

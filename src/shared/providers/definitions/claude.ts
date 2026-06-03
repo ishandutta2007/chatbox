@@ -8,7 +8,7 @@ export const claudeProvider = defineProvider({
   name: 'Claude',
   type: ModelProviderType.Claude,
   modelsDevProviderId: 'anthropic',
-  curatedModelIds: ['claude-opus-4-6', 'claude-sonnet-4-6', 'claude-opus-4-1', 'claude-sonnet-4-5', 'claude-haiku-4-5'],
+  curatedModelIds: ['claude-opus-4-8', 'claude-opus-4-7', 'claude-opus-4-6', 'claude-sonnet-4-6', 'claude-haiku-4-5'],
   urls: {
     website: 'https://www.anthropic.com',
   },
@@ -17,8 +17,20 @@ export const claudeProvider = defineProvider({
     // https://docs.anthropic.com/en/docs/about-claude/models/overview
     models: [
       {
+        modelId: 'claude-opus-4-8',
+        contextWindow: 1_000_000,
+        maxOutput: 32_000,
+        capabilities: ['vision', 'reasoning', 'tool_use'],
+      },
+      {
+        modelId: 'claude-opus-4-7',
+        contextWindow: 1_000_000,
+        maxOutput: 32_000,
+        capabilities: ['vision', 'reasoning', 'tool_use'],
+      },
+      {
         modelId: 'claude-opus-4-6',
-        contextWindow: 200_000,
+        contextWindow: 1_000_000,
         maxOutput: 32_000,
         capabilities: ['vision', 'reasoning', 'tool_use'],
       },
@@ -26,12 +38,6 @@ export const claudeProvider = defineProvider({
         modelId: 'claude-sonnet-4-6',
         contextWindow: 200_000,
         maxOutput: 64_000,
-        capabilities: ['vision', 'reasoning', 'tool_use'],
-      },
-      {
-        modelId: 'claude-opus-4-1',
-        contextWindow: 200_000,
-        maxOutput: 32_000,
         capabilities: ['vision', 'reasoning', 'tool_use'],
       },
       {

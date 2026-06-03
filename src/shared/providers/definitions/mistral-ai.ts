@@ -8,13 +8,10 @@ export const mistralAIProvider = defineProvider({
   type: ModelProviderType.OpenAI,
   modelsDevProviderId: 'mistral',
   curatedModelIds: [
+    'mistral-medium-2604',
+    'mistral-small-2603',
+    'mistral-large-2512',
     'pixtral-large-latest',
-    'mistral-large-latest',
-    'mistral-medium-latest',
-    'mistral-small-latest',
-    'magistral-medium-latest',
-    'magistral-small-latest',
-    'devstral-medium-latest',
     'codestral-latest',
     'mistral-embed',
   ],
@@ -25,39 +22,27 @@ export const mistralAIProvider = defineProvider({
     apiHost: 'https://api.mistral.ai/v1',
     models: [
       {
-        modelId: 'pixtral-large-latest',
+        modelId: 'mistral-medium-2604',
+        nickname: 'Mistral Medium 3.5',
+        contextWindow: 128_000,
+        capabilities: ['vision', 'reasoning', 'tool_use'],
+      },
+      {
+        modelId: 'mistral-small-2603',
+        nickname: 'Mistral Small 4',
+        contextWindow: 128_000,
+        capabilities: ['vision', 'reasoning', 'tool_use'],
+      },
+      {
+        modelId: 'mistral-large-2512',
+        nickname: 'Mistral Large 3',
         contextWindow: 128_000,
         capabilities: ['vision', 'tool_use'],
       },
       {
-        modelId: 'mistral-large-latest',
-        contextWindow: 32_000,
-        capabilities: ['tool_use'],
-      },
-      {
-        modelId: 'mistral-medium-latest',
-        contextWindow: 32_000,
-        capabilities: ['tool_use'],
-      },
-      {
-        modelId: 'mistral-small-latest',
-        contextWindow: 32_000,
-        capabilities: ['tool_use'],
-      },
-      {
-        modelId: 'magistral-medium-latest',
-        contextWindow: 32_000,
-        capabilities: ['reasoning', 'tool_use'],
-      },
-      {
-        modelId: 'magistral-small-latest',
-        contextWindow: 32_000,
-        capabilities: ['reasoning', 'tool_use'],
-      },
-      {
-        modelId: 'devstral-medium-latest',
+        modelId: 'pixtral-large-latest',
         contextWindow: 128_000,
-        capabilities: ['tool_use'],
+        capabilities: ['vision', 'tool_use'],
       },
       {
         modelId: 'codestral-latest',
