@@ -1,5 +1,5 @@
-import { ActionIcon, Flex, Image, Paper, Skeleton, Tooltip } from '@mantine/core'
-import { IconDownload, IconMaximize, IconPhoto } from '@tabler/icons-react'
+import { ActionIcon, Flex, Image, Paper, Skeleton, Text, Tooltip } from '@mantine/core'
+import { IconDownload, IconMaximize, IconMessageReport, IconPhoto, IconPhotoOff } from '@tabler/icons-react'
 import { useQuery } from '@tanstack/react-query'
 import type PhotoSwipe from 'photoswipe'
 import type { UIElementData } from 'photoswipe'
@@ -9,19 +9,23 @@ import { Gallery, Item as GalleryItem } from 'react-photoswipe-gallery'
 import { useFetchBlob } from '@/hooks/useBlob'
 import { useIsSmallScreen } from '@/hooks/useScreenChange'
 import platform from '@/platform'
-import { blobToDataUrl, getBase64ImageSize } from './constants'
+
+import { blobToDataUrl, getBase64ImageSize, getImageSizeFromUrl } from './constants'
 
 export interface GeneratedImagesGalleryProps {
-  storageKeys: string[]
-  onUseAsReference: (storageKey: string) => void
+  images: string[] // CDN URLs or local storage keys
+  onUseAsReference: (urlOrKey: string) => void
+  onReport?: () => void
 }
 
 export const GeneratedImagesGallery = memo(function GeneratedImagesGallery({
-  storageKeys,
+  images,
   onUseAsReference,
+  onReport,
 }: GeneratedImagesGalleryProps) {
-  const storageKeysRef = useRef(storageKeys)
-  storageKeysRef.current = storageKeys
+  const imageKeys = images
+  const imageKeysRef = useRef(imageKeys)
+  imageKeysRef.current = imageKeys
   const isSmallScreen = useIsSmallScreen()
   const fetchBlob = useFetchBlob()
 
@@ -38,17 +42,25 @@ export const GeneratedImagesGallery = memo(function GeneratedImagesGallery({
         outlineID: 'pswp__icn-download',
       },
       appendTo: 'bar',
-      onClick: async (_e: PointerEvent, _el: HTMLElement, pswp: PhotoSwipe) => {
-        const storageKey = storageKeysRef.current[pswp.currIndex]
-        if (storageKey) {
-          const base64 = await fetchBlob(storageKey)
-          if (!base64) return
-          const filename =
-            platform.type === 'mobile'
-              ? `${storageKey.replaceAll(':', '_')}_${Math.random().toString(36).substring(7)}`
-              : storageKey
-          platform.exporter.exportImageFile(filename, base64)
+      onClick: async (_e: MouseEvent, _el: HTMLElement, pswp: PhotoSwipe) => {
+        const keyOrUrl = imageKeysRef.current[pswp.currIndex]
+        if (!keyOrUrl) return
+
+        // If it's a URL, download it directly
+        if (keyOrUrl.startsWith('http://') || keyOrUrl.startsWith('https://')) {
+          const filename = `image_${Date.now()}.png`
+          platform.exporter.exportByUrl(filename, keyOrUrl)
+          return
         }
+
+        // Otherwise read from storage
+        const base64 = await fetchBlob(keyOrUrl)
+        if (!base64) return
+        const filename =
+          platform.type === 'mobile'
+            ? `${keyOrUrl.replaceAll(':', '_')}_${Math.random().toString(36).substring(7)}`
+            : keyOrUrl
+        platform.exporter.exportImageFile(filename, base64)
       },
     },
   ]
@@ -56,11 +68,12 @@ export const GeneratedImagesGallery = memo(function GeneratedImagesGallery({
   return (
     <Gallery uiElements={uiElements}>
       <Flex gap="md" wrap="wrap" justify="center" className="w-full">
-        {storageKeys.map((storageKey) => (
+        {imageKeys.map((keyOrUrl) => (
           <GeneratedImageGalleryItem
-            key={storageKey}
-            storageKey={storageKey}
-            onUseAsReference={() => onUseAsReference(storageKey)}
+            key={keyOrUrl}
+            keyOrUrl={keyOrUrl}
+            onUseAsReference={() => onUseAsReference(keyOrUrl)}
+            onReport={onReport}
             isSmallScreen={isSmallScreen}
           />
         ))}
@@ -70,8 +83,9 @@ export const GeneratedImagesGallery = memo(function GeneratedImagesGallery({
 })
 
 interface GeneratedImageGalleryItemProps {
-  storageKey: string
+  keyOrUrl: string
   onUseAsReference: () => void
+  onReport?: () => void
   isSmallScreen: boolean
 }
 
@@ -104,22 +118,40 @@ function calculateDisplaySize(width: number, height: number): { displayWidth: nu
   return { displayWidth: Math.round(displayWidth), displayHeight: Math.round(displayHeight) }
 }
 
-function GeneratedImageGalleryItem({ storageKey, onUseAsReference, isSmallScreen }: GeneratedImageGalleryItemProps) {
+function GeneratedImageGalleryItem({
+  keyOrUrl,
+  onUseAsReference,
+  onReport,
+  isSmallScreen,
+}: GeneratedImageGalleryItemProps) {
   const { t } = useTranslation()
   const [hovered, setHovered] = useState(false)
+  const isUrl = keyOrUrl.startsWith('http://') || keyOrUrl.startsWith('https://')
   const fetchBlob = useFetchBlob()
 
-  const { data: imageData } = useQuery({
-    queryKey: ['generated-image-gallery', storageKey],
+  const {
+    data: imageData,
+    isError,
+    refetch,
+  } = useQuery({
+    queryKey: ['generated-image-gallery', keyOrUrl],
     queryFn: async () => {
-      const blob = await fetchBlob(storageKey)
+      if (isUrl) {
+        // For URLs, we need to load the image to get dimensions
+        const size = await getImageSizeFromUrl(keyOrUrl)
+        const displaySize = calculateDisplaySize(size.width, size.height)
+        return { data: keyOrUrl, ...size, ...displaySize, isUrl: true }
+      }
+      // For storage keys, read from local storage
+      const blob = await fetchBlob(keyOrUrl)
       if (!blob) return null
       const base64 = blobToDataUrl(blob)
       const size = await getBase64ImageSize(base64)
       const displaySize = calculateDisplaySize(size.width, size.height)
-      return { data: base64, ...size, ...displaySize }
+      return { data: base64, ...size, ...displaySize, isUrl: false }
     },
     staleTime: Infinity,
+    gcTime: 60 * 1000,
   })
 
   // Mobile: fixed 1:1 square with cover fit
@@ -133,7 +165,11 @@ function GeneratedImageGalleryItem({ storageKey, onUseAsReference, isSmallScreen
       e.stopPropagation()
       if (!imageData) return
       const filename = `image_${Date.now()}`
-      void platform.exporter.exportImageFile(filename, imageData.data)
+      if (imageData.isUrl) {
+        void platform.exporter.exportByUrl(`${filename}.png`, imageData.data)
+      } else {
+        void platform.exporter.exportImageFile(filename, imageData.data)
+      }
     },
     [imageData]
   )
@@ -146,6 +182,36 @@ function GeneratedImageGalleryItem({ storageKey, onUseAsReference, isSmallScreen
     [onUseAsReference]
   )
 
+  const handleReport = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation()
+      onReport?.()
+    },
+    [onReport]
+  )
+
+  // Error state: show error placeholder with retry option
+  if (isError) {
+    return (
+      <Paper
+        radius="lg"
+        h={displayHeight}
+        w={displayWidth}
+        className="bg-[var(--chatbox-background-tertiary)] flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-[var(--chatbox-background-secondary)] transition-colors"
+        onClick={() => void refetch()}
+      >
+        <IconPhotoOff size={32} className="text-[var(--chatbox-tint-tertiary)]" />
+        <Text size="xs" c="dimmed">
+          {t('Failed to load')}
+        </Text>
+        <Text size="xs" c="dimmed" className="underline">
+          {t('Click to retry')}
+        </Text>
+      </Paper>
+    )
+  }
+
+  // Loading state
   if (!imageData) {
     return (
       <Skeleton
@@ -181,6 +247,22 @@ function GeneratedImageGalleryItem({ storageKey, onUseAsReference, isSmallScreen
               },
             }}
           />
+
+          {onReport && isSmallScreen && (
+            <Tooltip label={t('report')} withArrow disabled={isSmallScreen}>
+              <ActionIcon
+                aria-label={t('report')}
+                color="red"
+                variant="white"
+                size="sm"
+                radius="xl"
+                onClick={handleReport}
+                className="absolute right-3 bottom-3 z-[1] !bg-white/70 !text-red-500 shadow-sm opacity-65 transition-opacity hover:opacity-100 pointer-events-auto"
+              >
+                <IconMessageReport size={14} />
+              </ActionIcon>
+            </Tooltip>
+          )}
 
           {/* Hover Overlay (always visible on mobile) */}
           <div

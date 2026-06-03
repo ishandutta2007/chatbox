@@ -1,3 +1,4 @@
+import NiceModal from '@ebay/nice-modal-react'
 import {
   ActionIcon,
   Box,
@@ -14,11 +15,11 @@ import {
 import type { ImageGeneration, ImageGenerationModel } from '@shared/types'
 import { ModelProviderEnum } from '@shared/types'
 import {
+  IconArrowUp,
   IconAspectRatio,
   IconChevronRight,
   IconHistory,
   IconPhoto,
-  IconArrowUp,
   IconPlus,
   IconSparkles,
 } from '@tabler/icons-react'
@@ -428,6 +429,20 @@ function ImageCreatorPage() {
     })
   }, [])
 
+  const handleReportGeneratedImage = useCallback(async (record: ImageGeneration) => {
+    const contentId = [
+      `Image generation prompt: ${record.prompt}`,
+      `Record ID: ${record.id}`,
+      record.taskId ? `Task ID: ${record.taskId}` : undefined,
+      record.generatedImages.length > 0 ? `Images: ${record.generatedImages.join(', ')}` : undefined,
+      `Model: ${record.model.provider}/${record.model.modelId}`,
+    ]
+      .filter((item): item is string => Boolean(item))
+      .join('\n')
+
+    await NiceModal.show('report-content', { contentId })
+  }, [])
+
   const handleHistoryClick = useCallback(
     async (record: ImageGeneration) => {
       await cleanupTempUploads()
@@ -549,6 +564,7 @@ function ImageCreatorPage() {
                       <GeneratedImagesGallery
                         images={currentRecord.generatedImages}
                         onUseAsReference={(urlOrKey) => handleUseAsReference(urlOrKey, currentRecord.id)}
+                        onReport={isSmallScreen ? () => void handleReportGeneratedImage(currentRecord) : undefined}
                       />
                     </Flex>
                   )}
