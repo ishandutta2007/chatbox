@@ -5,6 +5,7 @@ import { type FC, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ScalableIcon } from '@/components/common/ScalableIcon'
 import platform from '@/platform'
+import classes from './ProviderSpotlight.module.css'
 import { FEATURED_PROVIDER_IDS, ProviderIconImage } from './providerIcons'
 
 export const [providerSpotlightStore, providerSpotlight] = createSpotlight()
@@ -63,7 +64,6 @@ const ProviderSpotlight: FC<{
         actions: featured.map((p) => ({
           id: `provider-${p.id}`,
           label: String(t(p.name)),
-          description: p.description ? String(t(p.description)) : undefined,
           onClick: () => {
             providerSpotlight.close()
             onSelectProvider(p.id)
@@ -76,7 +76,6 @@ const ProviderSpotlight: FC<{
         actions: others.map((p) => ({
           id: `provider-${p.id}`,
           label: String(t(p.name)),
-          description: p.description ? String(t(p.description)) : undefined,
           onClick: () => {
             providerSpotlight.close()
             onSelectProvider(p.id)
@@ -93,8 +92,9 @@ const ProviderSpotlight: FC<{
       actions={actions}
       nothingFound={String(t('Nothing found...'))}
       scrollable
-      maxHeight={600}
+      maxHeight="min(600px, calc(100vh - 180px))"
       shortcut={null}
+      classNames={{ actionsList: classes.actionsList }}
       searchProps={{
         leftSection: <ScalableIcon icon={IconSearch} size={20} stroke={1.5} />,
         placeholder: String(t('Search providers...')),

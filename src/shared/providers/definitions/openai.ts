@@ -8,7 +8,6 @@ export const openaiProvider = defineProvider({
   id: ModelProviderEnum.OpenAI,
   name: 'OpenAI',
   type: ModelProviderType.OpenAI,
-  description: 'openai',
   modelsDevProviderId: 'openai',
   curatedModelIds: [
     'gpt-5.4',

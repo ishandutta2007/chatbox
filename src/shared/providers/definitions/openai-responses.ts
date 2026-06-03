@@ -7,7 +7,6 @@ export const openaiResponsesProvider = defineProvider({
   id: ModelProviderEnum.OpenAIResponses,
   name: 'OpenAI (Responses)',
   type: ModelProviderType.OpenAIResponses,
-  description: 'openai-responses',
   modelsDevProviderId: 'openai',
   curatedModelIds: ['gpt-5.4', 'gpt-5.4-mini', 'gpt-5.4-nano', 'gpt-5.2', 'gpt-5.2-pro', 'o3-pro'],
   urls: {

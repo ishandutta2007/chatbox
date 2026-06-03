@@ -17,6 +17,11 @@ const providerIconMap = new Map<string, string>(
   })
 )
 
+const PROVIDER_ICON_ALIASES: Record<string, string> = {
+  [ModelProviderEnum.QwenPortal]: ModelProviderEnum.Qwen,
+  [ModelProviderEnum.MiniMaxCN]: ModelProviderEnum.MiniMax,
+}
+
 export const FEATURED_PROVIDER_IDS: string[] = [
   ModelProviderEnum.OpenAI,
   ModelProviderEnum.Claude,
@@ -28,7 +33,7 @@ export const FEATURED_PROVIDER_IDS: string[] = [
 ]
 
 export function getProviderIconSrc(providerId: string): string | undefined {
-  return providerIconMap.get(providerId)
+  return providerIconMap.get(providerId) || providerIconMap.get(PROVIDER_ICON_ALIASES[providerId] || '')
 }
 
 export function ProviderIconImage({ providerId, size = 32 }: { providerId: string; size?: number }) {

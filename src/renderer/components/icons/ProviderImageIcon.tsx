@@ -1,7 +1,7 @@
 /// <reference types="vite/client" />
 
 import { Image } from '@mantine/core'
-import type { ModelProvider } from '@shared/types'
+import { type ModelProvider, ModelProviderEnum } from '@shared/types'
 import { useProviders } from '@/hooks/useProviders'
 import CustomProviderIcon from '../CustomProviderIcon'
 
@@ -18,6 +18,11 @@ const icons: { name: string; src: string }[] = Object.entries(iconsModules).map(
     src: (module as { default: string }).default, // 获取图片路径
   }
 })
+
+const PROVIDER_ICON_ALIASES: Record<string, string> = {
+  [ModelProviderEnum.QwenPortal]: ModelProviderEnum.Qwen,
+  [ModelProviderEnum.MiniMaxCN]: ModelProviderEnum.MiniMax,
+}
 
 export default function ProviderImageIcon(props: {
   className?: string
@@ -38,7 +43,7 @@ export default function ProviderImageIcon(props: {
     )
   }
 
-  const iconSrc = icons.find((icon) => icon.name === provider)?.src
+  const iconSrc = icons.find((icon) => icon.name === provider || icon.name === PROVIDER_ICON_ALIASES[provider])?.src
 
   return iconSrc ? (
     <Image w={size} h={size} src={iconSrc} className={className} alt={`${providerName || provider} image icon`} />
