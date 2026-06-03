@@ -113,8 +113,8 @@ export async function processFileWithMastra(
     // 2. Chunking
     const allChunks = await doc.chunk({
       strategy: 'recursive',
-      size: 512,
-      overlap: 50,
+      maxSize: 1200,
+      overlap: 150,
     })
 
     if (!allChunks || allChunks.length === 0) {

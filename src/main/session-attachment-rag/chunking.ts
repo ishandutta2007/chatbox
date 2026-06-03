@@ -5,8 +5,7 @@ import { MDocument } from '@mastra/rag'
 // names were a misnomer — actual chunks were ~1/4 of the implied tokens. Values kept
 // because retrieval evals showed they recall well at this size.
 // `tokenEstimate` (length / 4) is preserved for DB metadata only.
-// TODO: same misnomer exists in `src/main/knowledge-base/file-loaders.ts` (`size: 512`).
-// 最初设计时是想要以 token count 为基础切分，这也是 anthropic/openai 口径。但 mastra 的 chunker 实际上是以 character count 为基础的
+// 最初设计时是想要以 token count 为基础切分，这也是 anthropic/openai 口径。但 mastra 的 chunker 实际上是以 character count(str.length) 为基础的
 // 该问题在 code review 阶段发现，但实际测试使用效果，112 的 chunk size 依然效果良好。考虑到整个 session rag 功能设计目的就是节约成本，保持现状
 const PARENT_TARGET_CHARS = 1600 // ≈ 400 tokens
 const PARENT_HARD_CAP_CHARS = 2400 // ≈ 600 tokens
