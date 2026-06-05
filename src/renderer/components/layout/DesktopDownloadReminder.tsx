@@ -28,15 +28,9 @@ export default function DesktopDownloadReminder() {
         <Stack gap="sm">
           <Flex justify="space-between" gap="sm" align="flex-start">
             <Flex gap="sm" align="flex-start" flex={1}>
-              <ScalableIcon icon={IconDeviceDesktop} size={20} className="text-chatbox-brand mt-0.5 shrink-0" />
-              <Stack gap={2} flex={1}>
-                <Text fw={600}>{t('More advanced features are available in Chatbox Desktop.')}</Text>
-                <Text size="xs" c="chatbox-secondary">
-                  {t(
-                    'MCP and Knowledge Base are currently supported on the desktop app only. Download Chatbox Desktop to use these features.'
-                  )}
+              <ScalableIcon icon={IconDeviceDesktop} size={20} className="text-chatbox-brand mt-2 shrink-0" />
+                <Text fw={600}>{t('More advanced features are available in Chatbox Desktop.')}
                 </Text>
-              </Stack>
             </Flex>
 
             <ActionIcon
@@ -49,13 +43,19 @@ export default function DesktopDownloadReminder() {
             </ActionIcon>
           </Flex>
 
+          <Text size="xs" c="chatbox-secondary" style={{ whiteSpace: 'pre-line' }}>
+            {t(
+              '1. Your chat history on web version can only be stored in the browser cache (unreliable - it may be cleaned by browser). \n2. MCP and Knowledge Base are currently supported on the desktop app only. '
+            )}
+          </Text>
+
           <Button
             size="compact-sm"
             leftSection={<ScalableIcon icon={IconDownload} size={14} />}
-            className="self-start"
+            className="mx-2"
             onClick={() =>
               platform.openLink(
-                buildChatboxUrl(`/redirect_app/homepage/${language}?utm_source=web&utm_content=floating_desktop_prompt`)
+                buildChatboxUrl(`/redirect_app/homepage/${language}?utm_source=web&utm_content=floating_desktop_prompt#download`)
               )
             }
           >
