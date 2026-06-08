@@ -1,4 +1,18 @@
 const changelog = `
+## v1.21.0 - 2026.06.08
+1. 新增 Vercel AI Gateway 模型提供方
+2. 新增提供方 Spotlight，选择模型提供方更快捷
+3. 新增文件对话能力，并优化大文件和多附件处理体验
+4. 新增 GPT Image 2 支持，并支持反馈图片生成中的有害内容
+5. 新增 Microsoft 翻译作为备用翻译服务
+6. 优化联网搜索体验，提升 BoCha、Tavily 和移动端 Bing 搜索的稳定性
+7. 优化错误信息展示，支持更清晰的本地化错误提示、请求 ID 和重试状态
+8. 优化会话列表性能与稳定性，修复批量删除、排序和迁移相关问题
+9. 修复 Electron 升级后本地文件路径、数据库目录和附件处理相关问题
+10. 修复网络错误后可能重复发起 AI 请求的问题
+11. 修复知识库、登录状态、新手引导和设置界面的多项问题
+12. 更新 Windows 应用图标
+
 ## v1.20.3 - 2026.04.29
 1. 全新 Chatbox AI 套餐详情卡片 UI
 2. 修复 DeepSeek V4 思考模式下后续对话报错 "reasoning_content in the thinking mode must be passed back to the API" 的问题
