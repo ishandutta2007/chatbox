@@ -1,10 +1,10 @@
-import type { SessionMetaRecord } from '@shared/types'
 import { defaultSessionsForCN, defaultSessionsForEN } from '@/packages/initial_data'
 import platform from '@/platform'
 import storage from '@/storage'
 import { StorageKeyGenerator } from '@/storage/StoreStorage'
 import * as chatStore from '@/stores/chatStore'
 import { getSessionMeta } from '@/stores/sessionHelpers'
+import { createSessionMetaRecordsFromLegacyList } from '@/utils/session-utils'
 
 export async function initData() {
   await initSessionsIfNeeded()
@@ -24,12 +24,7 @@ async function initSessionsIfNeeded() {
     await storage.setItemNow(StorageKeyGenerator.session(session.id), session)
   }
 
-  const now = Date.now()
-  const records: SessionMetaRecord[] = defaultSessions.map((session, i) => ({
-    ...getSessionMeta(session),
-    sortOrder: now - i * 1000,
-    createdAt: now - i * 1000,
-  }))
+  const records = createSessionMetaRecordsFromLegacyList(defaultSessions.map(getSessionMeta))
 
   await metaStorage.createMany(records)
 }

@@ -30,6 +30,7 @@ import WebPlatform from '@/platform/web_platform'
 import { initData } from '@/setup/init_data'
 import storage, { StorageKey } from '@/storage'
 import { StorageKeyGenerator } from '@/storage/StoreStorage'
+import { createSessionMetaRecordsFromLegacyList } from '@/utils/session-utils'
 import * as defaults from '../../shared/defaults'
 import { getLogger } from '../lib/utils'
 import { migrationProcessAtom } from './atoms/utilAtoms'
@@ -816,12 +817,7 @@ async function migrate_14_to_15(dataStore: MigrateStore) {
   const sessionMetaStorage = platform.getSessionMetaStorage()
   await sessionMetaStorage.initialize()
 
-  const now = Date.now()
-  const records = chatSessionList.map((meta, i) => ({
-    ...meta,
-    createdAt: now - (chatSessionList.length - i) * 1000,
-    sortOrder: now - (chatSessionList.length - 1 - i) * 1000,
-  }))
+  const records = createSessionMetaRecordsFromLegacyList(chatSessionList)
 
   await sessionMetaStorage.createMany(records)
 
