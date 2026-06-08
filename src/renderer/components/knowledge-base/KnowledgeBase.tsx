@@ -1,9 +1,9 @@
-import { Alert, Button, Flex, Group, Paper, Pill, Stack, Text, Title } from '@mantine/core'
+import { Alert, Button, Flex, Group, Paper, Pill, Stack, Text, Title, Tooltip } from '@mantine/core'
 import { SystemProviders } from '@shared/defaults'
 import type { KnowledgeBase, ModelProvider, ProviderModelInfo } from '@shared/types'
 import type { DocumentParserConfig, DocumentParserType } from '@shared/types/settings'
 import { parseKnowledgeBaseModelString } from '@shared/utils/knowledge-base-model-parser'
-import { IconAlertTriangle, IconInfoCircle, IconPlus } from '@tabler/icons-react'
+import { IconAlertTriangle, IconInfoCircle, IconLogin, IconPlus } from '@tabler/icons-react'
 import compact from 'lodash/compact'
 import flatten from 'lodash/flatten'
 import type React from 'react'
@@ -11,8 +11,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { useProviders } from '@/hooks/useProviders'
+import { navigateToSettings } from '@/modals/Settings'
 import * as remote from '@/packages/remote'
 import platform from '@/platform'
+import { useAuthInfoStore } from '@/stores/authInfoStore'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { trackEvent } from '@/utils/track'
 import { Modal } from '../layout/Overlay'
@@ -34,9 +36,19 @@ interface ModelPillProps {
   isProviderAvailable: (model: string) => boolean
   type: 'embedding' | 'rerank' | 'vision'
   t: (key: string) => string
+  unavailableTooltip?: string
+  onUnavailableClick?: () => void
 }
 
-const ModelPill: React.FC<ModelPillProps> = ({ modelValue, formatModelName, isProviderAvailable, type, t }) => {
+const ModelPill: React.FC<ModelPillProps> = ({
+  modelValue,
+  formatModelName,
+  isProviderAvailable,
+  type,
+  t,
+  unavailableTooltip,
+  onUnavailableClick,
+}) => {
   const isEmbedding = type === 'embedding'
   const hasModel = !!modelValue
   const modelUnavailable = useMemo(
@@ -51,7 +63,24 @@ const ModelPill: React.FC<ModelPillProps> = ({ modelValue, formatModelName, isPr
 
   const getIcon = () => {
     if (!hasModel || isProviderAvailable(modelValue)) return null
-    return <ScalableIcon icon={IconAlertTriangle} size={12} color="red" title={t('Provider unavailable')} />
+    const icon = (
+      <ScalableIcon
+        icon={IconAlertTriangle}
+        size={12}
+        color="red"
+        title={unavailableTooltip || t('Provider unavailable')}
+      />
+    )
+    if (onUnavailableClick) {
+      return (
+        <Tooltip label={unavailableTooltip || t('Provider unavailable')} withArrow multiline maw={200} position="top">
+          <span style={{ cursor: 'pointer' }} onClick={onUnavailableClick}>
+            {icon}
+          </span>
+        </Tooltip>
+      )
+    }
+    return icon
   }
 
   const maxWidth = isEmbedding ? 200 : 150
@@ -90,6 +119,9 @@ const KnowledgeBasePage: React.FC = () => {
   const [showCreate, setShowCreate] = useState(false)
   const licenseKey = useSettingsStore((state) => state.licenseKey)
   const customProviders = useSettingsStore((state) => state.customProviders)
+  const accessToken = useAuthInfoStore((state) => state.accessToken)
+  const refreshToken = useAuthInfoStore((state) => state.refreshToken)
+  const isLoggedIn = !!(accessToken && refreshToken)
 
   const [newEmbeddingModel, setNewEmbeddingModel] = useState<string | null>(null)
   const [newRerankModel, setNewRerankModel] = useState<string | null>(null)
@@ -123,6 +155,15 @@ const KnowledgeBasePage: React.FC = () => {
     },
     [chatboxAIModels]
   )
+
+  // Check if there are Chatbox AI KBs but user is not logged in — show login prompt.
+  // A KB counts as a Chatbox AI KB when its embedding model is the Chatbox AI embedding model.
+  const chatboxAIKbNeedsLogin = useMemo(() => {
+    if (canUseChatboxAIProvider) return false
+    if (!chatboxAIModels) return false
+    // key
+    return kbList.some((kb) => kb.embeddingModel === chatboxAIModels.embedding)
+  }, [canUseChatboxAIProvider, chatboxAIModels, kbList])
 
   const [newProviderMode, setNewProviderMode] = useState<'chatbox-ai' | 'custom'>('custom')
 
@@ -503,6 +544,30 @@ const KnowledgeBasePage: React.FC = () => {
       </Modal>
       {!isUnsupportedPlatform && (
         <Stack gap="xl">
+          {chatboxAIKbNeedsLogin && (
+            <Alert
+              variant="light"
+              color="orange"
+              icon={<IconAlertTriangle size={16} />}
+              title={t('Sign in to Chatbox AI')}
+            >
+              <Text size="sm">
+                {t(
+                  'Your Chatbox AI knowledge base requires an active login. Please sign in to Chatbox AI to use this knowledge base.'
+                )}
+              </Text>
+              <Group mt="sm">
+                <Button
+                  size="xs"
+                  variant="light"
+                  leftSection={<IconLogin size={14} />}
+                  onClick={() => navigateToSettings('chatbox-ai')}
+                >
+                  {t('Log in to Chatbox AI')}
+                </Button>
+              </Group>
+            </Alert>
+          )}
           {kbList.length === 0 ? (
             <Paper withBorder p="xl" style={{ textAlign: 'center' }}>
               <Stack gap="md" align="center">
@@ -550,6 +615,12 @@ const KnowledgeBasePage: React.FC = () => {
                             isProviderAvailable={() => canUseChatboxAIProvider}
                             type="embedding"
                             t={t}
+                            unavailableTooltip={
+                              !isLoggedIn
+                                ? String(t('Sign in to Chatbox AI to use this knowledge base'))
+                                : String(t('Provider unavailable'))
+                            }
+                            onUnavailableClick={!isLoggedIn ? () => navigateToSettings('chatbox-ai') : undefined}
                           />
                         </>
                       ) : (
