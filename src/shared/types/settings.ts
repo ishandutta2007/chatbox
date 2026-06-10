@@ -215,7 +215,6 @@ const ShortcutSettingSchema = z.object({
   sessionListNavNext: z.string(),
   sessionListNavPrev: z.string(),
   sessionListNavTargetIndex: z.string(),
-  messageListRefreshContext: z.string(),
   dialogOpenSearch: z.string(),
   optionNavUp: z.string(),
   optionNavDown: z.string(),

@@ -161,11 +161,6 @@ export function ShortcutConfig(props: {
       keys: 'mod+1-9',
     },
     {
-      label: t('Start a New Thread'),
-      name: 'messageListRefreshContext',
-      keys: shortcuts.messageListRefreshContext,
-    },
-    {
       label: t('Show/Hide the Search Dialog'),
       name: 'dialogOpenSearch',
       keys: shortcuts.dialogOpenSearch,

@@ -6,7 +6,7 @@ import { uiStore } from '@/stores/uiStore'
 import { getOS } from '../packages/navigator'
 import platform from '../platform'
 import { currentSessionIdAtom } from '../stores/atoms'
-import { startNewThread, switchToIndex, switchToNext } from '../stores/sessionActions'
+import { switchToIndex, switchToNext } from '../stores/sessionActions'
 import * as dom from './dom'
 import { useIsSmallScreen } from './useScreenChange'
 
@@ -35,9 +35,7 @@ export default function useShortcut() {
 
   function keyboardShortcut(e: KeyboardEvent) {
     // 这里不用 e.key 是因为 alt、 option、shift 都会改变 e.key 的值
-    const ctrlOrCmd = e.ctrlKey || e.metaKey
     const shift = e.shiftKey
-    const altOrOption = e.altKey
 
     const ctrlKey = getOS() === 'Mac' ? e.metaKey : e.ctrlKey
 
@@ -67,16 +65,6 @@ export default function useShortcut() {
       })
       return
     }
-    // 归档当前会话的上下文。
-    if (e.key === 'r' && ctrlKey) {
-      e.preventDefault()
-      const sid = getDefaultStore().get(currentSessionIdAtom)
-      if (sid) {
-        void startNewThread(sid)
-      }
-      return
-    }
-
     if (e.code === 'Tab' && ctrlKey && !shift) {
       switchToNext()
     }

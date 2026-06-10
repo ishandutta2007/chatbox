@@ -38,7 +38,6 @@ describe('defaults', () => {
         'sessionListNavNext',
         'sessionListNavPrev',
         'sessionListNavTargetIndex',
-        'messageListRefreshContext',
         'dialogOpenSearch',
         'inputBoxSendMessage',
         'inputBoxSendMessageWithoutResponse',

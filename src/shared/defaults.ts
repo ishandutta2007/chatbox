@@ -116,7 +116,6 @@ export function settings(): Settings {
       sessionListNavNext: 'mod+tab', // 切换到下一个会话的快捷键
       sessionListNavPrev: 'mod+shift+tab', // 切换到上一个会话的快捷键
       sessionListNavTargetIndex: 'mod', // 会话导航的快捷键
-      messageListRefreshContext: 'mod+r', // 刷新上下文的快捷键
       dialogOpenSearch: 'mod+k', // 打开搜索对话框的快捷键
       inputBoxSendMessage: 'Enter', // 发送消息的快捷键
       inputBoxSendMessageWithoutResponse: 'Ctrl+Enter', // 发送但不生成回复的快捷键
