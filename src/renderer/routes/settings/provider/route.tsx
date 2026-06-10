@@ -37,21 +37,18 @@ export function RouteComponent() {
   const providersMap = useSettingsStore((state) => state.providers)
   const { isExceeded } = useVersion()
 
-  const providers = useMemo<ProviderInfo[]>(
-    () =>
-      [
-        ...SystemProviders().filter(
-          (p) =>
-            p.id !== 'chatbox-ai' && // Chatbox AI is now a top-level menu item
-            !(isExceeded && p.name.toLocaleLowerCase().match(/openai|claude|gemini/i))
-        ),
-        ...(customProviders || []),
-      ].map((p) => ({
-        ...p,
-        ...(providersMap?.[p.id] || {}),
-      })),
-    [customProviders, isExceeded, providersMap]
-  )
+  const providers = useMemo<ProviderInfo[]>(() => {
+    const systemProviders = SystemProviders().filter(
+      (p) => !(isExceeded && p.name.toLocaleLowerCase().match(/openai|claude|gemini/i))
+    )
+    // Put ChatboxAI first
+    const chatboxAI = systemProviders.find((p) => p.id === 'chatbox-ai')
+    const others = systemProviders.filter((p) => p.id !== 'chatbox-ai')
+    return [...(chatboxAI ? [chatboxAI] : []), ...others, ...(customProviders || [])].map((p) => ({
+      ...p,
+      ...(providersMap?.[p.id] || {}),
+    }))
+  }, [customProviders, isExceeded, providersMap])
 
   const allSystemProviders = useMemo(() => {
     return providers.filter((p) => !p.isCustom)

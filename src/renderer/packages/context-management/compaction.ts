@@ -7,7 +7,6 @@ import queryClient from '@/stores/queryClient'
 import { settingsStore } from '@/stores/settingsStore'
 import { sumCachedTokensFromMessages } from '../token'
 import { checkOverflow } from './compaction-detector'
-import { buildContextForAI } from './context-builder'
 import {
   type ContextTokensCacheValue,
   getContextMessagesForTokenEstimation,
@@ -55,21 +54,18 @@ export async function needsCompaction(sessionId: string): Promise<boolean> {
   // ===== Keep existing early returns (do not modify) =====
   const session = await chatStore.getSession(sessionId)
   if (!session) {
-    console.log('[DEBUG needsCompaction] session not found')
     return false
   }
 
   const globalSettings = settingsStore.getState().getSettings()
 
   if (!isAutoCompactionEnabled(session.settings, globalSettings)) {
-    console.log('[DEBUG needsCompaction] auto compaction disabled')
     return false
   }
 
   const providerId = session.settings?.provider ?? globalSettings.defaultChatModel?.provider
   const modelId = session.settings?.modelId ?? globalSettings.defaultChatModel?.model
   if (!modelId) {
-    console.log('[DEBUG needsCompaction] no modelId')
     return false
   }
 

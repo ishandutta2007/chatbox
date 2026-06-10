@@ -9,6 +9,7 @@ import { parseLocale } from '@/i18n/parser'
 import { getLogger } from '@/lib/utils'
 import { type ImageGenerationStorage, IndexedDBImageGenerationStorage } from '@/storage/ImageGenerationStorage'
 import { IndexedDBSessionMetaStorage, type SessionMetaStorage } from '@/storage/SessionMetaStorage'
+import { IndexedDBTaskSessionStorage, type TaskSessionStorage } from '@/storage/TaskSessionStorage'
 import { rememberFileNativePath } from '@/utils/file-native-path'
 import { getOS } from '../packages/navigator'
 import type { Platform, PlatformType } from './interfaces'
@@ -29,6 +30,7 @@ export default class DesktopPlatform implements Platform {
   private _kbController?: DesktopKnowledgeBaseController
   private _sessionAttachmentRagController?: DesktopSessionAttachmentRagController
   private _imageGenerationStorage: ImageGenerationStorage | null = null
+  private _taskSessionStorage: TaskSessionStorage | null = null
   private _sessionMetaStorage: SessionMetaStorage | null = null
 
   public ipc: ElectronIPC
@@ -134,8 +136,9 @@ export default class DesktopPlatform implements Platform {
     let valueJson: string
     try {
       valueJson = JSON.stringify(value)
-    } catch (error: any) {
-      throw new Error(`Failed to serialize value for key "${key}": ${error.message}`)
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error)
+      throw new Error(`Failed to serialize value for key "${key}": ${message}`)
     }
     if (this.needStoreInFile(key)) {
       return this.ipc.invoke('setStoreValue', key, valueJson)
@@ -330,12 +333,72 @@ export default class DesktopPlatform implements Platform {
     return this._imageGenerationStorage
   }
 
+  public getTaskSessionStorage(): TaskSessionStorage {
+    if (!this._taskSessionStorage) {
+      this._taskSessionStorage = new IndexedDBTaskSessionStorage()
+    }
+    return this._taskSessionStorage
+  }
+
   public getSessionMetaStorage(): SessionMetaStorage {
     if (!this._sessionMetaStorage) {
       this._sessionMetaStorage = new IndexedDBSessionMetaStorage()
     }
     return this._sessionMetaStorage
   }
+
+  public async sandboxInit(config: { workingDirectory: string }) {
+    return this.ipc.invoke('sandbox:init', config)
+  }
+
+  public async sandboxExec(params: { command: string; timeout?: number }) {
+    return this.ipc.invoke('sandbox:exec', params)
+  }
+
+  public async sandboxRead(params: { filePath: string }) {
+    return this.ipc.invoke('sandbox:read', params)
+  }
+
+  public async sandboxWrite(params: { filePath: string; content: string }) {
+    return this.ipc.invoke('sandbox:write', params)
+  }
+
+  public async sandboxEdit(params: { filePath: string; search: string; replace: string }) {
+    return this.ipc.invoke('sandbox:edit', params)
+  }
+
+  public async sandboxLs(params: { dirPath: string }) {
+    return this.ipc.invoke('sandbox:ls', params)
+  }
+
+  public async sandboxGrep(params: { pattern: string; dirPath?: string; include?: string }) {
+    return this.ipc.invoke('sandbox:grep', params)
+  }
+
+  public async sandboxFind(params: { dirPath: string; pattern?: string }) {
+    return this.ipc.invoke('sandbox:find', params)
+  }
+
+  public async sandboxKill() {
+    return this.ipc.invoke('sandbox:kill')
+  }
+
+  public async sandboxReset() {
+    return this.ipc.invoke('sandbox:reset')
+  }
+
+  public async sandboxStatus() {
+    return this.ipc.invoke('sandbox:status')
+  }
+
+  public async sandboxCheckAvailability() {
+    return this.ipc.invoke('sandbox:check-availability')
+  }
+
+  public async openDirectoryDialog() {
+    return this.ipc.invoke('dialog:openDirectory')
+  }
+
   public minimize() {
     return this.ipc.invoke('window:minimize')
   }

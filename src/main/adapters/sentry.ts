@@ -47,7 +47,7 @@ initSentry()
  * 使用 @sentry/node 进行错误上报
  */
 export class MainSentryAdapter implements SentryAdapter {
-  captureException(error: any): void {
+  captureException(error: unknown): void {
     Sentry.captureException(error)
   }
 
@@ -57,7 +57,7 @@ export class MainSentryAdapter implements SentryAdapter {
         setTag(key: string, value: string): void {
           sentryScope.setTag(key, value)
         },
-        setExtra(key: string, value: any): void {
+        setExtra(key: string, value: unknown): void {
           sentryScope.setExtra(key, value)
         },
       }

@@ -241,11 +241,6 @@ function analyzeMessageAttachments(
     const contentMode: ContentMode = usePreview ? 'preview' : 'full'
     const cacheKey = getTokenCacheKey({ tokenizerType, contentMode })
 
-    if (isCurrentInput) {
-      totalTokens += attachment.tokenCountMap?.[cacheKey] ?? 0
-      continue
-    }
-
     if (isAttachmentCacheValid(attachment, cacheKey)) {
       totalTokens += attachment.tokenCountMap?.[cacheKey] ?? 0
     } else {

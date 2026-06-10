@@ -14,8 +14,6 @@ import {
 } from 'react'
 import { useTranslation } from 'react-i18next'
 import ReactMarkdown from 'react-markdown'
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
-import { oneDark, oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import rehypeKatex from 'rehype-katex'
 import remarkBreaks from 'remark-breaks'
 import remarkGfm from 'remark-gfm'
@@ -61,11 +59,13 @@ import clsx from 'clsx'
 import { visit } from 'unist-util-visit'
 import { useCopied } from '@/hooks/useCopied'
 import { deployHtmlToEdgeOne } from '../packages/edgeone'
+import { highlight, highlightSync, type ShikiTheme } from '../packages/shiki'
 import * as toastActions from '../stores/toastActions'
+import { ScalableIcon } from './common/ScalableIcon'
 import IconDart from './icons/Dart'
 import IconJava from './icons/Java'
 import { MessageMermaid, SVGPreview } from './Mermaid'
-import { ScalableIcon } from './common/ScalableIcon'
+import './shiki-code.css'
 
 const CODE_BLOCK_COLLAPSE_LINE_THRESHOLD = 7
 
@@ -90,6 +90,8 @@ function Markdown(props: {
   className?: string
   generating?: boolean
   forceColorScheme?: 'light' | 'dark'
+  onCodeCopy?: () => void
+  onPreviewWebpage?: () => void
 }) {
   const {
     children,
@@ -100,6 +102,8 @@ function Markdown(props: {
     className,
     generating,
     forceColorScheme,
+    onCodeCopy,
+    onPreviewWebpage,
   } = props
 
   const codeFences = useMemo(() => (children.match(/```/g) || []).length, [children])
@@ -130,6 +134,8 @@ function Markdown(props: {
                 enableMermaidRendering={enableMermaidRendering}
                 generating={generating && generatingCodeIndex === codeIndex}
                 forceColorScheme={forceColorScheme}
+                onCodeCopy={onCodeCopy}
+                onPreviewWebpage={onPreviewWebpage}
               />
             )
           },
@@ -144,7 +150,16 @@ function Markdown(props: {
             />
           ),
         }),
-        [uniqueId, hiddenCodeCopyButton, enableMermaidRendering, generating, generatingCodeIndex, forceColorScheme]
+        [
+          uniqueId,
+          hiddenCodeCopyButton,
+          enableMermaidRendering,
+          generating,
+          generatingCodeIndex,
+          forceColorScheme,
+          onCodeCopy,
+          onPreviewWebpage,
+        ]
       )}
     >
       {enableLaTeXRendering ? latex.processLaTeX(children) : children}
@@ -163,9 +178,20 @@ export const CodeRenderer = memo(
     generating?: boolean
     enableMermaidRendering?: boolean
     forceColorScheme?: 'light' | 'dark'
+    onCodeCopy?: () => void
+    onPreviewWebpage?: () => void
   }) => {
     const theme = useTheme()
-    const { children, className, hiddenCodeCopyButton, generating, enableMermaidRendering, forceColorScheme } = props
+    const {
+      children,
+      className,
+      hiddenCodeCopyButton,
+      generating,
+      enableMermaidRendering,
+      forceColorScheme,
+      onCodeCopy,
+      onPreviewWebpage,
+    } = props
     const language = /language-(\w+)/.exec(className || '')?.[1] || 'text'
     if (!String(children).includes('\n')) {
       return <InlineCode className={className}>{children}</InlineCode>
@@ -182,6 +208,8 @@ export const CodeRenderer = memo(
           language={language}
           generating={generating}
           forceColorScheme={forceColorScheme}
+          onCodeCopy={onCodeCopy}
+          onPreviewWebpage={onPreviewWebpage}
         >
           {children}
         </BlockCode>
@@ -305,6 +333,8 @@ type BlockCodeProps = {
   hiddenCodeCopyButton?: boolean
   generating?: boolean
   forceColorScheme?: 'light' | 'dark'
+  onCodeCopy?: () => void
+  onPreviewWebpage?: () => void
 }
 
 const CodeIcons: { [key: string]: ElementType<IconProps> } = {
@@ -394,10 +424,20 @@ const ShikiCodeBlock = memo(({ code, language, theme }: { code: string; language
 })
 
 const BlockCode = memo(
-  ({ children, uniqueId, hiddenCodeCopyButton, language, generating, forceColorScheme }: BlockCodeProps) => {
+  ({
+    children,
+    uniqueId,
+    hiddenCodeCopyButton,
+    language,
+    generating,
+    forceColorScheme,
+    onCodeCopy,
+    onPreviewWebpage,
+  }: BlockCodeProps) => {
     const { t } = useTranslation()
     const computedColorScheme = useComputedColorScheme()
     const colorScheme = forceColorScheme || computedColorScheme
+    const shikiTheme: ShikiTheme = colorScheme !== 'light' ? 'one-dark-pro' : 'one-light'
     const languageName = useMemo(() => language.toUpperCase(), [language])
     const isRenderableCode = useMemo(() => isRenderableCodeLanguage(language), [language])
     const [deploying, setDeploying] = useState(false)
@@ -411,15 +451,16 @@ const BlockCode = memo(
     const { copied, copy } = useCopied(String(children))
     const onClickCopy = useCallback(
       (event: React.MouseEvent) => {
-        event.stopPropagation() // Avoid triggering parent select behavior in search window
+        event.stopPropagation()
         event.preventDefault()
         copy()
+        onCodeCopy?.()
       },
-      [copy]
+      [copy, onCodeCopy]
     )
     const onClickArtifact = useCallback(
       (event: React.MouseEvent) => {
-        event.stopPropagation() // Avoid triggering parent select behavior in search window
+        event.stopPropagation()
         event.preventDefault()
         NiceModal.show('artifact-preview', {
           htmlCode: String(children),
@@ -435,6 +476,8 @@ const BlockCode = memo(
         if (!canDeploy) {
           return
         }
+        // 应投放侧要求改触发点为分享按钮。但注意现在语义上是 mismatch 的
+        onPreviewWebpage?.()
         setDeploying(true)
         try {
           const url = await deployHtmlToEdgeOne(String(children))
@@ -445,7 +488,7 @@ const BlockCode = memo(
           setDeploying(false)
         }
       },
-      [canDeploy, children, t]
+      [canDeploy, children, t, onPreviewWebpage]
     )
 
     const needCollapse = useMemo(
@@ -454,7 +497,7 @@ const BlockCode = memo(
     )
     const { collapsed, toggleCollapsed } = useBlockCodeCollapsedState(uniqueId || '')
     const onClickCollapse = (event: React.MouseEvent) => {
-      event.stopPropagation() // Avoid triggering parent select behavior in search window
+      event.stopPropagation()
       event.preventDefault()
       toggleCollapsed()
     }
@@ -534,38 +577,11 @@ const BlockCode = memo(
         <Stack
           className={clsx(
             'border border-t-0 border-solid border-[var(--chatbox-border-primary)] rounded-b-md',
-            needCollapse && collapsed ? 'h-[10rem]' : ''
+            needCollapse && collapsed && generating ? 'h-[10rem] overflow-hidden justify-end' : '',
+            needCollapse && collapsed && !generating ? 'h-[10rem] overflow-auto' : ''
           )}
         >
-          <SyntaxHighlighter
-            style={colorScheme !== 'light' ? oneDark : oneLight}
-            language={language}
-            PreTag="div"
-            showLineNumbers
-            customStyle={{
-              marginTop: '0',
-              margin: '0',
-              borderTopLeftRadius: '0',
-              borderTopRightRadius: '0',
-              borderBottomLeftRadius: 'var(--chatbox-radius-md)',
-              borderBottomRightRadius: 'var(--chatbox-radius-md)',
-              border: 'none',
-              background: 'transparent !important',
-              ...(generating && needCollapse && collapsed
-                ? {
-                    overflow: 'hidden',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'flex-end',
-                  }
-                : {}),
-            }}
-            codeTagProps={{
-              className: '!bg-transparent',
-            }}
-          >
-            {children}
-          </SyntaxHighlighter>
+          <ShikiCodeBlock code={children} language={language} theme={shikiTheme} />
         </Stack>
       </Stack>
     )

@@ -52,7 +52,7 @@ const { remoteMocks, mcpMocks, stateControls, authControls, authSubscribers } = 
       mcp: { enabledBuiltinServers: [] },
     } as MockSettingsState,
   }
-  const auth = {
+  const auth: { current: MockAuthState } = {
     current: {
       accessToken: null,
       refreshToken: null,

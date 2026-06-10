@@ -1,5 +1,7 @@
+import { isUsingOAuth, mergeSharedOAuthProviderSettings } from '@shared/oauth'
 import { ModelProviderEnum } from '@shared/types'
 import { getDefaultStore } from 'jotai'
+import platform from '@/platform'
 import * as atoms from './atoms'
 import { settingsStore } from './settingsStore'
 
@@ -14,8 +16,13 @@ export function needEditSetting() {
   if (settings.providers && Object.keys(settings.providers).length > 0) {
     const providers = settings.providers
     const keys = Object.keys(settings.providers)
-    // 有任何一个供应商配置了api key
-    if (keys.filter((key) => !!providers[key].apiKey).length > 0) {
+    // 有任何一个供应商配置了api key 或者 OAuth
+    if (
+      keys.filter((key) => {
+        const providerSettings = mergeSharedOAuthProviderSettings(key, providers)
+        return !!providerSettings.apiKey || isUsingOAuth(providerSettings, platform.type)
+      }).length > 0
+    ) {
       return false
     }
     // Bedrock configured with AWS credentials

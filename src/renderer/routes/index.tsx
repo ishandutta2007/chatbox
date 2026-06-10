@@ -1,5 +1,5 @@
 import NiceModal from '@ebay/nice-modal-react'
-import { ActionIcon, Avatar, Box, Button, Divider, Flex, Paper, ScrollArea, Space, Stack, Text } from '@mantine/core'
+import { ActionIcon, Avatar, Box, Button, Divider, Flex, ScrollArea, Space, Stack, Text } from '@mantine/core'
 import type { CopilotDetail, ImageSource, Session } from '@shared/types'
 import { IconChevronLeft, IconChevronRight, IconMessageCircle2Filled, IconX } from '@tabler/icons-react'
 import { createFileRoute, useRouterState } from '@tanstack/react-router'
@@ -9,8 +9,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { v4 as uuidv4 } from 'uuid'
 import { z } from 'zod'
-import { trackJkClickEvent } from '@/analytics/jk'
-import { JK_EVENTS, JK_PAGE_NAMES } from '@/analytics/jk-events'
+import { JK_PAGE_NAMES } from '@/analytics/jk-events'
+import { ChatboxWelcomeCard } from '@/components/common/ChatboxWelcomeCard'
 import { MessageLayoutSelector } from '@/components/common/MessageLayoutPreview'
 import { ScalableIcon } from '@/components/common/ScalableIcon'
 import { ImageInStorage } from '@/components/Image'
@@ -21,14 +21,13 @@ import { useMyCopilots, useRemoteCopilotsByCursor } from '@/hooks/useCopilots'
 import { useProviders } from '@/hooks/useProviders'
 import { useIsSmallScreen } from '@/hooks/useScreenChange'
 import { navigateToSettings } from '@/modals/Settings'
-import { openLinkWithAuth } from '@/packages/openLinkWithAuth'
 import * as remote from '@/packages/remote'
 import { router } from '@/router'
 import { useAuthInfoStore } from '@/stores/authInfoStore'
 import { createSession as createSessionStore } from '@/stores/chatStore'
 import { submitNewUserMessage, switchCurrentSession } from '@/stores/sessionActions'
 import { initEmptyChatSession } from '@/stores/sessionHelpers'
-import { useLanguage, useSettingsStore } from '@/stores/settingsStore'
+import { useSettingsStore } from '@/stores/settingsStore'
 import { useUIStore } from '@/stores/uiStore'
 import { getHomeWelcomeCardMode } from '@/utils/homeWelcomeCard'
 
@@ -62,16 +61,14 @@ function Index() {
     id: 'new',
     ...initEmptyChatSession(),
   })
-  const [pendingWelcomeAction, setPendingWelcomeAction] = useState<'claim-free-plan' | 'view-more-plans' | null>(null)
-  const pendingWelcomeActionRef = useRef(false)
 
   const { providers } = useProviders()
-  const language = useLanguage()
   const hasLicense = useSettingsStore((s) => Boolean(s.licenseKey))
+  const hasExpiredLicense = useSettingsStore((s) => s.hasExpiredLicense)
   const isLoggedIn = useAuthInfoStore((s) => Boolean(s.accessToken && s.refreshToken))
   const welcomeCardMode = useMemo(
-    () => getHomeWelcomeCardMode({ providerCount: providers.length, isLoggedIn, hasLicense }),
-    [providers.length, isLoggedIn, hasLicense]
+    () => getHomeWelcomeCardMode({ providerCount: providers.length, isLoggedIn, hasLicense, hasExpiredLicense }),
+    [providers.length, isLoggedIn, hasLicense, hasExpiredLicense]
   )
 
   const selectedModel = useMemo(() => {
@@ -122,7 +119,7 @@ function Index() {
       let c: CopilotDetail | null = null
       try {
         c = JSON.parse(copilot) as CopilotDetail
-      } catch (e) {
+      } catch (_e) {
         return
       }
 
@@ -293,119 +290,11 @@ function Index() {
 
         {welcomeCardMode !== 'none' && (
           <Box px="sm">
-            <Paper
-              radius="md"
-              shadow="none"
-              withBorder
-              py="md"
-              px="sm"
-              mb="md"
-              className={widthFull ? 'w-full' : 'w-full max-w-4xl mx-auto'}
-            >
-              <Stack gap="sm">
-                <Stack gap="xxs" align="center">
-                  <Text fw={600} className="text-center">
-                    {t('Welcome to Chatbox!')}
-                  </Text>
-
-                  <Text size="xs" c="chatbox-tertiary" className="text-center">
-                    {welcomeCardMode === 'no-license' ? t('No licenses found') : t('Login to start chatting with AI')}
-                  </Text>
-                </Stack>
-
-                <Flex gap="xs" justify="center" align="center" wrap="wrap">
-                  {welcomeCardMode === 'no-license' ? (
-                    <>
-                      <Button
-                        size="xs"
-                        variant="filled"
-                        h={32}
-                        miw={160}
-                        fw={600}
-                        flex="0 1 auto"
-                        onClick={() => {
-                          if (pendingWelcomeActionRef.current) return
-
-                          pendingWelcomeActionRef.current = true
-                          trackJkClickEvent(JK_EVENTS.FREE_LICENSE_CLAIM_CLICK, {
-                            pageName: JK_PAGE_NAMES.CHAT_PAGE,
-                          })
-                          setPendingWelcomeAction('claim-free-plan')
-                          openLinkWithAuth(
-                            remote.buildChatboxUrl(
-                              `/redirect_app/claim_free_plan/${language}/?utm_source=app&utm_content=provider_cb_login_claim_free`
-                            )
-                          ).finally(() => {
-                            pendingWelcomeActionRef.current = false
-                            setPendingWelcomeAction(null)
-                          })
-                        }}
-                        loading={pendingWelcomeAction === 'claim-free-plan'}
-                        disabled={pendingWelcomeAction !== null}
-                      >
-                        {t('Claim Free Plan')}
-                      </Button>
-                      <Button
-                        size="xs"
-                        variant="subtle"
-                        c="chatbox-tertiary"
-                        h={32}
-                        fw={400}
-                        flex="0 1 auto"
-                        onClick={() => {
-                          if (pendingWelcomeActionRef.current) return
-
-                          pendingWelcomeActionRef.current = true
-                          setPendingWelcomeAction('view-more-plans')
-                          openLinkWithAuth(
-                            remote.buildChatboxUrl(
-                              `/redirect_app/view_more_plans/${language}/?utm_source=app&utm_content=provider_cb_login_more_plans`
-                            )
-                          ).finally(() => {
-                            pendingWelcomeActionRef.current = false
-                            setPendingWelcomeAction(null)
-                          })
-                        }}
-                        loading={pendingWelcomeAction === 'view-more-plans'}
-                        disabled={pendingWelcomeAction !== null}
-                      >
-                        {t('View More Plans')}
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      <Button
-                        size="xs"
-                        variant="filled"
-                        h={32}
-                        miw={160}
-                        fw={600}
-                        flex="0 1 auto"
-                        onClick={() => {
-                          trackJkClickEvent(JK_EVENTS.LOGIN_BUTTON_CLICK, {
-                            pageName: JK_PAGE_NAMES.CHAT_PAGE,
-                          })
-                          navigateToSettings('chatbox-ai')
-                        }}
-                      >
-                        {t('Login Chatbox AI')}
-                      </Button>
-                      <Button
-                        size="xs"
-                        variant="subtle"
-                        c="chatbox-tertiary"
-                        h={32}
-                        fw={400}
-                        flex="0 1 auto"
-                        onClick={() => navigateToSettings('provider')}
-                      >
-                        {t('Other options')}
-                      </Button>
-                    </>
-                  )}
-                </Flex>
-              </Stack>
-            </Paper>
+            <ChatboxWelcomeCard
+              mode={welcomeCardMode}
+              pageName={JK_PAGE_NAMES.CHAT_PAGE}
+              className={clsx('mb-md', widthFull ? 'w-full' : 'w-full max-w-4xl mx-auto')}
+            />
           </Box>
         )}
 

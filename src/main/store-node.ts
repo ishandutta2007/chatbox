@@ -150,12 +150,14 @@ export function needBackup() {
 }
 
 /**
- * 清理备份文件，仅保留最近50个备份
+ * 清理备份文件：
+ * 1. 对于今天和昨天，每小时保留最后一份备份。
+ * 2. 对于昨天之前的 28 天内（即 3 天前到 30 天前），每天保留最后一份备份。
+ * 3. 删除 30 天前的所有备份。
  */
 export async function clearBackups() {
-  const limit = 50
-  const backups = getBackups()
-  if (backups.length < limit) {
+  const backups = getBackups() // Already sorted ascending by dateMs
+  if (backups.length === 0) {
     return
   }
 

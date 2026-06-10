@@ -49,7 +49,7 @@ export function useOAuth(
     }
   }, [isDesktop, oauthProviderId])
 
-  // --- Callback flow (OpenAI, Gemini) ---
+  // --- Callback flow (OpenAI) ---
   const loginCallback = useCallback(async (): Promise<OAuthResult> => {
     if (!isDesktop) return { success: false, error: 'Not desktop' }
     try {

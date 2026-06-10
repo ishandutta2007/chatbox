@@ -5,7 +5,7 @@ import type { SentryAdapter, SentryScope } from '../../shared/utils/sentry_adapt
  * 渲染进程的 Sentry 适配器实现
  */
 export class RendererSentryAdapter implements SentryAdapter {
-  captureException(error: any): void {
+  captureException(error: unknown): void {
     Sentry.captureException(error)
   }
 
@@ -15,11 +15,11 @@ export class RendererSentryAdapter implements SentryAdapter {
         setTag(key: string, value: string): void {
           sentryScope.setTag(key, value)
         },
-        setExtra(key: string, value: any): void {
+        setExtra(key: string, value: unknown): void {
           sentryScope.setExtra(key, value)
         },
       }
       callback(scope)
     })
   }
-} 
+}

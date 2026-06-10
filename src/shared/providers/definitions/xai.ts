@@ -44,7 +44,7 @@ export const xaiProvider = defineProvider({
   createModel: (config) => {
     return new XAI(
       {
-        apiKey: config.providerSetting.apiKey || '',
+        apiKey: config.effectiveApiKey,
         model: config.model,
         temperature: config.settings.temperature,
         topP: config.settings.topP,

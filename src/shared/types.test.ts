@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { copyMessagesWithMapping, copyThreads, createMessage } from './types'
+import { copyMessageForksWithMapping, copyMessagesWithMapping, copyThreads, createMessage } from './types'
 import type { CompactionPoint, SessionThread } from './types/session'
 
 describe('copyMessagesWithMapping', () => {
@@ -336,5 +336,99 @@ describe('copyThreads with compactionPoints', () => {
     expect(newCp.boundaryMessageId).toBe(newSessionMsgId)
     const threadMsgMapping = newThread.messages.find((m) => m.role === 'assistant')
     expect(newCp.summaryMessageId).toBe(threadMsgMapping?.id)
+  })
+})
+
+describe('copyMessageForksWithMapping', () => {
+  it('should copy reachable fork entries and remap nested fork ids', () => {
+    const pivot = createMessage('user', 'pivot')
+    const current = createMessage('assistant', 'current')
+    const branchPivot = createMessage('assistant', 'branch pivot')
+    const branchTail = createMessage('assistant', 'branch tail')
+    const nestedAlternative = createMessage('assistant', 'nested alternative')
+    const unrelated = createMessage('user', 'unrelated')
+
+    const { messages: copiedMessages, idMapping } = copyMessagesWithMapping([pivot, current])
+    const copiedForks = copyMessageForksWithMapping(
+      {
+        [pivot.id]: {
+          position: 0,
+          lists: [
+            { id: 'list-current', messages: [] },
+            { id: 'list-branch', messages: [branchPivot, branchTail] },
+          ],
+          createdAt: 1,
+        },
+        [branchPivot.id]: {
+          position: 0,
+          lists: [
+            { id: 'nested-current', messages: [] },
+            { id: 'nested-branch', messages: [nestedAlternative] },
+          ],
+          createdAt: 2,
+        },
+        [unrelated.id]: {
+          position: 0,
+          lists: [{ id: 'unrelated-list', messages: [createMessage('assistant', 'ignored')] }],
+          createdAt: 3,
+        },
+      },
+      idMapping
+    )
+
+    expect(copiedForks).toBeDefined()
+    const copiedPivotId = copiedMessages[0].id
+    const copiedPivotFork = copiedForks?.[copiedPivotId]
+    expect(copiedPivotFork).toBeDefined()
+    expect(copiedPivotFork?.lists[1].id).not.toBe('list-branch')
+
+    const copiedBranchPivot = copiedPivotFork?.lists[1].messages[0]
+    expect(copiedBranchPivot).toBeDefined()
+    expect(copiedBranchPivot?.id).not.toBe(branchPivot.id)
+
+    const copiedNestedFork = copiedForks?.[copiedBranchPivot!.id]
+    expect(copiedNestedFork).toBeDefined()
+    expect(copiedNestedFork?.lists[1].messages[0].id).not.toBe(nestedAlternative.id)
+    expect(copiedForks?.[unrelated.id]).toBeUndefined()
+  })
+
+  it('should return undefined when no fork ids can be mapped', () => {
+    const result = copyMessageForksWithMapping(
+      {
+        original: {
+          position: 0,
+          lists: [{ id: 'list', messages: [createMessage('assistant', 'ignored')] }],
+          createdAt: 1,
+        },
+      },
+      new Map([['other', 'copied-other']])
+    )
+
+    expect(result).toBeUndefined()
+  })
+
+  it('should reuse existing ids for pre-mapped fork list messages', () => {
+    const pivot = createMessage('user', 'pivot')
+    const alreadyMapped = createMessage('assistant', 'already mapped')
+    const mappedChildId = 'mapped-child-id'
+
+    const copiedForks = copyMessageForksWithMapping(
+      {
+        [pivot.id]: {
+          position: 0,
+          lists: [
+            { id: 'list-current', messages: [] },
+            { id: 'list-branch', messages: [alreadyMapped] },
+          ],
+          createdAt: 1,
+        },
+      },
+      new Map([
+        [pivot.id, 'mapped-pivot-id'],
+        [alreadyMapped.id, mappedChildId],
+      ])
+    )
+
+    expect(copiedForks?.['mapped-pivot-id']?.lists[1].messages[0].id).toBe(mappedChildId)
   })
 })

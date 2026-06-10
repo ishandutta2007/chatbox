@@ -69,6 +69,7 @@ export function useAutoValidate(): boolean {
       licenseDetail: undefined,
       licensePlanName: undefined,
       licenseActivationMethod: undefined,
+      hasExpiredLicense: true,
     }))
   }
   useEffect(() => {
@@ -159,6 +160,7 @@ export async function activate(
   method: 'login' | 'manual' = 'manual',
   options?: { pageName?: string }
 ) {
+  console.log('Enter acticate')
   const pageName = options?.pageName ?? JK_PAGE_NAMES.SETTING_PAGE
   const shouldTrackKeyVerifyEvent = method !== 'login'
   const settings = settingsStore.getState()
@@ -196,6 +198,7 @@ export async function activate(
   const licenseDetailResponse = await remote.getLicenseDetailRealtime({ licenseKey })
   // 如果获取详情返回错误（如过期、额度用尽），返回错误码
   if (licenseDetailResponse.error) {
+    console.log(`licenseDetailResponse.error: ${licenseDetailResponse.error.code}`)
     const error = licenseDetailResponse.error.code || 'license_error'
     // if expired
     if (error === 'expired' || error === 'expired_license') settingsStore.setState({ hasExpiredLicense: true })

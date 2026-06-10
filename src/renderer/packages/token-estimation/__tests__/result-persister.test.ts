@@ -11,12 +11,25 @@ vi.mock('@/stores/chatStore', () => ({
 }))
 
 vi.mock('@/stores/queryClient', () => ({
-  default: {},
+  default: {
+    setQueryData: vi.fn(),
+  },
+}))
+
+vi.mock('@/stores/taskSessionStore', () => ({
+  getTaskSession: vi.fn(),
+  updateTaskSession: vi.fn(),
+  TASK_SESSION_QUERY_KEY: 'task-session',
 }))
 
 import * as chatStore from '@/stores/chatStore'
+import queryClient from '@/stores/queryClient'
+import { getTaskSession, updateTaskSession } from '@/stores/taskSessionStore'
 
 const mockSession = { id: 'session-1', name: 'Test Session', messages: [] }
+const mockGetTaskSession = vi.mocked(getTaskSession)
+const mockUpdateTaskSession = vi.mocked(updateTaskSession)
+const mockSetQueryData = vi.mocked(queryClient.setQueryData)
 
 function createMessageTextResult(
   overrides: Partial<NonNullable<TaskResult['result']>> = {}
@@ -58,6 +71,8 @@ describe('ResultPersister', () => {
     persister = new ResultPersister()
     vi.clearAllMocks()
     vi.useFakeTimers()
+    mockGetTaskSession.mockResolvedValue(null)
+    mockUpdateTaskSession.mockResolvedValue(null)
   })
 
   afterEach(() => {
@@ -311,6 +326,58 @@ describe('ResultPersister', () => {
       await persister.flushNow()
 
       expect(chatStore.updateMessages).toHaveBeenCalledTimes(2)
+    })
+
+    it('falls back to task session persistence when chat session update fails', async () => {
+      vi.mocked(chatStore.updateMessages).mockRejectedValueOnce(new Error('Chat session not found'))
+      mockGetTaskSession.mockResolvedValueOnce({
+        id: 'session-1',
+        name: 'Task Session',
+        workingDirectory: '.',
+        messages: [{ id: 'msg-1', role: 'user', contentParts: [{ type: 'text', text: 'hello' }] }],
+        createdAt: Date.now(),
+      })
+      mockUpdateTaskSession.mockResolvedValueOnce({
+        id: 'session-1',
+        name: 'Task Session',
+        workingDirectory: '.',
+        messages: [
+          {
+            id: 'msg-1',
+            role: 'user',
+            contentParts: [{ type: 'text', text: 'hello' }],
+            tokenCountMap: { default: 100 },
+            tokenCalculatedAt: { default: 12345 },
+          },
+        ],
+        createdAt: Date.now(),
+      })
+
+      persister.addResult(
+        createMessageTextResult({
+          sessionId: 'session-1',
+          messageId: 'msg-1',
+          tokenizerType: 'default',
+          tokens: 100,
+          calculatedAt: 12345,
+        })
+      )
+
+      await persister.flushNow()
+
+      expect(mockGetTaskSession).toHaveBeenCalledWith('session-1')
+      expect(mockUpdateTaskSession).toHaveBeenCalledWith(
+        'session-1',
+        expect.objectContaining({
+          messages: expect.arrayContaining([
+            expect.objectContaining({ tokenCountMap: expect.objectContaining({ default: 100 }) }),
+          ]),
+        })
+      )
+      expect(mockSetQueryData).toHaveBeenCalledWith(
+        ['task-session', 'session-1'],
+        expect.objectContaining({ id: 'session-1' })
+      )
     })
   })
 

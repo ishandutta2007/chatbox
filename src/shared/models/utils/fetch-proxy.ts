@@ -1,5 +1,4 @@
 import type { ModelDependencies } from '../../types/adapters'
-import { ApiError } from '../errors'
 
 /**
  * Creates a fetch function that uses proxy when enabled,

@@ -8,6 +8,10 @@ vi.mock('@/stores/chatStore', () => ({
   getSession: vi.fn(),
 }))
 
+vi.mock('@/stores/taskSessionStore', () => ({
+  getTaskSession: vi.fn(),
+}))
+
 vi.mock('@/storage', () => ({
   default: {
     getBlob: vi.fn(),
@@ -16,8 +20,10 @@ vi.mock('@/storage', () => ({
 
 import storage from '@/storage'
 import * as chatStore from '@/stores/chatStore'
+import { getTaskSession } from '@/stores/taskSessionStore'
 
 const mockGetSession = vi.mocked(chatStore.getSession)
+const mockGetTaskSession = vi.mocked(getTaskSession)
 const mockGetBlob = vi.mocked(storage.getBlob)
 
 function createMessage(overrides: Partial<Message> = {}): Message {
@@ -72,6 +78,7 @@ describe('executeTask', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     computationQueue._reset()
+    mockGetTaskSession.mockResolvedValue(null)
   })
 
   afterEach(() => {
@@ -135,6 +142,7 @@ describe('executeTask', () => {
 
     it('returns error when session not found', async () => {
       mockGetSession.mockResolvedValue(null)
+      mockGetTaskSession.mockResolvedValue(null)
 
       const task = createMessageTextTask()
       const result = await executeTask(task)
@@ -192,6 +200,23 @@ describe('executeTask', () => {
 
       expect(result.success).toBe(true)
       expect(result.result?.tokenizerType).toBe('deepseek')
+    })
+
+    it('falls back to task session when chat session is not found', async () => {
+      mockGetSession.mockResolvedValue(null)
+      mockGetTaskSession.mockResolvedValue({
+        id: 'session-1',
+        name: 'Task Session',
+        workingDirectory: '.',
+        messages: [createMessage({ id: 'msg-1', contentParts: [{ type: 'text', text: 'Task message' }] })],
+        createdAt: Date.now(),
+      })
+
+      const task = createMessageTextTask()
+      const result = await executeTask(task)
+
+      expect(result.success).toBe(true)
+      expect(result.result?.type).toBe('message-text')
     })
   })
 
@@ -352,6 +377,30 @@ describe('executeTask', () => {
       expect(previewResult.result?.contentMode).toBe('preview')
       expect(previewResult.result?.lineCount).toBe(200)
       expect(previewResult.result?.tokens).toBeLessThan(fullResult.result?.tokens ?? 0)
+    })
+
+    it('uses task session for attachment lookup when chat session is not found', async () => {
+      mockGetSession.mockResolvedValue(null)
+      mockGetTaskSession.mockResolvedValue({
+        id: 'session-1',
+        name: 'Task Session',
+        workingDirectory: '.',
+        messages: [
+          createMessage({
+            id: 'msg-1',
+            files: [{ id: 'file-1', name: 'test.txt', fileType: 'text/plain', storageKey: 'storage-key-1' }],
+          }),
+        ],
+        createdAt: Date.now(),
+      })
+      mockGetBlob.mockResolvedValue('Task file content')
+
+      const task = createAttachmentTask()
+      const result = await executeTask(task)
+
+      expect(result.success).toBe(true)
+      expect(result.result?.type).toBe('attachment')
+      expect(result.result?.tokens).toBeGreaterThan(0)
     })
 
     it('includes wrapper tokens in calculation', async () => {

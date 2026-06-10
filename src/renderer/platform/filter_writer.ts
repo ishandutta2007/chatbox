@@ -20,6 +20,15 @@ export abstract class FilterWriter {
   }
 
   async writeFileAutoRenameOnConflict(options: WriteFileOptions): Promise<WriteFileResult> {
+    const availablePath = await this.getAvailableFilePath(options)
+    return await Filesystem.writeFile({ ...options, path: availablePath })
+  }
+
+  /**
+   * Get an available file path that doesn't conflict with existing files.
+   * If the file exists, append incrementing number (e.g., file_2.txt, file_3.txt)
+   */
+  protected async getAvailableFilePath(options: WriteFileOptions): Promise<string> {
     let counter = 1
     let currentPath = options.path
 
@@ -32,9 +41,9 @@ export abstract class FilterWriter {
         const baseName = pathParts.join('.')
         counter++
         currentPath = `${baseName}_${counter}${ext ? `.${ext}` : ''}`
-      } catch (e) {
+      } catch (_e) {
         // File doesn't exist, we can use this path
-        return await Filesystem.writeFile({ ...options, path: currentPath })
+        return currentPath
       }
     }
   }
@@ -119,7 +128,7 @@ export abstract class FilterWriter {
     }
   }
 
-  async writeFirstChunk(filename: string, content: string) {
+  async writeFirstChunk(filename: string, content: string): Promise<string> {
     const config = this.getWriteConfig(filename)
     await Filesystem.writeFile({
       path: config.path,
@@ -128,12 +137,13 @@ export abstract class FilterWriter {
       encoding: Encoding.UTF8,
       recursive: config.recursive,
     })
+    return config.path
   }
 
-  async appendChunk(filename: string, content: string) {
+  async appendChunk(filename: string, content: string, actualPath?: string) {
     const config = this.getWriteConfig(filename)
     await Filesystem.appendFile({
-      path: config.path,
+      path: actualPath || config.path,
       data: content,
       directory: config.directory,
       encoding: Encoding.UTF8,
@@ -152,22 +162,22 @@ export abstract class FilterWriter {
     await this.handlePostWrite(result)
   }
 
-  async finishWriting(filename: string, content: string) {
+  async finishWriting(filename: string, content: string, actualPath?: string) {
     const config = this.getWriteConfig(filename)
     await Filesystem.appendFile({
-      path: config.path,
+      path: actualPath || config.path,
       data: content,
       directory: config.directory,
       encoding: Encoding.UTF8,
     })
-    await this.completeExport(filename)
+    await this.completeExport(filename, actualPath)
   }
 
-  async completeExport(filename: string) {
+  async completeExport(filename: string, actualPath?: string) {
     const config = this.getWriteConfig(filename)
     const fileUri = await Filesystem.getUri({
       directory: config.directory,
-      path: config.path,
+      path: actualPath || config.path,
     })
     await this.handlePostWrite(fileUri)
   }
@@ -307,9 +317,23 @@ export class AndroidFilterWriter extends FilterWriter {
     return super.exportByUrl(filename, url)
   }
 
-  async writeFirstChunk(filename: string, content: string) {
+  async writeFirstChunk(filename: string, content: string): Promise<string> {
     await this.checkOrRequestPermission()
-    return super.writeFirstChunk(filename, content)
+    const config = this.getWriteConfig(filename)
+    const availablePath = await this.getAvailableFilePath({
+      path: config.path,
+      data: content,
+      directory: config.directory,
+      recursive: config.recursive,
+    })
+    await Filesystem.writeFile({
+      path: availablePath,
+      data: content,
+      directory: config.directory,
+      encoding: Encoding.UTF8,
+      recursive: config.recursive,
+    })
+    return availablePath
   }
 
   async writeCompleteFile(filename: string, content: string) {

@@ -186,16 +186,84 @@ export function copyMessagesWithMapping(messages: Message[]): {
   return { messages: newMessages, idMapping }
 }
 
-export function copyThreads(source?: SessionThread[], idMapping?: Map<string, string>): SessionThread[] | undefined {
-  if (!source) {
+export function copyMessageForksWithMapping(
+  source?: Session['messageForksHash'],
+  initialIdMapping?: Map<string, string>
+): Session['messageForksHash'] | undefined {
+  if (!source || !initialIdMapping?.size) {
     return undefined
   }
-  return source.map((thread) => {
+
+  const copiedForks: NonNullable<Session['messageForksHash']> = {}
+  const idMapping = new Map(initialIdMapping)
+  const pendingForkIds = [...initialIdMapping.keys()]
+  const visitedForkIds = new Set<string>()
+
+  while (pendingForkIds.length > 0) {
+    const forkMessageId = pendingForkIds.shift()!
+    if (visitedForkIds.has(forkMessageId)) {
+      continue
+    }
+    visitedForkIds.add(forkMessageId)
+
+    const forkEntry = source[forkMessageId]
+    const newForkMessageId = idMapping.get(forkMessageId)
+    if (!forkEntry || !newForkMessageId) {
+      continue
+    }
+
+    copiedForks[newForkMessageId] = {
+      ...forkEntry,
+      lists: forkEntry.lists.map((list) => {
+        const messages = list.messages.map((message) => {
+          const existingId = idMapping.get(message.id)
+          if (existingId) {
+            return {
+              ...message,
+              cancel: undefined,
+              id: existingId,
+            }
+          }
+
+          const copiedMessage = copyMessage(message)
+          idMapping.set(message.id, copiedMessage.id)
+          pendingForkIds.push(message.id)
+          return copiedMessage
+        })
+
+        return {
+          ...list,
+          id: uuidv4(),
+          messages,
+        }
+      }),
+    }
+  }
+
+  return Object.keys(copiedForks).length > 0 ? copiedForks : undefined
+}
+
+export function copyThreadsWithMapping(
+  source?: SessionThread[],
+  externalIdMapping?: Map<string, string>
+): {
+  threads: SessionThread[] | undefined
+  idMapping: Map<string, string>
+} {
+  const idMapping = new Map(externalIdMapping)
+  if (!source) {
+    return {
+      threads: undefined,
+      idMapping,
+    }
+  }
+
+  const threads = source.map((thread) => {
     // Use copyMessagesWithMapping for thread messages
     const { messages: newMessages, idMapping: threadIdMapping } = copyMessagesWithMapping(thread.messages)
 
     // Combine external mapping (if provided) with thread mapping
-    const combinedMapping = idMapping ? new Map([...idMapping, ...threadIdMapping]) : threadIdMapping
+    const combinedMapping = new Map([...idMapping, ...threadIdMapping])
 
     // Map compactionPoints (if they exist)
     const newCompactionPoints = thread.compactionPoints
@@ -215,6 +283,10 @@ export function copyThreads(source?: SessionThread[], idMapping?: Map<string, st
       })
       .filter((cp): cp is NonNullable<typeof cp> => cp !== null)
 
+    for (const [oldId, newId] of threadIdMapping) {
+      idMapping.set(oldId, newId)
+    }
+
     return {
       ...thread,
       messages: newMessages,
@@ -224,6 +296,18 @@ export function copyThreads(source?: SessionThread[], idMapping?: Map<string, st
       compactionPoints: newCompactionPoints?.length ? newCompactionPoints : thread.compactionPoints ? [] : undefined,
     }
   })
+
+  return {
+    threads,
+    idMapping,
+  }
+}
+
+export function copyThreads(source?: SessionThread[], idMapping?: Map<string, string>): SessionThread[] | undefined {
+  if (!source) {
+    return undefined
+  }
+  return copyThreadsWithMapping(source, idMapping).threads
 }
 
 // RAG related types
@@ -337,3 +421,5 @@ export type FileMeta = {
 export * from './types/image-generation'
 export * from './types/session'
 export * from './types/settings'
+export * from './types/skills'
+export * from './types/task-session'

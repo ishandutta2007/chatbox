@@ -1,9 +1,7 @@
-import { getModel } from '@shared/models'
 import type { Message, MessageImagePart, MessagePicture, SessionSettings } from '@shared/types'
-import { createModelDependencies } from '@/adapters'
+import { createModel } from '@/adapters'
 import * as appleAppStore from '@/packages/apple_app_store'
 import { generateImage } from '@/packages/model-calls'
-import platform from '@/platform'
 import storage from '@/storage'
 import { StorageKeyGenerator } from '@/storage/StoreStorage'
 import type * as chatStore from '../chatStore'
@@ -35,7 +33,6 @@ export async function orchestratePictureGeneration(
   options?: { operationType?: 'send_message' | 'regenerate' }
 ) {
   const globalSettings = settingsStore.getState().getSettings()
-  const configs = await platform.getConfig()
 
   // Track generation event
   trackGenerateEvent(sessionId, settings, globalSettings, session.type, options)
@@ -70,8 +67,7 @@ export async function orchestratePictureGeneration(
   }
 
   try {
-    const dependencies = await createModelDependencies()
-    const model = getModel(settings, globalSettings, configs, dependencies)
+    const model = await createModel(settings)
 
     // Picture message generation
     if (session.type === 'picture') {

@@ -25,7 +25,10 @@ type FetchFunction = typeof globalThis.fetch
 export default class CustomOpenAI extends AbstractAISDKModel {
   public name = 'Custom OpenAI'
 
-  constructor(public options: Options, dependencies: ModelDependencies) {
+  constructor(
+    public options: Options,
+    dependencies: ModelDependencies
+  ) {
     super(options, dependencies)
     const { apiHost, apiPath } = normalizeOpenAIApiHostAndPath(options)
     this.options = { ...options, apiHost, apiPath }

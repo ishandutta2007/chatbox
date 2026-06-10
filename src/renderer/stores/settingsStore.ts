@@ -62,7 +62,7 @@ export const settingsStore = createStore<Settings & Action>()(
           },
           removeItem: async (name) => await storage.removeItem(name),
         })),
-        version: 2,
+        version: 4,
         partialize: (state) => {
           try {
             return SettingsSchema.parse(state)
@@ -88,6 +88,13 @@ export const settingsStore = createStore<Settings & Action>()(
               if (settings.licenseKey && !settings.licenseActivationMethod) {
                 settings.licenseActivationMethod = 'manual'
                 settings.memorizedManualLicenseKey = settings.licenseKey
+              }
+            case 2:
+              // Add skills defaults for existing users upgrading from before skills feature
+              if (!settings.skills) {
+                settings.skills = defaults.settings().skills
+              } else if (settings.skills.translationEnabled === undefined) {
+                settings.skills.translationEnabled = true
               }
             default:
               break

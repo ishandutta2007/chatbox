@@ -7,7 +7,7 @@ export default class Locale {
     try {
       this.locale = app.getLocale()
     } catch (e) {
-      console.log(e)
+      console.error('Failed to get locale:', e)
     }
   }
 

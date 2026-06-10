@@ -8,10 +8,13 @@ export default class WebExporter implements Exporter {
     var eleLink = document.createElement('a')
     eleLink.download = filename
     eleLink.style.display = 'none'
-    eleLink.href = URL.createObjectURL(blob)
+    const url = URL.createObjectURL(blob)
+    eleLink.href = url
     document.body.appendChild(eleLink)
     eleLink.click()
     document.body.removeChild(eleLink)
+    // Revoke after a tick to ensure the download has started.
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
   }
 
   async exportTextFile(filename: string, content: string) {
@@ -19,10 +22,12 @@ export default class WebExporter implements Exporter {
     eleLink.download = filename
     eleLink.style.display = 'none'
     var blob = new Blob([content])
-    eleLink.href = URL.createObjectURL(blob)
+    const url = URL.createObjectURL(blob)
+    eleLink.href = url
     document.body.appendChild(eleLink)
     eleLink.click()
     document.body.removeChild(eleLink)
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
   }
 
   async exportImageFile(basename: string, base64Data: string) {
@@ -45,10 +50,12 @@ export default class WebExporter implements Exporter {
     var eleLink = document.createElement('a')
     eleLink.download = filename
     eleLink.style.display = 'none'
-    eleLink.href = URL.createObjectURL(blob)
+    const url = URL.createObjectURL(blob)
+    eleLink.href = url
     document.body.appendChild(eleLink)
     eleLink.click()
     document.body.removeChild(eleLink)
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
   }
 
   async exportByUrl(filename: string, url: string) {

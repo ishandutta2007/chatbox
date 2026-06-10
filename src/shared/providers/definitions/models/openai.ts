@@ -19,6 +19,13 @@ interface Options {
   injectDefaultMetadata: boolean
   useProxy: boolean
   stream?: boolean
+  extraHeaders?: Record<string, string>
+  customFetch?: typeof globalThis.fetch
+  listModelsFallback?: ProviderModelInfo[]
+  /** Skip remote model fetching and use listModelsFallback directly (e.g. OAuth tokens that can't access /models) */
+  skipRemoteModelList?: boolean
+  /** Skip host normalization (e.g. for Copilot API which doesn't use /v1 prefix) */
+  skipHostNormalization?: boolean
 }
 
 export default class OpenAI extends AbstractAISDKModel {
@@ -27,8 +34,12 @@ export default class OpenAI extends AbstractAISDKModel {
 
   constructor(options: Options, dependencies: ModelDependencies) {
     super(options, dependencies)
-    const { apiHost } = normalizeOpenAIApiHostAndPath(options)
-    this.options = { ...options, apiHost }
+    if (options.skipHostNormalization) {
+      this.options = options
+    } else {
+      const { apiHost } = normalizeOpenAIApiHostAndPath(options)
+      this.options = { ...options, apiHost }
+    }
   }
 
   static isSupportTextEmbedding() {
@@ -36,16 +47,25 @@ export default class OpenAI extends AbstractAISDKModel {
   }
 
   protected getProvider() {
+    let headers: Record<string, string> | undefined
+    if (this.options.extraHeaders && Object.keys(this.options.extraHeaders).length > 0) {
+      headers = this.options.extraHeaders
+    } else if (this.options.apiHost.includes('openrouter.ai')) {
+      headers = {
+        'HTTP-Referer': 'https://chatboxai.app',
+        'X-Title': 'Chatbox AI',
+      }
+    } else if (this.options.apiHost.includes('aihubmix.com')) {
+      headers = {
+        'APP-Code': 'VAFU9221',
+      }
+    }
+
     return createOpenAI({
       apiKey: this.options.apiKey,
       baseURL: this.options.apiHost,
-      fetch: createFetchWithProxy(this.options.useProxy, this.dependencies),
-      headers: this.options.apiHost.includes('openrouter.ai')
-        ? {
-            'HTTP-Referer': 'https://chatboxai.app',
-            'X-Title': 'Chatbox AI',
-          }
-        : undefined,
+      fetch: this.options.customFetch || createFetchWithProxy(this.options.useProxy, this.dependencies),
+      headers,
     })
   }
 
@@ -81,13 +101,24 @@ export default class OpenAI extends AbstractAISDKModel {
   }
 
   public listModels() {
+    if (this.options.skipRemoteModelList && this.options.listModelsFallback) {
+      return Promise.resolve(this.options.listModelsFallback)
+    }
     return fetchRemoteModels(
       {
         apiHost: this.options.apiHost,
         apiKey: this.options.apiKey,
         useProxy: this.options.useProxy,
+        extraHeaders: this.options.extraHeaders,
+        customFetch: this.options.customFetch,
       },
       this.dependencies
-    )
+    ).catch((error) => {
+      if (this.options.listModelsFallback) {
+        console.warn(`[OpenAI] Failed to fetch remote models for ${this.options.apiHost}, using fallback.`, error)
+        return this.options.listModelsFallback
+      }
+      throw error
+    })
   }
 }

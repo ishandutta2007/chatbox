@@ -28,7 +28,7 @@ export const deepseekProvider = defineProvider({
   createModel: (config) => {
     return new DeepSeek(
       {
-        apiKey: config.providerSetting.apiKey || '',
+        apiKey: config.effectiveApiKey,
         model: config.model,
         temperature: config.settings.temperature,
         topP: config.settings.topP,

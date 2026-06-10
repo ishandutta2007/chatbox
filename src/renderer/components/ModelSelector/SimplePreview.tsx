@@ -80,7 +80,6 @@ export function SimplePreview() {
                   selectedProviderId={selectedModel.provider}
                   selectedModelId={selectedModel.model}
                   onSelect={(provider, model) => {
-                    console.log('Selected:', provider, model)
                     setSelectedModel({ provider, model })
                   }}
                 >
@@ -104,13 +103,7 @@ export function SimplePreview() {
                 <Text size="sm" fw={500} mb="xs">
                   Search Position: Top
                 </Text>
-                <ModelSelector
-                  showAuto={true}
-                  searchPosition="top"
-                  onSelect={(provider, model) => {
-                    console.log('Search Top:', provider, model)
-                  }}
-                >
+                <ModelSelector showAuto={true} searchPosition="top" onSelect={(provider, model) => {}}>
                   <Button
                     variant="light"
                     fullWidth
@@ -132,13 +125,7 @@ export function SimplePreview() {
                 <Text size="sm" fw={500} mb="xs">
                   Without Auto Option
                 </Text>
-                <ModelSelector
-                  showAuto={false}
-                  searchPosition="bottom"
-                  onSelect={(provider, model) => {
-                    console.log('No Auto:', provider, model)
-                  }}
-                >
+                <ModelSelector showAuto={false} searchPosition="bottom" onSelect={(provider, model) => {}}>
                   <Button
                     variant="light"
                     fullWidth
@@ -160,12 +147,7 @@ export function SimplePreview() {
                 <Text size="sm" fw={500} mb="xs">
                   Custom Button Style
                 </Text>
-                <ModelSelector
-                  showAuto={true}
-                  onSelect={(provider, model) => {
-                    console.log('Custom:', provider, model)
-                  }}
-                >
+                <ModelSelector showAuto={true} onSelect={(provider, model) => {}}>
                   <Button
                     variant="gradient"
                     gradient={{ from: 'blue', to: 'cyan' }}

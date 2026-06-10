@@ -15,8 +15,8 @@ export async function rerank(
   const { topK = 5 } = options
 
   // Extract text content from results for reranking
-  const documents = results.map((result) => result?.metadata?.text || '').filter(text => text.length > 0)
-  
+  const documents = results.map((result) => result?.metadata?.text || '').filter((text) => text.length > 0)
+
   if (documents.length === 0) {
     return []
   }
@@ -32,7 +32,7 @@ export async function rerank(
   // Map rerank results back to original QueryResult format
   const rerankResults: RerankResult[] = response.results.map((rerankItem) => {
     const originalResult = results[rerankItem.index]
-    
+
     return {
       result: originalResult,
       score: rerankItem.relevanceScore,

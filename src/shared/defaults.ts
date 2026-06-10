@@ -87,6 +87,9 @@ export function settings(): Settings {
 
     allowReportingAndTracking: true,
 
+    hasExpiredLicense: false,
+    chatboxAIDesktopPromptDismissed: false,
+
     enableMarkdownRendering: true,
     enableLaTeXRendering: true,
     enableMermaidRendering: true,
@@ -126,6 +129,9 @@ export function settings(): Settings {
         provider: 'build-in',
         tavilyApiKey: '',
         bochaApiKey: '',
+        queritApiKey: '',
+        queritMaxResults: 5,
+        queritTimeRange: 'none',
       },
       knowledgeBase: {
         models: {

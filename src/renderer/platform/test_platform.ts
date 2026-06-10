@@ -12,6 +12,7 @@ import type { Config, Language, Settings, ShortcutSetting } from '@shared/types'
 import { v4 as uuidv4 } from 'uuid'
 import { type ImageGenerationStorage, IndexedDBImageGenerationStorage } from '@/storage/ImageGenerationStorage'
 import { IndexedDBSessionMetaStorage, type SessionMetaStorage } from '@/storage/SessionMetaStorage'
+import { IndexedDBTaskSessionStorage, type TaskSessionStorage } from '@/storage/TaskSessionStorage'
 import type { Exporter, Platform, PlatformType, Storage } from './interfaces'
 import type { KnowledgeBaseController } from './knowledge-base/interface'
 import type { SessionAttachmentRagController } from './session-attachment-rag/interface'
@@ -119,6 +120,7 @@ export default class TestPlatform implements Platform {
   private storage = new InMemoryStorage()
   private _sessionMetaStorage: SessionMetaStorage | null = null
   private _imageGenerationStorage: ImageGenerationStorage | null = null
+  private _taskSessionStorage: TaskSessionStorage | null = null
   private blobs = new Map<string, string>()
   private configs: Config | null = null
   private settings: Settings | null = null
@@ -330,12 +332,20 @@ export default class TestPlatform implements Platform {
     return this._imageGenerationStorage
   }
 
+  public getTaskSessionStorage(): TaskSessionStorage {
+    if (!this._taskSessionStorage) {
+      this._taskSessionStorage = new IndexedDBTaskSessionStorage()
+    }
+    return this._taskSessionStorage
+  }
+
   public getSessionMetaStorage(): SessionMetaStorage {
     if (!this._sessionMetaStorage) {
       this._sessionMetaStorage = new IndexedDBSessionMetaStorage()
     }
     return this._sessionMetaStorage
   }
+
   public async minimize(): Promise<void> {
     // no-op
   }
@@ -403,6 +413,7 @@ export default class TestPlatform implements Platform {
     this.settings = null
     this._sessionMetaStorage = null
     this._imageGenerationStorage = null
+    this._taskSessionStorage = null
   }
 
   /**

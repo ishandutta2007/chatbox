@@ -1,5 +1,5 @@
 import type { Message } from '@shared/types/session'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { analyzeTokenRequirements } from '../analyzer'
 import { computationQueue, generateTaskId } from '../computation-queue'
 import { getTokenizerType } from '../tokenizer'
@@ -19,6 +19,7 @@ export function useTokenEstimation(options: UseTokenEstimationOptions): TokenEst
   const tokenizerType = useMemo(() => getTokenizerType(model), [model])
 
   const [queueStatus, setQueueStatus] = useState({ pending: 0, running: 0 })
+  const lastInvalidatedTaskSignature = useRef<string>('')
 
   useEffect(() => {
     const updateStatus = () => {
@@ -58,8 +59,14 @@ export function useTokenEstimation(options: UseTokenEstimationOptions): TokenEst
   useEffect(() => {
     if (!sessionId || sessionId === 'new') return
 
-    if (pendingTaskIds.length > 0) {
+    const pendingTaskSignature = pendingTaskIds.join('|')
+    if (pendingTaskIds.length > 0 && pendingTaskSignature !== lastInvalidatedTaskSignature.current) {
       computationQueue.invalidateCompletedTasks(pendingTaskIds)
+      lastInvalidatedTaskSignature.current = pendingTaskSignature
+    }
+
+    if (pendingTaskIds.length === 0) {
+      lastInvalidatedTaskSignature.current = ''
     }
 
     // Cancel tasks for messages no longer in context (e.g., maxContextMessageCount changed)

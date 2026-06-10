@@ -110,7 +110,10 @@ export const ProviderHeader = ({
         ) : provider.isCustom ? (
           <ScalableIcon icon={IconServer} size={iconSize} className={iconClass} />
         ) : (
-          <ScalableIcon icon={ProviderIcon} size={iconSize} provider={provider.id} className={iconClass} />
+          // ProviderIcon renders its own SVG icon per provider.id and doesn't conform
+          // to tabler's IconProps interface, so we render it directly instead of
+          // wrapping in ScalableIcon which expects a tabler-compatible icon component.
+          <ProviderIcon size={iconSize} provider={provider.id} className={iconClass} />
         )}
         <Text span c={textColor} size="sm" fw={textWeight}>
           {provider.name}

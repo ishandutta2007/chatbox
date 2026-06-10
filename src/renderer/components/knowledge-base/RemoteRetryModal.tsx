@@ -12,6 +12,7 @@ import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Modal } from '@/components/layout/Overlay'
+import { toastError } from '@/packages/toast'
 import platform from '@/platform'
 
 /**
@@ -79,7 +80,7 @@ export function RemoteRetryModal({ opened, onClose, failedFiles, onSuccess }: Re
       onSuccess()
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error)
-      toast.error(t('Failed to retry {{filename}}: {{error}}', { filename, error: errorMessage }))
+      toastError(t('Failed to retry {{filename}}: {{error}}', { filename, error: errorMessage }))
     } finally {
       setRetryingIds((prev) => prev.filter((id) => id !== fileId))
     }
@@ -99,7 +100,7 @@ export function RemoteRetryModal({ opened, onClose, failedFiles, onSuccess }: Re
         toast.success(t('{{count}} file(s) queued for server parsing', { count: successCount }))
       }
       if (failCount > 0) {
-        toast.error(t('{{count}} file(s) failed to queue', { count: failCount }))
+        toastError(t('{{count}} file(s) failed to queue', { count: failCount }))
       }
 
       onSuccess()

@@ -16,10 +16,13 @@ interface Options {
 export default class Perplexity extends AbstractAISDKModel {
   public name = 'Perplexity API'
 
-  constructor(public options: Options, dependencies: ModelDependencies) {
+  constructor(
+    public options: Options,
+    dependencies: ModelDependencies
+  ) {
     super(options, dependencies)
   }
-  
+
   protected getProvider() {
     return createPerplexity({
       apiKey: this.options.perplexityApiKey,

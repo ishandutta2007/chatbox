@@ -222,6 +222,18 @@ describe('attachment-payload', () => {
       expect(result.map((m) => m.id)).toEqual(['msg3', 'msg4', 'msg5'])
     })
 
+    it('should return no messages when maxContextMessageCount is 0 without preserveLastUserMessage', () => {
+      const messages: Message[] = [createMessage('user', 'msg1', 'msg1'), createMessage('assistant', 'msg2', 'msg2')]
+
+      const result = selectMessagesForSendContext({
+        settings: { maxContextMessageCount: 0 },
+        msgs: messages,
+        preserveLastUserMessage: false,
+      })
+
+      expect(result).toEqual([])
+    })
+
     it('should use default keepToolCallRounds = 2', () => {
       const messages: Message[] = [createMessage('user', 'hello', 'msg1')]
 

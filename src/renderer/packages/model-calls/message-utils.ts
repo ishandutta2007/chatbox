@@ -1,8 +1,8 @@
-import type { JSONValue } from '@ai-sdk/provider'
-import type { ReasoningPart } from '@ai-sdk/provider-utils'
 import type { Message, MessageContentParts, MessageToolCallPart } from '@shared/types'
 import type { ModelDependencies } from '@shared/types/adapters'
+import type { ReasoningPart } from '@ai-sdk/provider-utils'
 import type { FilePart, ImagePart, ModelMessage, TextPart, ToolCallPart } from 'ai'
+import type { JSONValue } from '@ai-sdk/provider'
 import dayjs from 'dayjs'
 import { compact } from 'lodash'
 import { createModelDependencies } from '@/adapters'
@@ -68,7 +68,7 @@ async function convertContentParts<T extends TextPart | ImagePart | FilePart>(
   )
 }
 
-function convertUserContentParts(
+async function convertUserContentParts(
   contentParts: MessageContentParts,
   dependencies: ModelDependencies,
   options?: { modelSupportVision: boolean }

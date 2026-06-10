@@ -53,8 +53,11 @@ describe('addAnthropicCacheControl', () => {
     const messages: ModelMessage[] = [
       { role: 'system', content: 'you are helpful' },
       { role: 'user', content: [{ type: 'text', text: 'first' }] },
-      { role: 'assistant', content: [{ type: 'tool-call', toolCallId: 't1', toolName: 'search', args: {} }] },
-      { role: 'tool', content: [{ type: 'tool-result', toolCallId: 't1', toolName: 'search', result: 'found' }] },
+      { role: 'assistant', content: [{ type: 'tool-call', toolCallId: 't1', toolName: 'search', input: {} }] },
+      {
+        role: 'tool',
+        content: [{ type: 'tool-result', toolCallId: 't1', toolName: 'search', output: { type: 'text', value: 'found' } }],
+      },
       { role: 'assistant', content: [{ type: 'text', text: 'response1' }] },
       { role: 'user', content: [{ type: 'text', text: 'second' }] },
       { role: 'assistant', content: [{ type: 'text', text: 'response2' }] },

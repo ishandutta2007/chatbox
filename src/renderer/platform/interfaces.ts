@@ -2,6 +2,7 @@
 import type { Config, Language, Settings, ShortcutSetting } from '@shared/types'
 import type { ImageGenerationStorage } from '@/storage/ImageGenerationStorage'
 import type { SessionMetaStorage } from '@/storage/SessionMetaStorage'
+import type { TaskSessionStorage } from '@/storage/TaskSessionStorage'
 import type { KnowledgeBaseController } from './knowledge-base/interface'
 import type { SessionAttachmentRagController } from './session-attachment-rag/interface'
 
@@ -102,7 +103,41 @@ export interface Platform extends Storage {
 
   getImageGenerationStorage(): ImageGenerationStorage
 
+  getTaskSessionStorage(): TaskSessionStorage
+
   getSessionMetaStorage(): SessionMetaStorage
+
+  // Sandbox operations (Desktop only)
+  sandboxInit?(config: { workingDirectory: string }): Promise<{ success: boolean; error?: string }>
+  sandboxExec?(params: {
+    command: string
+    timeout?: number
+  }): Promise<{ stdout: string; stderr: string; exitCode: number }>
+  sandboxRead?(params: { filePath: string }): Promise<{ success: boolean; content?: string; error?: string }>
+  sandboxWrite?(params: { filePath: string; content: string }): Promise<{ success: boolean; error?: string }>
+  sandboxEdit?(params: {
+    filePath: string
+    search: string
+    replace: string
+  }): Promise<{ success: boolean; error?: string }>
+  sandboxLs?(params: { dirPath: string }): Promise<{ success: boolean; content?: string; error?: string }>
+  sandboxGrep?(params: {
+    pattern: string
+    dirPath?: string
+    include?: string
+  }): Promise<{ success: boolean; content?: string; error?: string }>
+  sandboxFind?(params: {
+    dirPath: string
+    pattern?: string
+  }): Promise<{ success: boolean; content?: string; error?: string }>
+  sandboxKill?(): Promise<{ killed: boolean }>
+  sandboxReset?(): Promise<{ success: boolean; error?: string }>
+  sandboxStatus?(): Promise<{ state: string; workingDirectory?: string | null; platform?: string }>
+  sandboxCheckAvailability?(): Promise<{ available: boolean; reason?: string }>
+
+  // Directory dialog (Desktop only)
+  openDirectoryDialog?(): Promise<{ canceled: boolean; path?: string }>
+
   // window controls
   minimize(): Promise<void>
 

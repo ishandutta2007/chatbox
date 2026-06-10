@@ -43,7 +43,7 @@ interface DesktopModelSelectorProps {
   onSearchChange: (search: string) => void
   onOptionSubmit: (val: string) => void
   onDropdownOpen?: () => void
-  modelFilter?: (model: ProviderModelInfo) => boolean
+  modelFilter?: (model: ProviderModelInfo, providerId?: string) => boolean
   comboboxProps?: ComboboxProps
   searchPosition?: 'top' | 'bottom'
 }
@@ -109,14 +109,20 @@ export const DesktopModelSelector = forwardRef<HTMLDivElement, DesktopModelSelec
       onSearchChange,
       onOptionSubmit,
       onDropdownOpen,
+      modelFilter,
       comboboxProps,
       searchPosition = 'bottom',
     },
     ref
   ) => {
     const { t } = useTranslation()
-    const { favoritedModels, favoriteModel, unfavoriteModel, isFavoritedModel } = useProviders()
+    const { favoritedModels: allFavoritedModels, favoriteModel, unfavoriteModel, isFavoritedModel } = useProviders()
     const [collapsedProviders, setCollapsedProviders] = useAtom(collapsedProvidersAtom)
+
+    const favoritedModels = useMemo(() => {
+      if (!allFavoritedModels || !modelFilter) return allFavoritedModels
+      return allFavoritedModels.filter((fm) => fm.model && fm.provider && modelFilter(fm.model, fm.provider.id))
+    }, [allFavoritedModels, modelFilter])
 
     const toggleProviderCollapse = (providerId: string) => {
       setCollapsedProviders((prev) => ({

@@ -1,5 +1,6 @@
-import { migrateMessage } from '@/utils/message'
-import { ModelProviderEnum, Session } from '../../shared/types'
+import type { Session } from '../../shared/types'
+import { ModelProviderEnum } from '../../shared/types'
+import { migrateMessage } from '../../shared/utils/message'
 
 export const defaultSessionsForEN: Session[] = [
   {
@@ -1030,5 +1031,5 @@ mindmap
   threads: [],
 }
 
-defaultSessionsForCN.unshift(imageCreatorSessionForCN, artifactSessionCN, mermaidSessionCN)
-defaultSessionsForEN.unshift(imageCreatorSessionForEN, artifactSessionEN, mermaidSessionEN)
+defaultSessionsForCN.unshift(artifactSessionCN, mermaidSessionCN)
+defaultSessionsForEN.unshift(artifactSessionEN, mermaidSessionEN)

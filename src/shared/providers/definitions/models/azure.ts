@@ -27,7 +27,10 @@ interface Options {
 export default class AzureOpenAI extends AbstractAISDKModel {
   public name = 'Azure OpenAI'
 
-  constructor(public options: Options, dependencies: ModelDependencies) {
+  constructor(
+    public options: Options,
+    dependencies: ModelDependencies
+  ) {
     super(options, dependencies)
   }
 

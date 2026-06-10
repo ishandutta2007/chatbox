@@ -1,6 +1,6 @@
 import { Alert, Button, Flex, Group, Paper, Pill, Stack, Text, Title, Tooltip } from '@mantine/core'
 import { SystemProviders } from '@shared/defaults'
-import type { KnowledgeBase, ModelProvider, ProviderModelInfo } from '@shared/types'
+import type { KnowledgeBase, ProviderModelInfo } from '@shared/types'
 import type { DocumentParserConfig, DocumentParserType } from '@shared/types/settings'
 import { parseKnowledgeBaseModelString } from '@shared/utils/knowledge-base-model-parser'
 import { IconAlertTriangle, IconInfoCircle, IconLogin, IconPlus } from '@tabler/icons-react'
@@ -9,15 +9,15 @@ import flatten from 'lodash/flatten'
 import type React from 'react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { toast } from 'sonner'
+import { Modal } from '@/components/layout/Overlay'
 import { useProviders } from '@/hooks/useProviders'
 import { navigateToSettings } from '@/modals/Settings'
 import * as remote from '@/packages/remote'
+import { toastError } from '@/packages/toast'
 import platform from '@/platform'
 import { useAuthInfoStore } from '@/stores/authInfoStore'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { trackEvent } from '@/utils/track'
-import { Modal } from '../layout/Overlay'
 import { ScalableIcon } from '../common/ScalableIcon'
 import KnowledgeBaseDocuments from './KnowledgeBaseDocuments'
 import {
@@ -213,11 +213,7 @@ const KnowledgeBasePage: React.FC = () => {
 
   const getProviderName = useCallback(
     (providerId: string) => {
-      if (
-        SystemProviders()
-          .map((it) => it.id)
-          .includes(providerId as ModelProvider)
-      ) {
+      if (SystemProviders().some((it) => it.id === providerId)) {
         return SystemProviders().find((it) => it.id === providerId)?.name
       }
 
@@ -282,7 +278,7 @@ const KnowledgeBasePage: React.FC = () => {
         setKbList(list)
       }
     } catch (error) {
-      toast.error(t('Failed to fetch knowledge base list, Error: {{error}}', { error: error }))
+      toastError(t('Failed to fetch knowledge base list, Error: {{error}}', { error: error }))
     }
   }, [knowledgeBaseController, isUnsupportedPlatform, t])
 
@@ -314,7 +310,7 @@ const KnowledgeBasePage: React.FC = () => {
           setChatboxAIModels(config.knowledge_base_models)
         }
       } catch (error) {
-        toast.error(t('Failed to fetch Chatbox AI models config, Error: {{error}}', { error: error }))
+        toastError(t('Failed to fetch Chatbox AI models config, Error: {{error}}', { error: error }))
       }
     }
     fetchChatboxAIModels()
@@ -374,7 +370,7 @@ const KnowledgeBasePage: React.FC = () => {
       setShowCreate(false)
       fetchKbList()
     } catch (e) {
-      toast.error(t('Failed to create knowledge base, Error: {{error}}', { error: e }))
+      toastError(t('Failed to create knowledge base, Error: {{error}}', { error: e }))
     }
   }
 
@@ -399,7 +395,7 @@ const KnowledgeBasePage: React.FC = () => {
       setEditVisionModel(null)
       fetchKbList()
     } catch (e) {
-      toast.error(t('Failed to update knowledge base, Error: {{error}}', { error: e }))
+      toastError(t('Failed to update knowledge base, Error: {{error}}', { error: e }))
     }
   }
 

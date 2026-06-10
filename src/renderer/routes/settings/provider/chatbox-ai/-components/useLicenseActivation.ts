@@ -64,15 +64,10 @@ export function useLicenseActivation({ settings, onActivationSuccess }: UseLicen
       } else {
         onActivationSuccess?.()
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       // 提取具体的错误信息：API 返回的 error 对象或通用错误消息
-      const errorDetail =
-        e?.data?.error?.detail ||
-        e?.data?.error?.title ||
-        e?.error?.detail ||
-        e?.error?.title ||
-        e?.message ||
-        'Unknown error'
+      const err = e as { data?: { error?: { detail?: string } }; message?: string }
+      const errorDetail = err?.data?.error?.detail || err?.message || 'Unknown error'
       setActivateError(errorDetail)
     } finally {
       setActivating(false)
@@ -94,7 +89,6 @@ export function useLicenseActivation({ settings, onActivationSuccess }: UseLicen
     const isUserInput = memorizedManualLicenseKey !== prevKeyRef.current && memorizedManualLicenseKey.length >= 36
 
     if (!isDeactivating && isUserInput && !settings.licenseInstances?.[memorizedManualLicenseKey] && !activated) {
-      console.log('auto activate')
       activate()
     }
 

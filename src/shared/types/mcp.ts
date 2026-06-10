@@ -21,4 +21,4 @@ export type MCPTransportConfig =
 export type MCPServerStatus = {
   state: 'idle' | 'starting' | 'running' | 'stopping'
   error?: string
-} 
+}

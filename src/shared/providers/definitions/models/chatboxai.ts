@@ -1,9 +1,9 @@
+import { type AnthropicProviderOptions, createAnthropic } from '@ai-sdk/anthropic'
 import {
   createGoogleGenerativeAI,
   type GoogleGenerativeAIProvider,
   type GoogleGenerativeAIProviderOptions,
 } from '@ai-sdk/google'
-import { createAnthropic } from '@ai-sdk/anthropic'
 import { buildGeminiImageConfig } from '../gemini-types'
 import { createOpenAI, type OpenAIProvider } from '@ai-sdk/openai'
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible'
@@ -114,7 +114,29 @@ export default class ChatboxAI extends AbstractAISDKModel implements ModelInterf
     }
   }
 
-  protected getCallSettings() {
+  protected getCallSettings(options: CallChatCompletionOptions): CallSettings {
+    if (this.options.model.apiStyle === 'anthropic') {
+      const isModelSupportReasoning = this.isSupportReasoning()
+      let providerOptions = {} as { anthropic: AnthropicProviderOptions }
+      if (isModelSupportReasoning) {
+        providerOptions = {
+          anthropic: {
+            ...(options.providerOptions?.claude || {}),
+          },
+        }
+      }
+      // Anthropic API requires only one of temperature or topP
+      const callSettings: CallSettings = {
+        providerOptions,
+        maxOutputTokens: this.options.maxOutputTokens,
+      }
+      if (this.options.temperature !== undefined) {
+        callSettings.temperature = this.options.temperature
+      } else if (this.options.topP !== undefined) {
+        callSettings.topP = this.options.topP
+      }
+      return callSettings
+    }
     return {
       temperature: this.options.temperature,
       topP: this.options.topP,
@@ -141,7 +163,7 @@ export default class ChatboxAI extends AbstractAISDKModel implements ModelInterf
       aspectRatio?: string
     },
     signal?: AbortSignal,
-    callback?: (picBase64: string) => void
+    callback?: (picBase64: string) => void | Promise<void>
   ): Promise<string[]> {
     if (this.options.model.apiStyle === 'google') {
       return this.paintWithGemini(params, signal, callback)
@@ -157,7 +179,7 @@ export default class ChatboxAI extends AbstractAISDKModel implements ModelInterf
       aspectRatio?: string
     },
     signal?: AbortSignal,
-    callback?: (picBase64: string) => void
+    callback?: (picBase64: string) => void | Promise<void>
   ): Promise<string[]> {
     const provider = this.getGoogleProvider()
     const model = provider.chat(this.options.model.modelId)
@@ -175,8 +197,9 @@ export default class ChatboxAI extends AbstractAISDKModel implements ModelInterf
       const providerOptions: GoogleGenerativeAIProviderOptions = {
         responseModalities: ['TEXT', 'IMAGE'],
       }
-      if (params.aspectRatio && params.aspectRatio !== 'auto') {
-        providerOptions.imageConfig = { aspectRatio: params.aspectRatio }
+      const imageConfig = buildGeminiImageConfig(params.aspectRatio)
+      if (imageConfig) {
+        providerOptions.imageConfig = imageConfig
       }
 
       const result = streamText({
@@ -194,7 +217,7 @@ export default class ChatboxAI extends AbstractAISDKModel implements ModelInterf
         if (chunk.type === 'file' && chunk.file.mediaType?.startsWith('image/') && chunk.file.base64) {
           const dataUrl = `data:${chunk.file.mediaType};base64,${chunk.file.base64}`
           results.push(dataUrl)
-          callback?.(dataUrl)
+          await callback?.(dataUrl)
         }
       }
     }
@@ -223,15 +246,13 @@ export default class ChatboxAI extends AbstractAISDKModel implements ModelInterf
       aspectRatio?: string
     },
     signal?: AbortSignal,
-    callback?: (picBase64: string) => void
+    callback?: (picBase64: string) => void | Promise<void>
   ): Promise<string[]> {
     const concurrence: Promise<string>[] = []
     for (let i = 0; i < params.num; i++) {
       concurrence.push(
-        this.callImageGeneration(params.prompt, params.images, params.aspectRatio, signal).then((picBase64) => {
-          if (callback) {
-            callback(picBase64)
-          }
+        this.callImageGeneration(params.prompt, params.images, params.aspectRatio, signal).then(async (picBase64) => {
+          await callback?.(picBase64)
           return picBase64
         })
       )

@@ -12,9 +12,10 @@ import clsx from 'clsx'
 import { type FC, useCallback, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Toaster } from 'sonner'
+import { z } from 'zod'
+import { ScalableIcon } from '@/components/common/ScalableIcon'
 import SettingsKnowledgeBaseRouteComponent from '@/components/knowledge-base/KnowledgeBase'
 import { Modal } from '@/components/layout/Overlay'
-import { ScalableIcon } from '@/components/common/ScalableIcon'
 import { getThemeDesign } from '@/hooks/useAppTheme'
 import useNeedRoomForWinControls from '@/hooks/useNeedRoomForWinControls'
 import { router } from '@/router'
@@ -31,6 +32,7 @@ import { RouteComponent as SettingsProviderChatboxAiRouteComponent } from '@/rou
 import { RouteComponent as SettingsProviderIndexRouteComponent } from '@/routes/settings/provider/index'
 import { RouteComponent as SettingsProviderRouteRouteComponent } from '@/routes/settings/provider/route'
 import { SettingsRoot } from '@/routes/settings/route'
+import { RouteComponent as SettingsSkillsRouteComponent } from '@/routes/settings/skills'
 import { RouteComponent as SettingsWebSearchRouteComponent } from '@/routes/settings/web-search'
 
 export type SettingsModalProps = {}
@@ -38,25 +40,27 @@ export type SettingsModalProps = {}
 export const SettingsModal: FC<SettingsModalProps> = (props) => {
   const { t } = useTranslation()
   const location = useLocation()
+  const search = location.search as { settings?: string }
   const { needRoomForMacWindowControls } = useNeedRoomForWinControls()
 
   useEffect(() => {
-    if (location.search.settings) {
-      settingsModalHistory.replace(location.search.settings)
+    if (search.settings) {
+      settingsModalHistory.replace(search.settings)
     }
-  }, [location.search.settings])
+  }, [search.settings])
 
   const onClose = useCallback(() => {
-    const { settings: _, ...otherSearch } = router.state.location.search
+    const currentSearch = router.state.location.search as { settings?: string }
+    const { settings: _, ...otherSearch } = currentSearch
     router.navigate({
-      to: router.state.location.pathname,
+      to: router.state.location.pathname as '/',
       search: otherSearch,
     })
   }, [])
 
   return (
     <Modal
-      opened={!!location.search.settings}
+      opened={!!search.settings}
       onClose={onClose}
       // size="1200"
       fullScreen={true}
@@ -100,7 +104,12 @@ export const SettingsModal: FC<SettingsModalProps> = (props) => {
       <Box flex={1} w="100%" maw={1200} mx="auto" className="overflow-auto">
         <RouterProvider router={modalRouter} />
       </Box>
-      <Toaster richColors position="bottom-center" />
+      <Toaster
+        richColors
+        position="bottom-center"
+        style={{ zIndex: 2147483647 }}
+        toastOptions={{ style: { zIndex: 2147483647 } }}
+      />
     </Modal>
   )
 }
@@ -108,13 +117,13 @@ export const SettingsModal: FC<SettingsModalProps> = (props) => {
 export default SettingsModal
 
 export function navigateToSettings(path?: string) {
-  if (window.matchMedia(`(max-width:${getThemeDesign('light', 16, 'en').breakpoints?.values?.sm || 640}px)`).matches) {
+  if (window.matchMedia(`(max-width:${getThemeDesign('light', 'en').breakpoints?.values?.sm || 640}px)`).matches) {
     router.navigate({
-      to: `/settings${path ? (path.startsWith('/') ? path : `/${path}`) : ''}`,
+      to: `/settings${path ? (path.startsWith('/') ? path : `/${path}`) : ''}` as '/settings',
     })
   } else {
     router.navigate({
-      to: router.state.location.pathname,
+      to: router.state.location.pathname as '/',
       search: {
         settings: `/settings${path ? (path.startsWith('/') ? path : `/${path}`) : ''}`,
       },
@@ -126,6 +135,7 @@ export function navigateToSettings(path?: string) {
 }
 
 const RootRoute = createRootRoute({
+  validateSearch: z.object({}),
   component: SettingsRoot,
 })
 
@@ -162,6 +172,12 @@ const SettingsWebSearchRoute = createRoute({
 const SettingsMcpRoute = createRoute({
   component: SettingsMcpRouteComponent,
   path: '/settings/mcp',
+  getParentRoute: () => RootRoute,
+})
+
+const SettingsSkillsRoute = createRoute({
+  component: SettingsSkillsRouteComponent,
+  path: '/settings/skills',
   getParentRoute: () => RootRoute,
 })
 
@@ -226,6 +242,7 @@ const routeTree = RootRoute.addChildren([
   SettingsChatRoute,
   SettingsWebSearchRoute,
   SettingsMcpRoute,
+  SettingsSkillsRoute,
   SettingsKnowledgeBaseRoute,
   SettingsDocumentParserRoute,
   SettingsHotkeysRoute,

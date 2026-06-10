@@ -80,6 +80,10 @@ export function selectMessagesForSendContext(params: SelectMessagesForSendContex
 
   const limit = preserveLastUserMessage ? maxContextMessageCount + 1 : maxContextMessageCount
 
+  if (limit <= 0) {
+    return []
+  }
+
   if (filtered.length <= limit) {
     return filtered
   }

@@ -636,9 +636,8 @@ describe('getContextMessageIds', () => {
       messages: [createMessage('m1', 'user', 'Hello'), createMessage('m2', 'assistant', 'Hi')],
     }
 
-    // maxCount of 0 should return all (treated as no limit)
     const result = getContextMessageIds(session, 0)
 
-    expect(result).toEqual(['m1', 'm2'])
+    expect(result).toEqual([])
   })
 })

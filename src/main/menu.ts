@@ -16,7 +16,14 @@ export default class MenuBuilder {
   buildMenu(): Menu {
     const locale = new Locale()
     // 监听右键菜单
-    this.mainWindow.webContents.on('context-menu', (_, props) => {
+    this.mainWindow.webContents.on('context-menu', (event, props) => {
+      const hasSelection = Boolean(props.selectionText?.trim())
+
+      // 没有选中文本：禁止右键菜单
+      if (!hasSelection) {
+        event.preventDefault()
+        return
+      }
       const items: (Electron.MenuItem | Electron.MenuItemConstructorOptions)[] = [
         { role: 'copy', label: locale.t('Copy'), accelerator: 'CmdOrCtrl+C' },
         { role: 'cut', label: locale.t('Cut'), accelerator: 'CmdOrCtrl+X' },

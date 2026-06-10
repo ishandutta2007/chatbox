@@ -459,6 +459,16 @@ export function LinkMiniCard(props: {
           </Typography>
         </div>
       </Tooltip>
+
+      {/* Status indicator */}
+      {status && (
+        <div className="absolute bottom-1 left-1">
+          {status === 'processing' && <Loader2 size="16" className="animate-spin text-blue-500" />}
+          {status === 'completed' && <CheckCircle size="16" className="text-green-500" />}
+          {status === 'error' && <AlertCircle size="16" className="text-red-500" />}
+        </div>
+      )}
+
       {onDelete && (
         <MiniButton
           className="hidden group-hover/file-mini-card:inline-block

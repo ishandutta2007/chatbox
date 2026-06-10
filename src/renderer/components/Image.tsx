@@ -22,6 +22,7 @@ export const ImageInStorage = memo(
         return blob ? blob : false
       },
       staleTime: Infinity,
+      gcTime: 60 * 1000,
     })
 
     if (!base64) {

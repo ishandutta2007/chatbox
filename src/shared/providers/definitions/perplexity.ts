@@ -21,7 +21,7 @@ export const perplexityProvider = defineProvider({
   createModel: (config) => {
     return new Perplexity(
       {
-        perplexityApiKey: config.providerSetting.apiKey || '',
+        perplexityApiKey: config.effectiveApiKey,
         model: config.model,
         temperature: config.settings.temperature,
         topP: config.settings.topP,

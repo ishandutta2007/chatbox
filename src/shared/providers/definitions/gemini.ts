@@ -84,7 +84,7 @@ export const geminiProvider = defineProvider({
   createModel: (config) => {
     return new Gemini(
       {
-        geminiAPIKey: config.providerSetting.apiKey || '',
+        geminiAPIKey: config.effectiveApiKey,
         geminiAPIHost: config.formattedApiHost,
         model: config.model,
         temperature: config.settings.temperature,

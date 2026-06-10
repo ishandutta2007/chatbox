@@ -9,7 +9,7 @@ import { ofetch } from 'ofetch'
 // 事件名、参数名，必须是字母、数字、下划线的组合
 
 const measurement_id = `G-B365F44W6E`
-const api_secret = `pRnsvLo-REWLVzV_PbKvWg`
+const api_secret = `3H5zJ3WTSAm-4jOajRDP7A`
 
 export async function event(name: string, params: any = {}) {
   const clientId = store.getConfig().uuid

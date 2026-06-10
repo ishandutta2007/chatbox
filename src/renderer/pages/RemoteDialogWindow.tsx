@@ -32,7 +32,7 @@ export default function RemoteDialogWindow() {
         setOpen(true)
       }
     } catch (e) {
-      console.log(e)
+      console.error('Failed to check remote dialog:', e)
     }
   }
   useEffect(() => {

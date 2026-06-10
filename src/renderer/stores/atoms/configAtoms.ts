@@ -1,4 +1,3 @@
-import type { RemoteConfig } from '@shared/types'
 import { atomWithStorage } from 'jotai/utils'
 import storage, { StorageKey } from '../../storage'
 
@@ -6,4 +5,8 @@ import storage, { StorageKey } from '../../storage'
 // export const configVersionAtom = atomWithStorage<number>(StorageKey.ConfigVersion, 0, storage) // Keep commented out if original was
 
 // 远程配置
-export const remoteConfigAtom = atomWithStorage<Partial<RemoteConfig>>(StorageKey.RemoteConfig, {}, storage)
+export const remoteConfigAtom = atomWithStorage<{ setting_chatboxai_first?: boolean; current_version?: string }>(
+  StorageKey.RemoteConfig,
+  {},
+  storage
+)

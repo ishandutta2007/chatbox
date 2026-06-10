@@ -56,7 +56,7 @@ export const groqProvider = defineProvider({
   createModel: (config) => {
     return new Groq(
       {
-        apiKey: config.providerSetting.apiKey || '',
+        apiKey: config.effectiveApiKey,
         model: config.model,
         temperature: config.settings.temperature,
         topP: config.settings.topP,

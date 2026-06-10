@@ -84,7 +84,11 @@ export default class BaseStorage {
     return platform.setAllStoreValues(data)
   }
 
-  // TODO: 这些数据也应该实现数据导出与导入
+  // TODO: Blob 数据也应纳入导出/导入，至少包含：
+  // - `picture:*` 图片附件内容
+  // - `file:*` / `file:<name>-<size>-<mtime>` 文件解析内容与缓存文本
+  // - `link:*` 网页解析内容缓存
+  // - 与附件/链接相关的 `*_tokenMap` 统计键（用于恢复 token 预估与预览元数据）
   public async setBlob(key: string, value: string) {
     return platform.setStoreBlob(key, value)
   }

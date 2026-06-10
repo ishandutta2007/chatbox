@@ -1,4 +1,6 @@
 .msg-block {
+  font-size: var(--chatbox-msg-font-size, 14px);
+
   /* 避免用户复制时，复制到文字的样式 */
   -webkit-user-select: text;
   user-select: text;
@@ -27,6 +29,21 @@
   .msg-content {
     overflow-x: auto;
   }
+}
+
+/* Bubble layout: ensure user message links match bubble text color (white on brand background) */
+.bubble-user-msg .msg-content a {
+  color: var(--chatbox-tint-white);
+  text-decoration: underline;
+}
+
+.bubble-user-msg .msg-content a:visited {
+  color: var(--chatbox-tint-white);
+}
+
+.bubble-user-msg .msg-content a:hover {
+  color: var(--chatbox-tint-white);
+  text-decoration: underline;
 }
 
 /* // markdown table */

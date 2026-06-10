@@ -47,7 +47,7 @@ export default function CreatableSelect(props: {
       getOptionLabel={(option) => {
         return option
       }}
-      renderOption={(props, option) => {
+      renderOption={({ key: _key, ...props }, option) => {
         if (!options.includes(option)) {
           return (
             <li

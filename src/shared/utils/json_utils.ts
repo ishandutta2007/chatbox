@@ -9,4 +9,4 @@ export function parseJsonOrEmpty(json: string): any {
   } catch (e) {
     return {}
   }
-} 
+}

@@ -173,7 +173,7 @@ export const openRouterProvider = defineProvider({
   createModel: (config) => {
     return new OpenRouter(
       {
-        apiKey: config.providerSetting.apiKey || '',
+        apiKey: config.effectiveApiKey,
         model: config.model,
         temperature: config.settings.temperature,
         topP: config.settings.topP,

@@ -39,7 +39,7 @@ export const volcEngineProvider = defineProvider({
   createModel: (config) => {
     return new VolcEngine(
       {
-        apiKey: config.providerSetting.apiKey || '',
+        apiKey: config.effectiveApiKey,
         model: config.model,
         temperature: config.settings.temperature,
         topP: config.settings.topP,

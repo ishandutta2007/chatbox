@@ -34,12 +34,20 @@ import './setup/global_error_handler'
 // GA4 初始化
 import './setup/ga_init'
 
+// Plausible 初始化
+import './setup/plausible_init'
+
+// jk analytics 初始化
+import './setup/jk_analytics_init'
+
 // 引入保护代码
 import './setup/protect'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { initSessionAttachmentRagMaintenance } from './setup/session_attachment_rag_maintenance'
 import { initLastUsedModelStore } from './stores/lastUsedModelStore'
+import { initOnboardingStore } from './stores/onboardingStore'
 import { initLoginLicenseStateReconciliation } from './stores/premiumActions'
+import { initRecentDirectoriesStore } from './stores/recentDirectoriesStore'
 import { initSettingsStore } from './stores/settingsStore'
 import { initUpdateListeners } from './stores/updateStore'
 
@@ -136,8 +144,13 @@ initializeApp()
   .finally(async () => {
     clearTimeout(tid)
 
-    // 等待settings初始化完成，避免闪屏
-    const [settings] = await Promise.all([initSettingsStore(), initLastUsedModelStore()])
+    // 等待settings和onboarding初始化完成，避免闪屏
+    const [settings] = await Promise.all([
+      initSettingsStore(),
+      initLastUsedModelStore(),
+      initOnboardingStore(),
+      initRecentDirectoriesStore(),
+    ])
 
     i18n.changeLanguage(settings.language)
     initLoginLicenseStateReconciliation()

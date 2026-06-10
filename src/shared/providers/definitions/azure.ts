@@ -20,7 +20,7 @@ export const azureProvider = defineProvider({
         azureEndpoint: config.providerSetting.endpoint || config.providerSetting.apiHost || '',
         model: config.model,
         azureDalleDeploymentName: config.providerSetting.dalleDeploymentName || '',
-        azureApikey: config.providerSetting.apiKey || '',
+        azureApikey: config.effectiveApiKey,
         azureApiVersion: config.providerSetting.apiVersion || '2024-05-01-preview',
         temperature: config.settings.temperature,
         topP: config.settings.topP,

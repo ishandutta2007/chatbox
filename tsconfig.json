@@ -2,7 +2,7 @@
   "compilerOptions": {
     "incremental": true,
     "target": "es2021",
-    "module": "nodenext",
+    "module": "esnext",
     "lib": ["dom", "es2023"],
     "jsx": "react-jsx",
     "strict": true,
@@ -12,7 +12,7 @@
       "@/*": ["./src/renderer/*"],
       "@shared/*": ["./src/shared/*"]
     },
-    "moduleResolution": "nodenext",
+    "moduleResolution": "bundler",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
@@ -26,8 +26,13 @@
     "tmp",
     "test",
     "release",
+    "out",
     ".erb/dll",
     "ios",
-    "android"
+    "android",
+    "**/*.stories.tsx",
+    "**/*.stories.ts",
+    ".storybook",
+    ".pnpm-store",
   ]
 }

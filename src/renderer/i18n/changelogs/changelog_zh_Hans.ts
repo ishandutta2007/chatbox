@@ -13,14 +13,7 @@ const changelog = `
 11. 修复知识库、登录状态、新手引导和设置界面的多项问题
 12. 更新 Windows 应用图标
 
-## v1.20.3 - 2026.04.29
-1. 全新 Chatbox AI 套餐详情卡片 UI
-2. 修复 DeepSeek V4 思考模式下后续对话报错 "reasoning_content in the thinking mode must be passed back to the API" 的问题
-
-## v1.20.2 - 2026.04.23
-1. 新增 GPT Image 2 模型支持
-
-## v1.20.1 - 2026.04.09
+## v1.20.1 - 2026.04.03
 1. 新增验证码登录支持
 2. 新增 AWS Bedrock 模型提供商
 3. 新增 BoCha 和 Querit.ai 网页搜索引擎
@@ -34,8 +27,7 @@ const changelog = `
 11. 修复 Gemini 3 模型思考模式配置
 12. 修复 macOS 输入框聚焦时底部空白
 13. 修复 Android 大文件导出自动重命名
-14. 修复消息导航按钮滚动异常
-15. 移除失效的 Gemini OAuth 支持
+14. 移除失效的 Gemini OAuth 支持
 
 ## v1.20.0 - 2026.03.30
 1. 新增对话气泡模式，带来更自然的聊天体验

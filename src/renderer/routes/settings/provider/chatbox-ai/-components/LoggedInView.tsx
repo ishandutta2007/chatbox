@@ -1,5 +1,13 @@
-import { Alert, Button, Flex, Paper, Select, Stack, Text, Title, UnstyledButton } from '@mantine/core'
-import { IconArrowRight, IconExclamationCircle, IconExternalLink, IconLogout } from '@tabler/icons-react'
+import { ActionIcon, Alert, Button, Flex, Menu, Paper, Select, Stack, Text, Title, UnstyledButton } from '@mantine/core'
+import {
+  IconArrowRight,
+  IconDots,
+  IconExclamationCircle,
+  IconExternalLink,
+  IconHelp,
+  IconKey,
+  IconLogout,
+} from '@tabler/icons-react'
 import { useQuery } from '@tanstack/react-query'
 import { forwardRef, useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'

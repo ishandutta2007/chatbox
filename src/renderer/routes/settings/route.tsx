@@ -12,6 +12,7 @@ import {
   IconKeyboard,
   IconMessages,
   IconSparkles,
+  IconWand,
   IconWorldWww,
 } from '@tabler/icons-react'
 import { createFileRoute, Link, Outlet, useCanGoBack, useRouter, useRouterState } from '@tanstack/react-router'
@@ -19,8 +20,8 @@ import clsx from 'clsx'
 import { useTranslation } from 'react-i18next'
 import { Toaster } from 'sonner'
 import Divider from '@/components/common/Divider'
-import Page from '@/components/layout/Page'
 import { ScalableIcon } from '@/components/common/ScalableIcon'
+import Page from '@/components/layout/Page'
 import { useProviders } from '@/hooks/useProviders'
 import { useIsSmallScreen } from '@/hooks/useScreenChange'
 import platform from '@/platform'
@@ -62,6 +63,15 @@ const ITEMS = [
           key: 'knowledge-base',
           label: 'Knowledge Base',
           icon: <IconBook className="w-full h-full" />,
+        },
+      ]
+    : []),
+  ...(featureFlags.skills
+    ? [
+        {
+          key: 'skills',
+          label: 'Skills',
+          icon: <IconWand className="w-full h-full" />,
         },
       ]
     : []),
@@ -120,7 +130,12 @@ export function RouteComponent() {
       }
     >
       <SettingsRoot />
-      <Toaster richColors position="bottom-center" />
+      <Toaster
+        richColors
+        position="bottom-center"
+        style={{ zIndex: 2147483647 }}
+        toastOptions={{ style: { zIndex: 2147483647 } }}
+      />
     </Page>
   )
 }

@@ -39,7 +39,6 @@ export function RouteComponent() {
           selectedModelId={settings.defaultChatModel?.model}
           searchPosition="top"
           onSelect={(provider, model) => {
-            console.log(provider, model)
             setSettings({
               defaultChatModel:
                 provider && model

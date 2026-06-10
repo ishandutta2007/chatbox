@@ -1,3 +1,4 @@
+import type { Session, TaskSession } from '@shared/types'
 import { getMessageText } from '@shared/utils/message'
 import { getLogger } from '@/lib/utils'
 import {
@@ -7,6 +8,7 @@ import {
 } from '@/packages/context-management/attachment-payload'
 import storage from '@/storage'
 import * as chatStore from '@/stores/chatStore'
+import { getTaskSession } from '@/stores/taskSessionStore'
 import { computationQueue } from './computation-queue'
 import { estimateTokens } from './tokenizer'
 import type { ComputationTask, TaskResult, TokenizerType } from './types'
@@ -40,14 +42,14 @@ export async function executeTask(task: ComputationTask): Promise<TaskResult> {
 async function executeMessageTextTask(task: ComputationTask): Promise<TaskResult> {
   const { sessionId, messageId, tokenizerType } = task
 
-  const session = await chatStore.getSession(sessionId)
+  const session = await getSessionForTokenEstimation(sessionId)
   if (!session) {
     log.debug('Session not found', { taskId: task.id, sessionId })
     return { success: false, error: 'session_not_found', silent: true }
   }
 
   let message = session.messages.find((m) => m.id === messageId)
-  if (!message && session.threads) {
+  if (!message && 'threads' in session && session.threads) {
     for (const thread of session.threads) {
       message = thread.messages.find((m) => m.id === messageId)
       if (message) break
@@ -85,14 +87,14 @@ async function executeAttachmentTask(task: ComputationTask): Promise<TaskResult>
     return { success: false, error: 'missing_attachment_info' }
   }
 
-  const session = await chatStore.getSession(sessionId)
+  const session = await getSessionForTokenEstimation(sessionId)
   if (!session) {
     log.debug('Session not found', { taskId: task.id, sessionId })
     return { success: false, error: 'session_not_found', silent: true }
   }
 
   let message = session.messages.find((m) => m.id === messageId)
-  if (!message && session.threads) {
+  if (!message && 'threads' in session && session.threads) {
     for (const thread of session.threads) {
       message = thread.messages.find((m) => m.id === messageId)
       if (message) break
@@ -221,6 +223,16 @@ function getTokenModel(tokenizerType: TokenizerType): { provider: string; modelI
     return { provider: 'deepseek', modelId: 'deepseek-chat' }
   }
   return undefined
+}
+
+type TokenEstimationSession = Pick<Session, 'messages' | 'threads'> | Pick<TaskSession, 'messages'>
+
+async function getSessionForTokenEstimation(sessionId: string): Promise<TokenEstimationSession | null> {
+  const chatSession = await chatStore.getSession(sessionId)
+  if (chatSession) {
+    return chatSession
+  }
+  return await getTaskSession(sessionId)
 }
 
 export function initializeExecutor(): void {

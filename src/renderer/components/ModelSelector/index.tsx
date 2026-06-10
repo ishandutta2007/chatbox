@@ -16,7 +16,7 @@ export type ModelSelectorProps = PropsWithChildren<
     autoText?: string
     onSelect?: (provider: ModelProvider | string, model: string) => void
     onDropdownOpen?: () => void
-    modelFilter?: (model: ProviderModelInfo) => boolean
+    modelFilter?: (model: ProviderModelInfo, providerId?: string) => boolean
     selectedProviderId?: string
     selectedModelId?: string
     searchPosition?: 'top' | 'bottom'
@@ -52,7 +52,7 @@ export const ModelSelector = forwardRef<HTMLDivElement, ModelSelectorProps>(
               provider.name.toLowerCase().includes(search.toLowerCase()) ||
               model.nickname?.toLowerCase().includes(search.toLowerCase()) ||
               model.modelId?.toLowerCase().includes(search.toLowerCase())) &&
-            (!modelFilter || modelFilter(model))
+            (!modelFilter || modelFilter(model, provider.id))
         )
         return {
           ...provider,

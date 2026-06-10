@@ -1,9 +1,13 @@
 import { app } from 'electron'
-import fs from 'fs'
-import os from 'os'
-import path from 'path'
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
+import { getModel } from '../../shared/models'
+import type { ModelInterface } from '../../shared/models/types'
 import { createAfetch } from '../../shared/request/request'
+import type { SessionSettings } from '../../shared/types'
 import type { ApiRequestOptions, ModelDependencies } from '../../shared/types/adapters'
+import { getConfig, getSettings } from '../store-node'
 import { sentry } from './sentry'
 
 export async function createModelDependencies(): Promise<ModelDependencies> {
@@ -63,4 +67,11 @@ export async function createModelDependencies(): Promise<ModelDependencies> {
       throw new Error('Not implemented')
     },
   }
+}
+
+export async function createModel(settings: SessionSettings): Promise<ModelInterface> {
+  const globalSettings = getSettings()
+  const config = getConfig()
+  const dependencies = await createModelDependencies()
+  return getModel(settings, globalSettings, config, dependencies)
 }

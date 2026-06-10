@@ -12,7 +12,7 @@ let POOL = [
 ]
 
 export function isChatboxAPI(input: RequestInfo | URL) {
-  const url = typeof input === 'string' ? input : (input as Request).url ?? input.toString()
+  const url = typeof input === 'string' ? input : ((input as Request).url ?? input.toString())
   return POOL.some((o) => url.startsWith(o)) || url.startsWith(API_ORIGIN)
 }
 

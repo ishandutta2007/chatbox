@@ -11,6 +11,10 @@ type State = {
     provider: string
     modelId: string
   }
+  task?: {
+    provider: string
+    modelId: string
+  }
 }
 
 export const lastUsedModelStore = createStore(
@@ -19,6 +23,7 @@ export const lastUsedModelStore = createStore(
       {
         chat: undefined,
         picture: undefined,
+        task: undefined,
       } as State,
       (set) => ({
         setChatModel: (provider: string, modelId: string) => {
@@ -32,6 +37,14 @@ export const lastUsedModelStore = createStore(
         setPictureModel: (provider: string, modelId: string) => {
           set({
             picture: {
+              provider,
+              modelId,
+            },
+          })
+        },
+        setTaskModel: (provider: string, modelId: string) => {
+          set({
+            task: {
               provider,
               modelId,
             },

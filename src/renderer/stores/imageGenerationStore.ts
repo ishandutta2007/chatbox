@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { createStore, useStore } from 'zustand'
 import { getLogger } from '@/lib/utils'
 import platform from '@/platform'
+import blobStorage from '@/storage'
 import type { ImageGenerationStorage } from '@/storage/ImageGenerationStorage'
 
 const log = getLogger('image-generation-store')
@@ -130,8 +131,44 @@ export async function deleteRecord(id: string): Promise<void> {
     await initializeStore()
   }
 
+  const record = await getStorage().getById(id)
   await getStorage().delete(id)
   log.debug('Deleted image generation record:', id)
+
+  // Best-effort cleanup of blobs. We only delete blobs that are not referenced by any other
+  // Image Creator record to avoid breaking DAG/reference workflows.
+  if (record) {
+    const referencedByOthers = new Set<string>()
+    try {
+      const total = await getStorage().getTotal()
+      let cursor = 0
+      const pageSize = 100
+      while (cursor < total) {
+        const page = await getStorage().getPage(cursor, pageSize)
+        for (const r of page.items) {
+          if (r.id === id) continue
+          for (const k of r.generatedImages) referencedByOthers.add(k)
+          for (const k of r.referenceImages) referencedByOthers.add(k)
+        }
+        if (page.nextCursor === null) break
+        cursor = page.nextCursor
+      }
+    } catch (e) {
+      log.error('Failed to scan image generation records for blob cleanup:', e)
+    }
+
+    const keys = [...new Set([...record.generatedImages, ...record.referenceImages])]
+    for (const key of keys) {
+      if (referencedByOthers.has(key)) continue
+      // Avoid deleting unrelated blobs.
+      if (!key.startsWith('picture:image-gen:') && !key.startsWith('picture:image-creator-ref:')) continue
+      try {
+        await blobStorage.delBlob(key)
+      } catch (e) {
+        log.error('Failed to delete blob for record cleanup:', key, e)
+      }
+    }
+  }
 
   // Clear current record if it's the one being deleted
   if (store.currentRecordId === id) {

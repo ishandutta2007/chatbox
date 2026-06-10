@@ -32,7 +32,7 @@ interface MobileModelSelectorProps {
   onTabChange: (tab: string | null) => void
   onSearchChange: (search: string) => void
   onOptionSubmit: (val: string) => void
-  modelFilter?: (model: ProviderModelInfo) => boolean
+  modelFilter?: (model: ProviderModelInfo, providerId?: string) => boolean
 }
 
 export const MobileModelSelector = forwardRef<HTMLDivElement, MobileModelSelectorProps>(
@@ -49,12 +49,18 @@ export const MobileModelSelector = forwardRef<HTMLDivElement, MobileModelSelecto
       onTabChange,
       onSearchChange,
       onOptionSubmit,
+      modelFilter,
     },
     _ref
   ) => {
     const { t } = useTranslation()
-    const { favoritedModels, favoriteModel, unfavoriteModel, isFavoritedModel } = useProviders()
+    const { favoritedModels: allFavoritedModels, favoriteModel, unfavoriteModel, isFavoritedModel } = useProviders()
     const [collapsedProviders, setCollapsedProviders] = useAtom(collapsedProvidersAtom)
+
+    const favoritedModels = useMemo(() => {
+      if (!allFavoritedModels || !modelFilter) return allFavoritedModels
+      return allFavoritedModels.filter((fm) => fm.model && fm.provider && modelFilter(fm.model, fm.provider.id))
+    }, [allFavoritedModels, modelFilter])
     const [open, setOpen] = useState(false)
 
     // Convert activeTab to index for SwipeableViews (0 = 'all', 1 = 'favorite')

@@ -5,6 +5,7 @@ import type React from 'react'
 import { useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
+import { toastError } from '@/packages/toast'
 import platform from '@/platform'
 import { ScalableIcon } from '../common/ScalableIcon'
 
@@ -96,7 +97,9 @@ export const KnowledgeBaseChatboxAIInfo: React.FC<KnowledgeBaseChatboxAIInfoProp
         </Group>
       )}
       <Text size="sm" c="dimmed">
-        {t('Chatbox AI provides all the essential model support required for knowledge base processing')}
+        {t(
+          'Chatbox AI provides all the essential model support required for knowledge base processing. Consumes compute points.'
+        )}
       </Text>
       {hasError && (
         <Text size="sm" c="red">
@@ -280,7 +283,7 @@ export const DocumentParserSelector: React.FC<DocumentParserSelectorProps> = ({
 
   const handleTestConnection = useCallback(async () => {
     if (!mineruToken.trim()) {
-      toast.error(t('Please enter an API token'))
+      toastError(t('Please enter an API token'))
       return
     }
 
@@ -294,12 +297,12 @@ export const DocumentParserSelector: React.FC<DocumentParserSelectorProps> = ({
       if (result.success) {
         toast.success(t('Connection successful'))
       } else {
-        toast.error(result.error || t('Connection failed'))
+        toastError(result.error || t('Connection failed'))
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error)
       setConnectionResult({ success: false, error: errorMessage })
-      toast.error(errorMessage)
+      toastError(errorMessage)
     } finally {
       setTestingConnection(false)
     }

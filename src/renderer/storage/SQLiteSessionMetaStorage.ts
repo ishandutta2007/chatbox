@@ -18,6 +18,23 @@ function safeJsonParse(value: string | null | undefined): unknown {
   }
 }
 
+function parseBackgroundImage(value: string | null | undefined): SessionMetaRecord['backgroundImage'] {
+  const parsed = safeJsonParse(value)
+  if (!parsed || typeof parsed !== 'object') return undefined
+  if ('type' in parsed && parsed.type === 'url' && 'url' in parsed && typeof parsed.url === 'string') {
+    return { type: 'url', url: parsed.url }
+  }
+  if (
+    'type' in parsed &&
+    parsed.type === 'storage-key' &&
+    'storageKey' in parsed &&
+    typeof parsed.storageKey === 'string'
+  ) {
+    return { type: 'storage-key', storageKey: parsed.storageKey }
+  }
+  return undefined
+}
+
 export class SQLiteSessionMetaStorage implements SessionMetaStorage {
   private sqlite: SQLiteConnection
   private database!: SQLiteDBConnection
@@ -89,7 +106,7 @@ export class SQLiteSessionMetaStorage implements SessionMetaStorage {
       hidden: row.hidden === 1 ? true : undefined,
       assistantAvatarKey: (row.assistant_avatar_key as string) || undefined,
       picUrl: (row.pic_url as string) || undefined,
-      backgroundImage: safeJsonParse(row.background_image as string),
+      backgroundImage: parseBackgroundImage(row.background_image as string),
       type: (row.type as SessionMetaRecord['type']) || undefined,
       sortOrder: row.sort_order as number,
       createdAt: row.created_at as number,

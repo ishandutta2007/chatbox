@@ -16,7 +16,6 @@ export function useAuthTokens() {
   const saveAuthTokens = useCallback(async (tokens: AuthTokens) => {
     try {
       await authInfoStore.getState().setTokens(tokens)
-      console.log('✅ Tokens saved to store')
     } catch (error) {
       console.error('❌ Failed to save tokens:', error)
       throw error
@@ -27,9 +26,10 @@ export function useAuthTokens() {
     try {
       const settings = settingsStore.getState()
       if (settings.licenseActivationMethod === 'login') {
-        console.log('🔥 Deactivating login-activated license')
         await premiumActions.deactivate()
       }
+
+      settingsStore.setState({ hasExpiredLicense: false })
 
       authInfoStore.getState().clearTokens()
 
@@ -37,8 +37,6 @@ export function useAuthTokens() {
       queryClient.removeQueries({ queryKey: ['userLicenses'] })
       queryClient.removeQueries({ queryKey: ['licenseDetail'] })
       queryClient.removeQueries({ queryKey: ['license-detail'] })
-
-      console.log('✅ Auth tokens and user cache cleared')
     } catch (error) {
       console.error('Failed to clear auth tokens:', error)
     }

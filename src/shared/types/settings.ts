@@ -338,9 +338,11 @@ export const SettingsSchema = GlobalSessionSettingsSchema.extend({
   licenseDetail: ChatboxAILicenseDetailSchema.optional().catch(undefined),
   licensePlanName: z.string().optional(),
   licenseActivationMethod: z.enum(['login', 'manual']).optional(),
+  hasExpiredLicense: z.boolean().default(false),
   lastSelectedLicenseByUser: z.record(z.string(), z.string()).optional().catch(undefined),
   // 在 licensekeyview UI中显示/记忆的key，以免用户使用 login 方式后老 key 被清除，他也不记得
   memorizedManualLicenseKey: z.string().optional(),
+  chatboxAIDesktopPromptDismissed: z.boolean().default(false),
 
   // chat settings
   showWordCount: z.boolean().optional().catch(undefined),

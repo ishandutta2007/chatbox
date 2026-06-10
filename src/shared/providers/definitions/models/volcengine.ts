@@ -20,7 +20,10 @@ const Path = '/api/v3/chat/completions'
 export default class VolcEngine extends AbstractAISDKModel {
   public name = 'VolcEngine'
 
-  constructor(public options: Options, dependencies: ModelDependencies) {
+  constructor(
+    public options: Options,
+    dependencies: ModelDependencies
+  ) {
     super(options, dependencies)
   }
 

@@ -15,14 +15,14 @@ export const WindowControls: FC<FlexProps> = ({ className, ...otherProps }) => {
   const platformType = useAtomValue(platformTypeAtom)
   return platformType === 'win32' || platformType === 'linux' ? (
     <Flex align="center" className={clsx('controls self-start', className)} {...otherProps}>
-      <ControlButton label={t('Minimize')} icon={IconMinus} onClick={() => platform.minimize()} />
+      <ControlButton label={t('Minimize') ?? ''} icon={IconMinus} onClick={() => platform.minimize()} />
       {!windowMaximized ? (
-        <ControlButton label={t('Maximize')} icon={IconSquare} onClick={() => platform.maximize()} />
+        <ControlButton label={t('Maximize') ?? ''} icon={IconSquare} onClick={() => platform.maximize()} />
       ) : (
-        <ControlButton label={t('Restore')} icon={IconSquares} onClick={() => platform.unmaximize()} />
+        <ControlButton label={t('Restore') ?? ''} icon={IconSquares} onClick={() => platform.unmaximize()} />
       )}
       <ControlButton
-        label={t('Close')}
+        label={t('Close') ?? ''}
         icon={IconX}
         className="hover:bg-chatbox-tint-error"
         onClick={() => platform.closeWindow()}
@@ -42,7 +42,7 @@ type ControlButtonProps = {
 const ControlButton: FC<ControlButtonProps> = ({ label, icon, onClick, ...props }) => {
   return (
     <Tooltip label={label}>
-      <ActionIcon variant="subtle" size={44} radius={0} color="chatbox-primary" onClick={onClick} {...props}>
+      <ActionIcon variant="subtle" size={40} radius={0} color="chatbox-primary" onClick={onClick} {...props}>
         <ScalableIcon icon={icon} size={16} strokeWidth={1.5} />
       </ActionIcon>
     </Tooltip>

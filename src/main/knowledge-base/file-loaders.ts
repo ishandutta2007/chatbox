@@ -241,21 +241,30 @@ export async function processFileWithMastra(
       sql: 'UPDATE kb_file SET status = ?, processing_started_at = NULL WHERE id = ?',
       args: ['done', fileMeta.fileId],
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errMsg =
+      error instanceof Error
+        ? error.message
+        : typeof error === 'object' &&
+            error !== null &&
+            'message' in error &&
+            typeof (error as Record<string, unknown>).message === 'string'
+          ? ((error as Record<string, unknown>).message as string)
+          : String(error)
     const duration = Date.now() - startTime
     log.error(`[FILE] File processing failed after ${duration}ms: ${fileMeta.filename} (id=${fileMeta.fileId})`, error)
 
     // Determine the operation type based on error message for better debugging
     let operation = 'file_processing'
-    if (error.message.includes('parse')) {
+    if (errMsg.includes('parse')) {
       operation = 'file_parsing'
-    } else if (error.message.includes('chunk')) {
+    } else if (errMsg.includes('chunk')) {
       operation = 'document_chunking'
-    } else if (error.message.includes('embedding')) {
+    } else if (errMsg.includes('embedding')) {
       operation = 'generate_embeddings'
-    } else if (error.message.includes('store') || error.message.includes('vector')) {
+    } else if (errMsg.includes('store') || errMsg.includes('vector')) {
       operation = 'vector_storage'
-    } else if (error.message.includes('vision') || error.message.includes('OCR') || error.message.includes('image')) {
+    } else if (errMsg.includes('vision') || errMsg.includes('OCR') || errMsg.includes('image')) {
       operation = 'image_ocr_processing'
     }
 
@@ -360,7 +369,7 @@ async function processPendingFiles() {
         })
       }
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     log.error('[FILE] Failed to process pending files:', error)
     sentry.withScope((scope) => {
       scope.setTag('component', 'knowledge-base-file')
@@ -377,7 +386,7 @@ export async function startWorkerLoop() {
   while (true) {
     try {
       await processPendingFiles()
-    } catch (e: any) {
+    } catch (e: unknown) {
       log.error('[FILE] Worker loop error:', e)
       sentry.withScope((scope) => {
         scope.setTag('component', 'knowledge-base-file')
@@ -453,8 +462,7 @@ export async function searchKnowledgeBase(kbId: number, query: string) {
       sentry.captureException(e)
     })
 
-    // TODO: user friendly error message
-    throw e
+    throw new Error(`Failed to search knowledge base (id: ${kbId}). Please try again later.`)
   }
 }
 

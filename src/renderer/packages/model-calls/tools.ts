@@ -3,8 +3,8 @@ import { last } from 'lodash'
 import * as promptFormat from '@/packages/prompts'
 import platform from '@/platform'
 import * as settingActions from '@/stores/settingActions'
-import { getMessageText, sequenceMessages } from '@/utils/message'
 import type { ModelInterface } from '../../../shared/models/types'
+import { getMessageText, sequenceMessages } from '../../../shared/utils/message'
 import { webSearchExecutor } from '../web-search'
 import { generateText } from '.'
 
@@ -13,7 +13,7 @@ import { generateText } from '.'
  * @param result The model response result containing content parts
  * @returns The parsed search action object or null if none found
  */
-function extractSearchActionFromResult<T = unknown>(result: {
+function extractSearchActionFromResult<T = any>(result: {
   contentParts: Array<{ type: string; text?: string }>
 }): T | null {
   const regex = /{(?:[^{}]|{(?:[^{}]|{[^{}]*})*})*}/g
@@ -141,7 +141,7 @@ export async function combinedSearchByPromptEngineering(
 
 export function constructMessagesWithSearchResults(
   messages: Message[],
-  searchResults: { title: string; snippet: string; link: string; rawContent?: string | null }[]
+  searchResults: { title: string; snippet: string; link: string }[]
 ) {
   const systemPrompt = promptFormat.answerWithSearchResults()
   const formattedSearchResults = searchResults
@@ -149,7 +149,7 @@ export function constructMessagesWithSearchResults(
       return `[webpage ${i + 1} begin]
 Title: ${it.title}
 URL: ${it.link}
-Content: ${it.snippet}${it.rawContent ? `\nRaw Content: ${it.rawContent}` : ''}
+Content: ${it.snippet}
 [webpage ${i + 1} end]`
     })
     .join('\n')
@@ -167,9 +167,7 @@ Content: ${it.snippet}${it.rawContent ? `\nRaw Content: ${it.rawContent}` : ''}
       contentParts: [
         {
           type: 'text',
-          text: `${formattedSearchResults}\nUser Message:\n${getMessageText(
-            last(messages) ?? { id: '', role: 'user', contentParts: [{ type: 'text', text: '' }] }
-          )}`,
+          text: `${formattedSearchResults}\nUser Message:\n${getMessageText(last(messages) ?? { id: '', role: 'user', contentParts: [{ type: 'text', text: '' }] })}`,
         },
       ],
     },
@@ -211,9 +209,7 @@ Content: ${it.text}
       contentParts: [
         {
           type: 'text',
-          text: `${formattedSearchResults}\nUser Message:\n${getMessageText(
-            last(messages) ?? { id: '', role: 'user', contentParts: [{ type: 'text', text: '' }] }
-          )}`,
+          text: `${formattedSearchResults}\nUser Message:\n${getMessageText(last(messages) ?? { id: '', role: 'user', contentParts: [{ type: 'text', text: '' }] })}`,
         },
       ],
     },

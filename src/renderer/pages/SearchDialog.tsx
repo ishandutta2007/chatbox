@@ -11,7 +11,6 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { useIsSmallScreen } from '@/hooks/useScreenChange'
 import { cn } from '@/lib/utils'
 import { currentSessionIdAtom } from '@/stores/atoms'
-import { useSession } from '@/stores/chatStore'
 import { searchSessions } from '@/stores/sessionHelpers'
 import { useUIStore } from '@/stores/uiStore'
 import * as scrollActions from '../stores/scrollActions'

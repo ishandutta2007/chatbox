@@ -170,8 +170,6 @@ const KnowledgeBaseDocuments: React.FC<KnowledgeBaseDocumentsProps> = ({ knowled
         // Default to text/plain for unknown text-like files
         mimeType = 'text/plain'
       }
-
-      console.log(`[Upload] Corrected MIME type for ${file.name}: "${file.type}" -> "${mimeType}"`)
     }
 
     const filePath = platform.getLocalFilePath(file)
@@ -252,8 +250,6 @@ const KnowledgeBaseDocuments: React.FC<KnowledgeBaseDocumentsProps> = ({ knowled
     async (files: FileList) => {
       if (!knowledgeBase?.id || !files.length) return
 
-      console.log(`[Upload] Starting upload for ${files.length} files.`)
-
       try {
         const knowledgeBaseController = platform.getKnowledgeBaseController()
         const oversizedFiles = Array.from(files)
@@ -282,14 +278,11 @@ const KnowledgeBaseDocuments: React.FC<KnowledgeBaseDocumentsProps> = ({ knowled
         for (const file of uploadableFiles) {
           const correctedFile = correctMimeType(file)
           correctedFiles.push(correctedFile)
-
-          console.log(`[Upload] File ${i + 1}/${files.length}: ${file.name} (${correctedFile.type})`)
         }
 
         // Upload all files using allSettled to allow partial successes
         const uploadResults = await Promise.allSettled(
           correctedFiles.map(async (file) => {
-            console.log(`[Upload] Starting upload for file: ${file.name}`)
             await knowledgeBaseController.uploadFile(knowledgeBase.id, file)
             return file
           })
@@ -304,7 +297,7 @@ const KnowledgeBaseDocuments: React.FC<KnowledgeBaseDocumentsProps> = ({ knowled
           if (result.status === 'rejected') {
             const fileName = correctedFiles[index]?.name || 'Unknown file'
             console.error(`[Upload] Failed to upload file ${fileName}:`, result.reason)
-            toast.error(
+            toastError(
               t('Failed to upload {{filename}}: {{error}}', {
                 filename: fileName,
                 error: (result.reason as Error)?.message || 'Unknown error',
@@ -313,6 +306,7 @@ const KnowledgeBaseDocuments: React.FC<KnowledgeBaseDocumentsProps> = ({ knowled
           }
         })
 
+        // Provide appropriate user feedback
         const blockedUploadCount = failedUploads.length + oversizedFiles.length
 
         if (successfulUploads.length > 0 && blockedUploadCount === 0) {
@@ -353,7 +347,7 @@ const KnowledgeBaseDocuments: React.FC<KnowledgeBaseDocumentsProps> = ({ knowled
         }
       } catch (error) {
         console.error('[Upload] Upload operation failed:', error)
-        toast.error(
+        toastError(
           t('Upload failed: {{error}}', {
             error: (error as Error)?.message || 'Unknown error',
           })
@@ -439,7 +433,7 @@ const KnowledgeBaseDocuments: React.FC<KnowledgeBaseDocumentsProps> = ({ knowled
       if (invalidFiles.length > 0) {
         const invalidFileNames = invalidFiles.map((f) => f.name).join(', ')
         const supportedTypes = getSupportedFileTypes()
-        toast.error(
+        toastError(
           t('{{count}} file(s) not supported: {{files}}. Supported formats: {{formats}}', {
             count: invalidFiles.length,
             files: invalidFileNames,
@@ -450,8 +444,6 @@ const KnowledgeBaseDocuments: React.FC<KnowledgeBaseDocumentsProps> = ({ knowled
 
       // Upload valid files if any
       if (validFiles.length > 0) {
-        console.log(`[Upload] Drag & Drop: ${validFiles.length} valid files out of ${files.length} total`)
-
         // Create a proper FileList-like object
         const fileListLike = Object.assign(validFiles, {
           item: (index: number) => validFiles[index] || null,
@@ -673,13 +665,10 @@ const KnowledgeBaseDocuments: React.FC<KnowledgeBaseDocumentsProps> = ({ knowled
       const { accept } = getSupportedFileTypes()
       input.accept = accept
 
-      console.log('[Upload] File dialog accept types:', accept)
-
       input.onchange = async (e) => {
         const files = (e.target as HTMLInputElement).files
         if (!files || !files.length) return
 
-        console.log('[Upload] Files selected:', files.length)
         await uploadFiles(files)
       }
 
@@ -689,7 +678,7 @@ const KnowledgeBaseDocuments: React.FC<KnowledgeBaseDocumentsProps> = ({ knowled
       }, 10)
     } catch (error) {
       console.error('Failed to upload file:', error)
-      toast.error(
+      toastError(
         t('Failed to open file dialog: {{error}}', {
           error: (error as Error)?.message || 'Unknown error',
         })
@@ -858,14 +847,41 @@ const KnowledgeBaseDocuments: React.FC<KnowledgeBaseDocumentsProps> = ({ knowled
                   <Flex gap="xs" align="center" style={{ flex: 1 }}>
                     <Text size="sm">{t('{{count}} file(s) failed to parse', { count: failedFiles.length })}</Text>
                   </Flex>
-                  <Button
-                    size="xs"
-                    variant="light"
-                    className="flex-shrink-0"
-                    onClick={() => setShowRemoteRetryModal(true)}
-                  >
-                    {t('Use server parsing')}
-                  </Button>
+                  <Stack gap={4} align="flex-end" className="flex-shrink-0">
+                    <Button size="xs" variant="light" onClick={() => setShowRemoteRetryModal(true)}>
+                      {t('Use server parsing')}
+                    </Button>
+                    <Tooltip
+                      label={t(
+                        'If you have never had a license before, you can claim it after logging in on the official website.'
+                      )}
+                      withArrow
+                      multiline
+                      maw={240}
+                      position="bottom-end"
+                      styles={{
+                        tooltip: {
+                          backgroundColor: 'rgba(0, 0, 0, 0.75)',
+                          backdropFilter: 'blur(4px)',
+                        },
+                      }}
+                    >
+                      <Text
+                        size="xs"
+                        c="dimmed"
+                        className="cursor-pointer hover:text-blue-500 transition-colors"
+                        onClick={() => {
+                          trackJkClickEvent(JK_EVENTS.FREE_LICENSE_CLAIM_CLICK, {
+                            pageName: JK_PAGE_NAMES.SETTING_PAGE,
+                            content: 'kb_error',
+                          })
+                          platform.openLink('https://chatboxai.app/login')
+                        }}
+                      >
+                        {t('Free trial available')} →
+                      </Text>
+                    </Tooltip>
+                  </Stack>
                 </Flex>
               </Alert>
             )}

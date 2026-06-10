@@ -12,9 +12,10 @@ const COLLAPSED_MAX = 4
 interface MessageAttachmentGridProps {
   files?: MessageFile[]
   links?: MessageLink[]
+  align?: 'start' | 'end'
 }
 
-export function MessageAttachmentGrid({ files, links }: MessageAttachmentGridProps) {
+export function MessageAttachmentGrid({ files, links, align = 'start' }: MessageAttachmentGridProps) {
   const { t } = useTranslation()
   const [expanded, setExpanded] = useState(false)
   const [retryingIds, setRetryingIds] = useState<number[]>([])
@@ -72,6 +73,8 @@ export function MessageAttachmentGrid({ files, links }: MessageAttachmentGridPro
   const visibleFileCount = shouldCollapse && !expanded ? Math.min(fileItems.length, COLLAPSED_MAX) : fileItems.length
   const remainingSlots = shouldCollapse && !expanded ? COLLAPSED_MAX - visibleFileCount : linkItems.length
   const visibleLinkCount = Math.max(0, Math.min(linkItems.length, remainingSlots))
+  const visibleTotalCount = visibleFileCount + visibleLinkCount
+  const shouldRightAlignLastItem = align === 'end' && visibleTotalCount % 2 === 1 && visibleTotalCount > 1
 
   const retryAttachment = async (attachmentId: number) => {
     if (platform.type !== 'desktop') {
@@ -94,10 +97,20 @@ export function MessageAttachmentGrid({ files, links }: MessageAttachmentGridPro
   }
 
   return (
-    <div className="mt-1 mb-1 max-w-[500px]">
-      <div className="grid grid-cols-2 gap-1.5">
-        {fileItems.slice(0, visibleFileCount).map((file) => (
-          <div key={file.id} className="group/attachment min-w-0 overflow-hidden">
+    <div className={align === 'end' ? 'mt-1 mb-1 max-w-[500px] w-fit ml-auto' : 'mt-1 mb-1 max-w-[500px]'}>
+      <div
+        className={['grid gap-1.5', align === 'end' && visibleTotalCount === 1 ? 'grid-cols-1' : 'grid-cols-2'].join(
+          ' '
+        )}
+      >
+        {fileItems.slice(0, visibleFileCount).map((file, index) => (
+          <div
+            key={file.id}
+            className={[
+              'group/attachment min-w-0 overflow-hidden',
+              shouldRightAlignLastItem && index === visibleTotalCount - 1 ? 'col-start-2' : '',
+            ].join(' ')}
+          >
             <MessageAttachment
               label={file.name}
               filename={file.name}
@@ -157,16 +170,25 @@ export function MessageAttachmentGrid({ files, links }: MessageAttachmentGridPro
             />
           </div>
         ))}
-        {linkItems.slice(0, visibleLinkCount).map((link) => (
-          <div key={link.id} className="group/attachment min-w-0 overflow-hidden">
-            <MessageAttachment
-              label={link.title}
-              url={link.url}
-              byteLength={link.byteLength}
-              storageKey={link.storageKey}
-            />
-          </div>
-        ))}
+        {linkItems.slice(0, visibleLinkCount).map((link, index) => {
+          const overallIndex = visibleFileCount + index
+          return (
+            <div
+              key={link.id}
+              className={[
+                'group/attachment min-w-0 overflow-hidden',
+                shouldRightAlignLastItem && overallIndex === visibleTotalCount - 1 ? 'col-start-2' : '',
+              ].join(' ')}
+            >
+              <MessageAttachment
+                label={link.title}
+                url={link.url}
+                byteLength={link.byteLength}
+                storageKey={link.storageKey}
+              />
+            </div>
+          )
+        })}
       </div>
       {shouldCollapse && (
         <button

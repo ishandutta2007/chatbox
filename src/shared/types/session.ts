@@ -35,7 +35,6 @@ export const SearchResultItemSchema = z.object({
   title: z.string(),
   link: z.string(),
   snippet: z.string(),
-  rawContent: z.string().nullable().optional(),
 })
 
 export const SearchResultSchema = z.object({
@@ -238,7 +237,7 @@ export const CompactionPointSchema = z.object({
 })
 
 // Session schemas
-export const SessionTypeSchema = z.enum(['chat', 'picture'])
+export const SessionTypeSchema = z.enum(['chat', 'picture', 'guide'])
 
 export const MessageForkListSchema = z.object({
   id: z.string(),

@@ -25,20 +25,25 @@ export function buildContextForAI(options: BuildContextOptions): Message[] {
     return []
   }
 
+  const compactedMessages = computeContextAfterCompaction(completedMessages, compactionPoints)
+  return cleanToolCalls(compactedMessages, keepToolCallRounds)
+}
+
+export function computeContextAfterCompaction(messages: Message[], compactionPoints?: CompactionPoint[]): Message[] {
   const latestCompactionPoint = findLatestCompactionPoint(compactionPoints)
 
   if (!latestCompactionPoint) {
-    return cleanToolCalls(completedMessages, keepToolCallRounds)
+    return messages
   }
 
-  const boundaryIndex = findMessageIndex(completedMessages, latestCompactionPoint.boundaryMessageId)
-  const summaryMessage = findMessage(completedMessages, latestCompactionPoint.summaryMessageId)
+  const boundaryIndex = messages.findIndex((m) => m.id === latestCompactionPoint.boundaryMessageId)
+  const summaryMessage = messages.find((m) => m.id === latestCompactionPoint.summaryMessageId)
 
   if (boundaryIndex === -1) {
-    return cleanToolCalls(completedMessages, keepToolCallRounds)
+    return messages
   }
 
-  const messagesAfterBoundary = completedMessages.slice(boundaryIndex + 1).filter((m) => !m.isSummary)
+  const messagesAfterBoundary = messages.slice(boundaryIndex + 1).filter((m) => !m.isSummary)
 
   let contextMessages: Message[]
   if (summaryMessage) {
@@ -47,12 +52,12 @@ export function buildContextForAI(options: BuildContextOptions): Message[] {
     contextMessages = messagesAfterBoundary
   }
 
-  const systemMessage = completedMessages.find((m) => m.role === 'system')
+  const systemMessage = messages.find((m) => m.role === 'system')
   if (systemMessage && !contextMessages.some((m) => m.id === systemMessage.id)) {
     contextMessages = [systemMessage, ...contextMessages]
   }
 
-  return cleanToolCalls(contextMessages, keepToolCallRounds)
+  return contextMessages
 }
 
 export function buildContextForSession(
@@ -104,7 +109,10 @@ export function getContextMessageIds(session: Session, maxCount?: number): strin
   const contextMessages = buildContextForSession(session)
   const ids = contextMessages.map((m) => m.id)
 
-  if (maxCount && maxCount > 0) {
+  if (maxCount !== undefined) {
+    if (maxCount <= 0) {
+      return []
+    }
     return ids.slice(-maxCount)
   }
 
@@ -119,12 +127,4 @@ function findLatestCompactionPoint(compactionPoints?: CompactionPoint[]): Compac
   return compactionPoints.reduce((latest, current) => {
     return current.createdAt > latest.createdAt ? current : latest
   })
-}
-
-function findMessageIndex(messages: Message[], messageId: string): number {
-  return messages.findIndex((m) => m.id === messageId)
-}
-
-function findMessage(messages: Message[], messageId: string): Message | undefined {
-  return messages.find((m) => m.id === messageId)
 }

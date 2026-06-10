@@ -18,6 +18,7 @@ export {
   buildContextForAI,
   buildContextForSession,
   buildContextForThread,
+  computeContextAfterCompaction,
   getContextMessageIds,
 } from './context-builder'
 export type {

@@ -32,6 +32,7 @@ const useChatboxAIModels = () => {
             capabilities: m.capabilities,
             type: m.type,
             apiStyle: m.apiStyle,
+            contextWindow: m.contextWindow || undefined,
           })),
         }))
       }
@@ -51,6 +52,7 @@ const useChatboxAIModels = () => {
             labels: item.labels,
             capabilities: item.capabilities,
             type: item.type,
+            contextWindow: item.contextWindow || undefined,
           }) as ProviderModelInfo
       ) || [],
     [data]

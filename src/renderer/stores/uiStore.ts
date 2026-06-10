@@ -21,7 +21,6 @@ export const uiStore = createStore(
         messageScrollingAtTop: false,
         messageScrollingAtBottom: false,
         showSidebar: platform.type !== 'mobile',
-        sidebarMode: 'chat' as 'chat' | 'task',
         openSearchDialog: false,
         searchDialogGlobalOnly: false, // 是否只显示全局搜索（用于对话列表）
         openAboutDialog: false, // 是否展示相关信息的窗口
@@ -45,6 +44,7 @@ export const uiStore = createStore(
         widthFull: false, // Stored UI preference
         showCopilotsInNewSession: false,
         sidebarWidth: null as number | null, // Custom sidebar width, null means use default
+        sidebarMode: 'chat' as 'chat' | 'task',
       },
       (set, get) => ({
         addToast: (content: string, duration?: number) => {
@@ -66,12 +66,7 @@ export const uiStore = createStore(
         },
 
         setShowSidebar: (showSidebar: boolean) => {
-          console.log('setShowSidebar:', showSidebar)
           set({ showSidebar })
-        },
-
-        setSidebarMode: (sidebarMode: 'chat' | 'task') => {
-          set({ sidebarMode })
         },
 
         setOpenSearchDialog: (openSearchDialog: boolean, globalOnly = false) => {
@@ -202,6 +197,10 @@ export const uiStore = createStore(
 
         setSidebarWidth: (sidebarWidth: number | null) => {
           set({ sidebarWidth })
+        },
+
+        setSidebarMode: (sidebarMode: 'chat' | 'task') => {
+          set({ sidebarMode })
         },
       })
     ),

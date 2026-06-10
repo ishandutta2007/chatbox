@@ -1,10 +1,20 @@
-export type WelcomeCardMode = 'guide' | 'copilots' | null
+export type HomeWelcomeCardMode = 'none' | 'login' | 'no-license' | 'expired-license'
 
-export function getHomeWelcomeCardMode(_params: {
+export function getHomeWelcomeCardMode(params: {
   providerCount: number
   isLoggedIn: boolean
   hasLicense: boolean
-}): WelcomeCardMode {
-  if (_params.providerCount === 0) return 'guide'
-  return null
+  hasExpiredLicense: boolean
+}): HomeWelcomeCardMode {
+  const { providerCount, isLoggedIn, hasLicense, hasExpiredLicense } = params
+
+  if (providerCount > 0 || hasLicense) {
+    return 'none'
+  }
+
+  if (isLoggedIn) {
+    return hasExpiredLicense ? 'expired-license' : 'no-license'
+  }
+
+  return 'login'
 }

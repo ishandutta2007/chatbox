@@ -1,12 +1,10 @@
 import * as Sentry from '@sentry/react'
-import { getModel } from '@shared/models'
 import { ApiError, NetworkError } from '@shared/models/errors'
 import type { ModelProvider } from '@shared/types'
-import { createModelDependencies } from '@/adapters'
+import { createModel } from '@/adapters'
 import { languageNameMap } from '@/i18n/locales'
 import { generateText } from '@/packages/model-calls'
 import * as promptFormat from '@/packages/prompts'
-import platform from '@/platform'
 import * as chatStore from '../chatStore'
 import { settingsStore } from '../settingsStore'
 import { activeNameGenerations, pendingNameGenerations } from './state'
@@ -50,9 +48,7 @@ async function _generateName(sessionId: string, modifyName: (sessionId: string, 
       : {}),
   }
   try {
-    const configs = await platform.getConfig()
-    const dependencies = await createModelDependencies()
-    const model = getModel(settings, globalSettings, configs, dependencies)
+    const model = await createModel(settings)
     const result = await generateText(
       model,
       promptFormat.nameConversation(

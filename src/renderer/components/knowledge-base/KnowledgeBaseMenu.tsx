@@ -21,13 +21,16 @@ const KnowledgeBaseMenu: FC<Props> = (props) => {
 
   return (
     <Menu
+      trigger="hover"
+      openDelay={100}
+      closeDelay={100}
       position="top"
       shadow="md"
       keepMounted
       // 使用动画延迟消失，保证点击后能看到选中状态
       transitionProps={{
-        transition: 'fade-up',
-        duration: 300,
+        transition: 'pop',
+        duration: 200,
       }}
     >
       <Menu.Target>{props.children}</Menu.Target>

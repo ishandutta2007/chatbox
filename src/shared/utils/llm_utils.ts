@@ -1,4 +1,4 @@
-import { ModelProviderEnum } from '../types';
+import { ModelProviderEnum } from '../types'
 
 export function normalizeOpenAIApiHostAndPath(
   options: { apiHost?: string; apiPath?: string },
@@ -135,6 +135,12 @@ export function isOpenAICompatible(providerId: string, _modelId: string) {
       ModelProviderEnum.Groq,
       ModelProviderEnum.DeepSeek,
       ModelProviderEnum.LMStudio,
+      ModelProviderEnum.Qwen,
+      ModelProviderEnum.QwenPortal,
+      ModelProviderEnum.MiniMax,
+      ModelProviderEnum.MiniMaxCN,
+      ModelProviderEnum.Moonshot,
+      ModelProviderEnum.MoonshotCN,
     ].includes(providerId as ModelProviderEnum) || providerId.startsWith('custom-provider-')
   )
 }

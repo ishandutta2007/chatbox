@@ -9,7 +9,7 @@ import { ScalableIcon } from './ScalableIcon'
 
 export type SystemAvatarProps = {
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | number
-  sessionType?: 'chat' | 'picture'
+  sessionType?: 'chat' | 'picture' | 'guide'
 } & PolymorphicComponentProps<'div', AvatarProps>
 
 export const SystemAvatar: FC<SystemAvatarProps> = ({ size = 'md', className, ...avatarProps }) => {
@@ -68,7 +68,7 @@ export type AssistantAvatarProps = {
   type?: 'assistant' | 'chat'
   avatarKey?: string
   picUrl?: string
-  sessionType?: 'chat' | 'picture'
+  sessionType?: 'chat' | 'picture' | 'guide'
 } & PolymorphicComponentProps<'div', AvatarProps>
 
 // 优先级: avatarKey > picUrl > defaultAssistantAvatarKey > sessionType

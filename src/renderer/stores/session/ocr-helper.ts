@@ -7,31 +7,40 @@ import { getModelSettings } from '@shared/utils/model_settings'
 import type { ModelMessage } from 'ai'
 import pMap from 'p-map'
 import { createModelDependencies } from '@/adapters'
-import * as settingActions from '@/stores/settingActions'
 
 /**
- * Resolve the OCR model based on license key and user settings.
+ * Resolve the OCR model based on user settings and license key.
+ * User-configured OCR model takes priority; Chatbox AI is the fallback.
  * Returns null if no OCR model is available (caller decides how to handle).
  */
 export function getOCRModel(
   globalSettings: Settings,
   configs: { uuid: string },
   dependencies: ModelDependencies
-): ModelInterface | null {
-  const licenseKey = settingActions.getLicenseKey()
-  if (!licenseKey && !(globalSettings.ocrModel?.provider && globalSettings.ocrModel?.model)) {
+): { model: ModelInterface; providerName: string } | null {
+  const hasUserOcrModel = !!(globalSettings.ocrModel?.provider && globalSettings.ocrModel?.model)
+  const hasLicenseKey = !!globalSettings.licenseKey
+
+  if (!hasUserOcrModel && !hasLicenseKey) {
     return null
   }
-  if (globalSettings.licenseKey) {
-    const modelSettings = getModelSettings(globalSettings, ModelProviderEnum.ChatboxAI, 'chatbox-ocr-1')
-    return getModel(modelSettings, globalSettings, configs, dependencies)
+
+  if (hasUserOcrModel) {
+    // User has explicitly configured an OCR model — always respect their choice
+    const ocrModelSetting = globalSettings.ocrModel!
+    const modelSettings = getModelSettings(globalSettings, ocrModelSetting.provider, ocrModelSetting.model)
+    return {
+      model: getModel(modelSettings, globalSettings, configs, dependencies),
+      providerName: ocrModelSetting.provider,
+    }
   }
-  const ocrModelSetting = globalSettings.ocrModel
-  if (!ocrModelSetting?.provider || !ocrModelSetting?.model) {
-    return null
+
+  // Fallback to Chatbox AI built-in OCR model
+  const modelSettings = getModelSettings(globalSettings, ModelProviderEnum.ChatboxAI, 'chatbox-ocr-1')
+  return {
+    model: getModel(modelSettings, globalSettings, configs, dependencies),
+    providerName: 'Chatbox AI',
   }
-  const modelSettings = getModelSettings(globalSettings, ocrModelSetting.provider, ocrModelSetting.model)
-  return getModel(modelSettings, globalSettings, configs, dependencies)
 }
 
 /**

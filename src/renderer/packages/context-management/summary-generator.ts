@@ -1,13 +1,11 @@
 import * as Sentry from '@sentry/react'
-import { getModel } from '@shared/models'
 import { ApiError, NetworkError } from '@shared/models/errors'
 import type { Language, Message, ModelProvider, SessionSettings, Settings } from '@shared/types'
-import { createModelDependencies } from '@/adapters'
+import { createModel } from '@/adapters'
 import { languageNameMap } from '@/i18n/locales'
 import { generateText } from '@/packages/model-calls'
 import { convertToModelMessages } from '@/packages/model-calls/message-utils'
 import * as promptFormat from '@/packages/prompts'
-import platform from '@/platform'
 import * as settingActions from '@/stores/settingActions'
 import { settingsStore } from '@/stores/settingsStore'
 
@@ -37,9 +35,7 @@ export async function generateSummary(options: SummaryGeneratorOptions): Promise
   const settings = buildModelSettings(globalSettings, sessionSettings)
 
   try {
-    const dependencies = await createModelDependencies()
-    const configs = await platform.getConfig()
-    const model = getModel(settings, globalSettings, configs, dependencies)
+    const model = await createModel(settings)
 
     const promptMessages = promptFormat.summarizeConversation(messages, languageName)
     const result = await generateText(model, promptMessages)
@@ -138,9 +134,7 @@ export async function generateSummaryWithStream(options: StreamingSummaryOptions
   const settings = buildModelSettings(globalSettings, sessionSettings)
 
   try {
-    const dependencies = await createModelDependencies()
-    const configs = await platform.getConfig()
-    const model = getModel(settings, globalSettings, configs, dependencies)
+    const model = await createModel(settings)
 
     const promptMessages = promptFormat.summarizeConversation(messages, languageName)
     const coreMessages = await convertToModelMessages(promptMessages, { modelSupportVision: model.isSupportVision() })

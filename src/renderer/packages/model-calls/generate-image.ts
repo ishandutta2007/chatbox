@@ -9,7 +9,7 @@ export async function generateImage(
     message: Message // 图片并不关注session context，只需要上一条用户消息
     num: number
   },
-  callback?: (picBase64: string) => void
+  callback?: (picBase64: string) => void | Promise<void>
 ) {
   const prompt = getMessageText(params.message)
 

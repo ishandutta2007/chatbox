@@ -1,5 +1,4 @@
 import type { Message, Session } from '@shared/types'
-import { getDefaultStore } from 'jotai'
 import { StorageKeyGenerator } from '@/storage/StoreStorage'
 import { listSessionsMeta } from '@/stores/chatStore'
 import { settingsStore } from '@/stores/settingsStore'
@@ -83,11 +82,27 @@ export async function tickStorageTask() {
     needDeletedSet.delete(settings.backgroundImageKey)
   }
 
-  // Image Creator 的图片存储在独立的 ImageGenerationStorage 中，不在 chat sessions 里，不应被清理
-  for (const key of needDeletedSet) {
-    if (key.startsWith('picture:image-gen:')) {
-      continue
+  // Image Creator 的图片存储在独立的 ImageGenerationStorage 中，需要额外排除仍被记录引用的 blobs
+  try {
+    const imageGenStorage = platform.getImageGenerationStorage()
+    await imageGenStorage.initialize()
+    const total = await imageGenStorage.getTotal()
+    let cursor = 0
+    const pageSize = 100
+    while (cursor < total) {
+      const page = await imageGenStorage.getPage(cursor, pageSize)
+      for (const record of page.items) {
+        for (const k of record.generatedImages) needDeletedSet.delete(k)
+        for (const k of record.referenceImages) needDeletedSet.delete(k)
+      }
+      if (page.nextCursor === null) break
+      cursor = page.nextCursor
     }
+  } catch (e) {
+    console.error('storage_clear: failed to scan image generation storage', e)
+    return
+  }
+  for (const key of needDeletedSet) {
     await storage.delBlob(key)
   }
 }

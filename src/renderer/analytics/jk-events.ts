@@ -1,5 +1,3 @@
-// No-op event constants for open-source edition
-
 export const JK_EVENTS = {
   ONBOARDING_CHOICE_CLICK: 'onboarding_choice_click',
   LOGIN_BUTTON_CLICK: 'login_button_click',

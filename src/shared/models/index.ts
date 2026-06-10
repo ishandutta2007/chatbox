@@ -12,6 +12,12 @@ export const aiProviderNameHash: Record<ModelProviderEnum, string> = {
   [ModelProviderEnum.ChatboxAI]: 'Chatbox AI',
   [ModelProviderEnum.Claude]: 'Claude API',
   [ModelProviderEnum.Gemini]: 'Google Gemini API',
+  [ModelProviderEnum.Qwen]: 'Qwen API',
+  [ModelProviderEnum.QwenPortal]: 'Qwen Portal',
+  [ModelProviderEnum.MiniMax]: 'MiniMax Global API',
+  [ModelProviderEnum.MiniMaxCN]: 'MiniMax CN API',
+  [ModelProviderEnum.Moonshot]: 'Moonshot AI API',
+  [ModelProviderEnum.MoonshotCN]: 'Moonshot CN API',
   [ModelProviderEnum.Ollama]: 'Ollama API',
   [ModelProviderEnum.Groq]: 'Groq API',
   [ModelProviderEnum.DeepSeek]: 'DeepSeek API',
@@ -67,6 +73,36 @@ export const AIModelProviderMenuOptionList = [
   {
     value: ModelProviderEnum.DeepSeek,
     label: aiProviderNameHash[ModelProviderEnum.DeepSeek],
+    disabled: false,
+  },
+  {
+    value: ModelProviderEnum.Qwen,
+    label: aiProviderNameHash[ModelProviderEnum.Qwen],
+    disabled: false,
+  },
+  {
+    value: ModelProviderEnum.QwenPortal,
+    label: aiProviderNameHash[ModelProviderEnum.QwenPortal],
+    disabled: false,
+  },
+  {
+    value: ModelProviderEnum.MiniMax,
+    label: aiProviderNameHash[ModelProviderEnum.MiniMax],
+    disabled: false,
+  },
+  {
+    value: ModelProviderEnum.MiniMaxCN,
+    label: aiProviderNameHash[ModelProviderEnum.MiniMaxCN],
+    disabled: false,
+  },
+  {
+    value: ModelProviderEnum.Moonshot,
+    label: aiProviderNameHash[ModelProviderEnum.Moonshot],
+    disabled: false,
+  },
+  {
+    value: ModelProviderEnum.MoonshotCN,
+    label: aiProviderNameHash[ModelProviderEnum.MoonshotCN],
     disabled: false,
   },
   {

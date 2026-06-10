@@ -1,4 +1,5 @@
 import type { SentryAdapter } from '../utils/sentry_adapter'
+import type { OAuthCredentials } from '../oauth/types'
 
 export interface ApiRequestOptions {
   url: string
@@ -15,6 +16,12 @@ export interface StorageAdapter {
   getImage(storageKey: string): Promise<string>
 }
 
+export interface OAuthAdapter {
+  refreshCredential(providerId: string, credential: OAuthCredentials): Promise<OAuthCredentials>
+  persistCredential(providerId: string, credential: OAuthCredentials): void
+  clearCredential(providerId: string): void
+}
+
 export interface RequestAdapter {
   fetchWithOptions(
     url: string,
@@ -29,4 +36,7 @@ export interface ModelDependencies {
   storage: StorageAdapter
   sentry: SentryAdapter
   getRemoteConfig(): any
-} 
+  oauth?: OAuthAdapter
+  /** Current platform type, used for OAuth auth resolution */
+  platformType?: 'desktop' | 'web' | 'mobile'
+}
