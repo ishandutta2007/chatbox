@@ -136,26 +136,31 @@ export function onFileProcessed(
   prev: PreConstructedMessageState,
   file: File,
   item: PreprocessedFile,
-  max: number = 20
+  max: number = 20,
+  options: { fileKeys?: Iterable<string> } = {}
 ): PreConstructedMessageState {
-  const key = StorageKeyGenerator.fileUniqKey(file)
-  if (prev.preprocessingStatus.files[key] !== 'processing') {
+  const keys = getFileKeys(file, options.fileKeys)
+  const key = Array.from(keys).find((candidateKey) => prev.preprocessingStatus.files[candidateKey] === 'processing')
+  if (!key) {
     return prev
   }
   const newPromises = new Map(prev.preprocessingPromises.files)
-  newPromises.delete(key)
+  for (const fileKey of keys) {
+    newPromises.delete(fileKey)
+  }
 
   const nextFiles = [...prev.preprocessedFiles, item].slice(-max)
+  const nextFileStatuses = { ...prev.preprocessingStatus.files }
+  for (const fileKey of keys) {
+    nextFileStatuses[fileKey] = fileKey === key ? (item.error ? 'error' : 'completed') : undefined
+  }
 
   return {
     ...prev,
     preprocessedFiles: nextFiles,
     preprocessingStatus: {
       ...prev.preprocessingStatus,
-      files: {
-        ...prev.preprocessingStatus.files,
-        [key]: item.error ? 'error' : 'completed',
-      },
+      files: nextFileStatuses,
     },
     preprocessingPromises: {
       ...prev.preprocessingPromises,

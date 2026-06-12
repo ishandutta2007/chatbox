@@ -307,6 +307,8 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
     )
     const preConstructedMessageRef = useRef(preConstructedMessage)
     preConstructedMessageRef.current = preConstructedMessage
+    const activeFilePreprocessingKeysRef = useRef(new Set<string>())
+    const inputFileKeyByFileRef = useRef(new WeakMap<File, string>())
     useEffect(() => {
       draftMessageIdRef.current = preConstructedMessage.draftMessageId
     }, [preConstructedMessage.draftMessageId])
@@ -905,16 +907,18 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
 
     const startFilePreprocessing = (file: File) => {
       const fileKey = StorageKeyGenerator.fileUniqKey(file)
+      inputFileKeyByFileRef.current.set(file, fileKey)
+      activeFilePreprocessingKeysRef.current.add(fileKey)
 
       // 异步预处理文件，失败时标记为 error，并吞掉异常避免 Promise.all reject
       return sessionHelpers
         .prepareFileAttachment(file, { provider: model?.provider || '', modelId: model?.modelId || '' })
         .then(async (preprocessedFile) => {
-          if (preConstructedMessageRef.current.preprocessingStatus.files[fileKey] !== 'processing') {
+          if (!activeFilePreprocessingKeysRef.current.has(fileKey)) {
             return
           }
 
-          let nextPreprocessedFile: PreprocessedFile = preprocessedFile
+          let nextPreprocessedFile: PreprocessedFile = { ...preprocessedFile, inputFileKey: fileKey }
           if (platform.type === 'desktop') {
             const draftMessageId = draftMessageIdRef.current || uuidv4()
             const indexedFile = await startPreparedSessionAttachmentIndexing({
@@ -922,8 +926,7 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
               preparedFile: nextPreprocessedFile,
               sessionId: currentSessionId || 'new',
               draftMessageId,
-              shouldContinue: () =>
-                preConstructedMessageRef.current.preprocessingStatus.files[fileKey] === 'processing',
+              shouldContinue: () => activeFilePreprocessingKeysRef.current.has(fileKey),
             })
             if (!indexedFile) {
               return
@@ -934,22 +937,32 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
             }
           }
 
-          setPreConstructedMessage((prev) => onFileProcessed(prev, file, nextPreprocessedFile, 20))
+          setPreConstructedMessage((prev) =>
+            onFileProcessed(prev, file, nextPreprocessedFile, 20, { fileKeys: [fileKey] })
+          )
         })
         .catch((error) => {
+          if (!activeFilePreprocessingKeysRef.current.has(fileKey)) {
+            return
+          }
           setPreConstructedMessage((prev) =>
             onFileProcessed(
               prev,
               file,
               {
                 file,
+                inputFileKey: fileKey,
                 content: '',
                 storageKey: '',
                 error: (error as Error)?.message || 'Failed to preprocess the file.',
               },
-              20
+              20,
+              { fileKeys: [fileKey] }
             )
           )
+        })
+        .finally(() => {
+          activeFilePreprocessingKeysRef.current.delete(fileKey)
         })
     }
 
@@ -1396,10 +1409,10 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
                   <ImageMiniCard key={picKey} storageKey={picKey} onDelete={() => onImageDeleteClick(picKey)} />
                 ))}
                 {attachments?.map((file) => {
-                  const fileKey = StorageKeyGenerator.fileUniqKey(file)
+                  const fileKey = inputFileKeyByFileRef.current.get(file) ?? StorageKeyGenerator.fileUniqKey(file)
                   const status = preConstructedMessage.preprocessingStatus.files[fileKey]
                   const preprocessedFile = preConstructedMessage.preprocessedFiles.find(
-                    (f) => StorageKeyGenerator.fileUniqKey(f.file) === fileKey
+                    (f) => f.inputFileKey === fileKey || StorageKeyGenerator.fileUniqKey(f.file) === fileKey
                   )
                   const effectiveIndexStatus = preprocessedFile?.sessionAttachmentId
                     ? (preprocessedAttachmentIndexStatusMap.get(preprocessedFile.sessionAttachmentId) ??
@@ -1475,6 +1488,9 @@ const InputBox = forwardRef<InputBoxRef, InputBoxProps>(
                         // Cancel any ongoing MinerU parsing for this file
                         const filePath = platform.getLocalFilePath(file)
                         fileKeysToRemove.add(StorageKeyGenerator.fileUniqKey(file))
+                        for (const key of fileKeysToRemove) {
+                          activeFilePreprocessingKeysRef.current.delete(key)
+                        }
                         if (filePath && platform.cancelMineruParse) {
                           platform.cancelMineruParse(filePath).catch(() => {
                             // Ignore cancellation errors
