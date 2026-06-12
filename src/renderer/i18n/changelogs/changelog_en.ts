@@ -1,4 +1,8 @@
 const changelog = `
+## v1.21.1 - 2026.06.12
+1. Fixed an issue where the send button could stay disabled after uploading files
+2. Updated the Android app icon
+
 ## v1.21.0 - 2026.06.08
 1. Added Vercel AI Gateway provider
 2. Added provider Spotlight for faster provider selection
